@@ -3,11 +3,13 @@
 
 """
 import base64
+import collections.abc
 import enum
 
+from .identity import Identity
 from .util import typed
 
-__all__ = {'KeyType', 'PublicKey'}
+__all__ = {'KeyStore', 'KeyType', 'PublicKey'}
 
 
 class KeyType(enum.Enum):
@@ -102,7 +104,8 @@ class PublicKey:
         return base64.b64encode(self.key).decode()
 
     @base64_key.setter
-    def base64_key(self, base64_key):
+    @typed
+    def base64_key(self, base64_key: str):
         self.key = base64.b64decode(base64_key)
 
     def __eq__(self, other):
@@ -129,3 +132,62 @@ class PublicKey:
     def __repr__(self):
         fmt = '{0.__module__}.{0.__qualname__}({1!r}, key={2!r}, comment={3!r})'
         return fmt.format(type(self), self.keytype, self.key, self.comment)
+
+
+class KeyStore:
+    """The key store backend interface."""
+
+    @typed
+    def register(self, identity: Identity, public_key: PublicKey):
+        """Register the given ``public_key`` to the ``identity``.
+
+        :param ientity: the owner identity
+        :type identity: :class:`~.identity.Identity`
+        :param public_key: the public key to register
+        :type public_key: :class:`PublicKey`
+        :raise geofront.keystore.AuthorizationError:
+            when the given ``identity`` has no required permission
+            to the key store
+
+
+        """
+        raise NotImplementedError('register() has to be implemented')
+
+    @typed
+    def list_keys(self, identity: Identity) -> collections.abc.Set:
+        """List registered public keys of the given ``identity``.
+
+        :param identity: the owner of keys to list
+        :type identity: :class:`~.identity.Identity`
+        :return: the set of :class:`PublicKey` owned by the ``identity``
+        :rtype: :class:`collections.abc.Set`
+        :raise geofront.keystore.AuthorizationError:
+            when the given ``identity`` has no required permission
+            to the key store
+
+        """
+        raise NotImplementedError('lookup() has to be implemented')
+
+    @typed
+    def deregister(self, identity: Identity, public_key: PublicKey):
+        """Remove the given ``public_key`` of the ``identity``.
+        It silently does nothing if there isn't the given ``public_key``
+        in the store.
+
+        :param ientity: the owner identity
+        :type identity: :class:`~.identity.Identity`
+        :param public_key: the public key to remove
+        :type public_key: :class:`PublicKey`
+        :raise geofront.keystore.AuthorizationError:
+            when the given ``identity`` has no required permission
+            to the key store
+
+        """
+        raise NotImplementedError('deregister() has to be implemented')
+
+
+class AuthorizationError(Exception):
+    """Authorization exception that rise when the given identity has
+    no required permission to the key store.
+
+    """

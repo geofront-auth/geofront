@@ -15,6 +15,7 @@ from werkzeug.urls import url_encode, url_decode_stream
 from werkzeug.wrappers import Request
 
 from ..identity import Identity
+from ..keystore import KeyStore, PublicKey
 from ..team import AuthenticationError, Team
 from ..util import typed
 
@@ -22,7 +23,7 @@ from ..util import typed
 __all__ = {'GitHubOrganization', 'request'}
 
 
-def request(access_token, url: str, method: str='GET'):
+def request(access_token, url: str, method: str='GET', data: bytes=None):
     """Make a request to GitHub API, and then return the parsed JSON result.
 
     :param access_token: api access token string,
@@ -32,6 +33,8 @@ def request(access_token, url: str, method: str='GET'):
     :type url: :class:`str`
     :param method: an optional http method.  ``'GET'`` by default
     :type method: :class:`str`
+    :param data: an optional content body
+    :type data: :class:`bytes`
 
     """
     if isinstance(access_token, Identity):
@@ -42,7 +45,8 @@ def request(access_token, url: str, method: str='GET'):
             'Authorization': 'token ' + access_token,
             'Accept': 'application/json'
         },
-        method=method
+        method=method,
+        data=data
     )
     with contextlib.closing(urllib.request.urlopen(req)) as response:
         content_type = response.headers['Content-Type']
@@ -75,6 +79,14 @@ def request(access_token, url: str, method: str='GET'):
 class GitHubOrganization(Team):
     """Authenticate team membership through GitHub, and authorize to
     access GitHub key store.
+
+    :param client_id: github api client id
+    :type client_id: :class:`str`
+    :param client_secret: github api client secret
+    :type client_secret: :class:`str`
+    :param org_login: github org account name.  for example ``'spoqa'``
+                      in https://github.com/spoqa
+    :type org_login: :class:`str`
 
     """
 
@@ -160,3 +172,31 @@ class GitHubOrganization(Team):
         if isinstance(response, collections.Mapping) and 'error' in response:
             return False
         return any(o['login'] == self.org_login for o in response)
+
+
+class GitHubKeyStore(KeyStore):
+    """Use GitHub account's public keys as key store."""
+
+    LIST_URL = 'https://api.github.com/user/keys'
+    DEREGISTER_URL = 'https://api.github.com/user/keys/{id}'
+
+    @typed
+    def register(self, identity: Identity, public_key: PublicKey):
+        data = json.dumps({
+            'title': public_key.comment,
+            'key': str(public_key)
+        })
+        request(identity, self.LIST_URL, 'POST', data=data.encode())
+
+    @typed
+    def list_keys(self, identity: Identity) -> collections.abc.Set:
+        keys = request(identity, self.LIST_URL)
+        return {PublicKey.parse_line(key['key']) for key in keys}
+
+    @typed
+    def deregister(self, identity: Identity, public_key: PublicKey):
+        keys = request(identity, self.LIST_URL)
+        for key in keys:
+            if PublicKey.parse_line(key['key']) == public_key:
+                request(identity, self.DEREGISTER_URL.format(**key), 'DELETE')
+                break
