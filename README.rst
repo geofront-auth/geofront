@@ -37,3 +37,14 @@ Idea
 4. A member requests to SSH a server, then Geofront *temporarily*
    (about 30 seconds, or a minute) adds their public key to ``authorized_keys``
    of the requested server.
+
+
+Author and license
+------------------
+
+Geofront is written by `Hong Minhee`__, maintained by Spoqa_, and licensed
+under AGPL3 or later.
+
+
+__ http://dahlia.kr/
+.. _Spoqa: http://www.spoqa.com/
