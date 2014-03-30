@@ -29,7 +29,7 @@ tests_require = [
 
 docs_require = [
     'Sphinx >= 1.2',
-    'sphinxcontrib-httpdomain >= 1.2.0',
+    'sphinxcontrib-httpdomain >= 1.2.1',
     'sphinxcontrib-autoprogram'
 ]
 
