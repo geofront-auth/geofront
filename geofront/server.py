@@ -16,6 +16,7 @@ from werkzeug.routing import BaseConverter, ValidationError
 
 from .team import AuthenticationError, Team
 from .util import typed
+from .version import VERSION
 
 __all__ = {'TokenIdConverter', 'app', 'authenticate', 'create_access_token',
            'get_team', 'get_token_store', 'main', 'main_parser'}
@@ -187,6 +188,9 @@ def main_parser() -> argparse.ArgumentParser:
                         default=5000,
                         help='port to bind [%(default)s]')
     parser.add_argument('-d', '--debug', action='store_true', help='debug mode')
+    parser.add_argument('-v', '--version',
+                        action='version',
+                        version='%(prog)s ' + VERSION)
     return parser
 
 

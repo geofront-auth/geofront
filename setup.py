@@ -7,6 +7,8 @@ except ImportError:
     use_setuptools()
     from setuptools import setup, find_packages
 
+from geofront.version import VERSION
+
 
 def readme():
     with open('README.rst') as f:
@@ -15,7 +17,7 @@ def readme():
 
 setup(
     name='Geofront',
-    version='0.1.0',
+    version=VERSION,
     description='Simple SSH key management service',
     long_description=readme(),
     author='Hong Minhee',
