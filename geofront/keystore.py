@@ -13,10 +13,19 @@ __all__ = {'KeyType', 'PublicKey'}
 class KeyType(enum.Enum):
     """SSH key types."""
 
+    #: (:class:`KeyType`) ECDSA NIST P-256.
     ecdsa_ssh2_nistp256 = 'ecdsa-sha2-nistp256'
+
+    #: (:class:`KeyType`) ECDSA NIST P-384.
     ecdsa_ssh2_nistp384 = 'ecdsa-sha2-nistp384'
+
+    #: (:class:`KeyType`) ECDSA NIST P-521.
     ecdsa_ssh2_nistp521 = 'ecdsa-sha2-nistp521'
+
+    #: (:class:`KeyType`) DSA.
     ssh_dss = 'ssh-dss'
+
+    #: (:class:`KeyType`) RSA.
     ssh_rsa = 'ssh-rsa'
 
     def __repr__(self):
