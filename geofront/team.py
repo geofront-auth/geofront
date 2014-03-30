@@ -2,6 +2,8 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 """
+import collections.abc
+
 from .identity import Identity
 from .util import typed
 
@@ -54,7 +56,7 @@ class Team:
     def authenticate(self,
                      auth_nonce: str,
                      requested_redirect_url: str,
-                     wsgi_environ: dict) -> Identity:
+                     wsgi_environ: collections.abc.Mapping) -> Identity:
         """Second step of authentication process, to create a verification
         token for the identity.  The token is used by :meth:`authorize()`
         method, and the key store as well (if available).
@@ -67,6 +69,8 @@ class Team:
                                        :meth:`request_authentication()`'s
                                        ``redirect_url`` parameter
         :type requested_redirect_url: :class:`str`
+        :param wsgi_environ: forwarded wsgi environ dictionary
+        :type wsgi_environ: :class:`collections.abc.Mapping`
         :return: an identity which contains a verification token
         :rtype: :class:`~.identity.Identity`
         :raise geofront.team.AuthenticationError:

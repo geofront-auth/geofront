@@ -7,6 +7,7 @@ References
 .. toctree::
    :maxdepth: 3
 
+   api
    geofront-server
    geofront
 

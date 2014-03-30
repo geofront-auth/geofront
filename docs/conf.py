@@ -38,6 +38,8 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
+    'sphinxcontrib.httpdomain',
+    'sphinxcontrib.autohttp.flask',
     'sphinxcontrib.autoprogram'
 ]
 

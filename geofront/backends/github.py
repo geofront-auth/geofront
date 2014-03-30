@@ -3,6 +3,7 @@
 
 """
 import collections
+import collections.abc
 import contextlib
 import io
 import json
@@ -103,7 +104,7 @@ class GitHubOrganization(Team):
     def authenticate(self,
                      auth_nonce: str,
                      requested_redirect_url: str,
-                     wsgi_environ: dict) -> Identity:
+                     wsgi_environ: collections.abc.Mapping) -> Identity:
         req = Request(wsgi_environ, populate_request=False, shallow=True)
         try:
             code = req.args['code']

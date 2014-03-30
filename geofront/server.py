@@ -112,6 +112,8 @@ def create_access_token(token_id: str):
     :param token_id: an arbitrary token id to create.
                      it should be enough random to avoid duplication
     :type token_id: :class:`str`
+    :status 202: when the access token is prepared
+    :resheader Link: the link owner's browser should redirect to
 
     .. todo:: Token should be expired.
 
@@ -139,6 +141,10 @@ def authenticate(token_id: str):
 
     :param token_id: token id created by :func:`create_access_token()`
     :type token_id: :class:`str`
+    :status 400: when authentication is failed
+    :status 404: when the given ``token_id`` doesn't exist
+    :status 403: when the ``token_id`` is already finalized
+    :status 200: when authentication is successfully done
 
     """
     token_store = get_token_store()
