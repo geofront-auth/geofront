@@ -1,5 +1,7 @@
 from __future__ import with_statement
 
+import os
+
 try:
     from setuptools import setup, find_packages
 except ImportError:
@@ -15,6 +17,22 @@ def readme():
         return f.read()
 
 
+install_requires = [
+    'setuptools',
+    'Werkzeug >= 0.9',
+    'Flask >= 0.10'
+]
+
+docs_require = [
+    'Sphinx >= 1.2',
+    'sphinxcontrib-autoprogram'
+]
+
+# Install requirements for documentation if it's run by ReadTheDocs.org
+if os.environ.get('READTHEDOCS'):
+    install_requires.extend(docs_require)
+
+
 setup(
     name='Geofront',
     version=VERSION,
@@ -26,18 +44,14 @@ setup(
     maintainer_email='dev' '@' 'spoqa.com',
     license='AGPLv3 or later',
     packages=find_packages(exclude=['tests']),
-    install_requires=[
-        'setuptools',
-        'Werkzeug >= 0.9',
-        'Flask >= 0.10'
-    ],
+    install_requires=install_requires,
+    extras_require={
+        'docs': docs_require
+    },
     entry_points='''
         [console_scripts]
         geofront-server = geofront.server:main
     ''',
-    extras_require={
-        'docs': ['Sphinx >= 1.2', 'sphinxcontrib-autoprogram']
-    },
     classifiers=[
         'Development Status :: 1 - Planning',
         'Environment :: Web Environment',
