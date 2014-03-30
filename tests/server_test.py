@@ -64,7 +64,10 @@ def fx_token_store(request, tmpdir):
         cache = cls(str(tmpdir.join('token_store')))
     elif cls is RedisCache:
         getoption = request.config.getoption
-        redis_host = getoption('--redis-host')
+        try:
+            redis_host = getoption('--redis-host')
+        except ValueError:
+            redis_host = None
         if not redis_host:
             skip('--redis-host is not set; skipped')
         cache = cls(
