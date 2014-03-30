@@ -1,0 +1,9 @@
+language: python
+python:
+- 3.3
+- 3.4
+install:
+- pip install -e .[tests]
+script:
+- python -mgeofront.version
+- py.test -v --durations=20 --redis-host=localhost

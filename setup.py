@@ -23,6 +23,10 @@ install_requires = [
     'Flask >= 0.10'
 ]
 
+tests_require = [
+    'pytest >= 2.5.0'
+]
+
 docs_require = [
     'Sphinx >= 1.2',
     'sphinxcontrib-autoprogram'
@@ -45,7 +49,9 @@ setup(
     license='AGPLv3 or later',
     packages=find_packages(exclude=['tests']),
     install_requires=install_requires,
+    tests_require=tests_require,
     extras_require={
+        'tests': tests_require,
         'docs': docs_require
     },
     entry_points='''
