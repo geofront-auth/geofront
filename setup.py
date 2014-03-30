@@ -24,7 +24,7 @@ install_requires = [
 ]
 
 tests_require = [
-    'pytest >= 2.5.0'
+    'pytest >= 2.5.0', 'redis'
 ]
 
 docs_require = [
