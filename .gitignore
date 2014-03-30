@@ -8,3 +8,4 @@
 .tox
 build
 dist
+docs/_build

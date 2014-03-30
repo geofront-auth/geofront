@@ -134,6 +134,12 @@ def create_access_token(token_id: str):
 @app.route('/tokens/<token_id:token_id>/authenticate/')
 @typed
 def authenticate(token_id: str):
+    """Finalize the authentication process.
+
+    :param token_id: token id created by :func:`create_access_token()`
+    :type token_id: :class:`str`
+
+    """
     token_store = get_token_store()
     team = get_team()
     try:
