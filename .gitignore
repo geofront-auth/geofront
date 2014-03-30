@@ -1,0 +1,10 @@
+*.pyc
+*.egg
+*.egg-info
+*.cfg.py
+.*.swp
+.idea
+.Sync*
+.tox
+build
+dist
