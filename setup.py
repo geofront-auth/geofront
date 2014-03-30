@@ -1,6 +1,7 @@
 from __future__ import with_statement
 
 import os
+import sys
 
 try:
     from setuptools import setup, find_packages
@@ -22,6 +23,9 @@ install_requires = [
     'Werkzeug >= 0.9',
     'Flask >= 0.10'
 ]
+
+if sys.version_info < (3, 4):
+    install_requires.append('enum34')
 
 tests_require = [
     'pytest >= 2.5.0', 'redis'

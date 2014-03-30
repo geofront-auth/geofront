@@ -6,6 +6,7 @@
 
       geofront/backends
       geofront/identity
+      geofront/keystore
       geofront/server
       geofront/team
       geofront/util

@@ -3,6 +3,7 @@
 *.egg-info
 *.cfg.py
 .*.swp
+.coverage
 .idea
 .Sync*
 .tox
