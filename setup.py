@@ -35,6 +35,9 @@ setup(
         [console_scripts]
         geofront-server = geofront.server:main
     ''',
+    extras_require={
+        'docs': ['Sphinx >= 1.2', 'sphinxcontrib-autoprogram']
+    },
     classifiers=[
         'Development Status :: 1 - Planning',
         'Environment :: Web Environment',
