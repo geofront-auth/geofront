@@ -4,6 +4,8 @@ python:
 # FIXME: uncomment the following line when Travis CI supports Python 3.4
 #        https://github.com/travis-ci/travis-ci/issues/1989
 #- 3.4
+services:
+- redis-server
 install:
 - pip install -e .[tests]
 script:
