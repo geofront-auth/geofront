@@ -35,7 +35,8 @@ def typed(function: types.FunctionType) -> types.FunctionType:
             except KeyError:
                 continue
             else:
-                if not isinstance(arg, cls):
+                if not (isinstance(arg, cls) or
+                        arg is sig.parameters[param].default):
                     raise TypeError(
                         '{0} must be an instance of {1.__module__}.'
                         '{1.__qualname__}, not {2!r}'.format(param, cls, arg)

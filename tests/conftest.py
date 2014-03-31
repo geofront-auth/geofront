@@ -14,3 +14,7 @@ def pytest_addoption(parser):
                      type=int,
                      default=1,
                      help='redis db number [%(default)s]')
+    parser.addoption('--github-access-token',
+                     metavar='TOKEN',
+                     help='github access token for key store test (caution: '
+                          'it will remove all ssh keys of the account)')

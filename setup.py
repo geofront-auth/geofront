@@ -20,6 +20,7 @@ def readme():
 
 install_requires = [
     'setuptools',
+    'paramiko >= 1.13.0, == dev',
     'Werkzeug >= 0.9',
     'Flask >= 0.10'
 ]

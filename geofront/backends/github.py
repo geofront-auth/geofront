@@ -49,14 +49,14 @@ def request(access_token, url: str, method: str='GET', data: bytes=None):
         data=data
     )
     with contextlib.closing(urllib.request.urlopen(req)) as response:
-        content_type = response.headers['Content-Type']
+        content_type = response.headers.get('Content-Type')
         mimetype, options = parse_options_header(content_type)
-        assert mimetype == 'application/json', \
+        assert mimetype == 'application/json' or method == 'DELETE', \
             'Content-Type of {} is not application/json but {}'.format(
                 url,
                 content_type
             )
-        charset = options.get('charset')
+        charset = options.get('charset', 'utf-8')
         io_wrapper = io.TextIOWrapper(response, encoding=charset)
         logger = logging.getLogger(__name__ + '.request')
         if logger.isEnabledFor(logging.DEBUG):
@@ -71,8 +71,13 @@ def request(access_token, url: str, method: str='GET', data: bytes=None):
                           for k, v in response.headers.items()),
                 read
             )
+            if method == 'DELETE':
+                return
             return json.loads(read)
         else:
+            if method == 'DELETE':
+                io_wrapper.read()
+                return
             return json.load(io_wrapper)
 
 

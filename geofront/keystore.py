@@ -80,7 +80,14 @@ class PublicKey:
             line = line.decode()
         elif not isinstance(line, str):
             raise TypeError('line must be str or bytes, not ' + repr(line))
-        keytype, key, comment = line.split()
+        tup = line.split()
+        if len(tup) == 2:
+            keytype, key = tup
+            comment = None
+        elif len(tup) == 3:
+            keytype, key, comment = tup
+        else:
+            raise ValueError('line should consist of two or three columns')
         return cls(KeyType(keytype), base64_key=key, comment=comment)
 
     @typed
