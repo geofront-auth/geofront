@@ -14,6 +14,7 @@
 # serve to show the default.
 
 import sys
+import os
 import os.path
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -278,3 +279,64 @@ intersphinx_mapping = {
     'werkzeug': ('http://werkzeug.pocoo.org/docs/', None),
     'flask': ('http://flask.pocoo.org/docs/', None)
 }
+
+
+if os.environ.get('READTHEDOCS'):
+    # http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
+    class Mock(object):
+        def __init__(self, *a, **k):
+            pass
+        def __call__(self, *a, **k):
+            return type(self)()
+        def __getattr__(self, name):
+            if name in {'__file__', '__path__'}:
+                return '/dev/null'
+            return Mock()
+    sys.modules.update({
+        'Crypto': Mock(),
+        'Crypto.Cipher': Mock(),
+        'Crypto.Cipher.AES': Mock(),
+        'Crypto.Cipher.ARC2': Mock(),
+        'Crypto.Cipher.ARC4': Mock(),
+        'Crypto.Cipher.Blowfish': Mock(),
+        'Crypto.Cipher.CAST': Mock(),
+        'Crypto.Cipher.DES': Mock(),
+        'Crypto.Cipher.DES3': Mock(),
+        'Crypto.Cipher.PKCS1_OAEP': Mock(),
+        'Crypto.Cipher.PKCS1_v1_5': Mock(),
+        'Crypto.Cipher.XOR': Mock(),
+        'Crypto.Cipher.blockalgo': Mock(),
+        'Crypto.Hash': Mock(),
+        'Crypto.Hash.HMAC': Mock(),
+        'Crypto.Hash.MD2': Mock(),
+        'Crypto.Hash.MD4': Mock(),
+        'Crypto.Hash.MD5': Mock(),
+        'Crypto.Hash.RIPEMD': Mock(),
+        'Crypto.Hash.SHA': Mock(),
+        'Crypto.Hash.SHA224': Mock(),
+        'Crypto.Hash.SHA256': Mock(),
+        'Crypto.Hash.SHA384': Mock(),
+        'Crypto.Hash.SHA512': Mock(),
+        'Crypto.Protocol': Mock(),
+        'Crypto.Protocol.AllOrNothing': Mock(),
+        'Crypto.Protocol.Chaffing': Mock(),
+        'Crypto.Protocol.KDF': Mock(),
+        'Crypto.PublicKey': Mock(),
+        'Crypto.PublicKey.DSA': Mock(),
+        'Crypto.PublicKey.ElGamal': Mock(),
+        'Crypto.PublicKey.RSA': Mock(),
+        'Crypto.Random': Mock(),
+        'Crypto.Random.random': Mock(),
+        'Crypto.Signature': Mock(),
+        'Crypto.Signature.PKCS1_PSS': Mock(),
+        'Crypto.Signature.PKCS1_v1_5': Mock(),
+        'Crypto.Util': Mock(),
+        'Crypto.Util.RFC1751': Mock(),
+        'Crypto.Util.asn1': Mock(),
+        'Crypto.Util.number': Mock(),
+        'Crypto.Util.py21compat': Mock(),
+        'Crypto.Util.randpool': Mock(),
+        'Crypto.Util.strxor': Mock(),
+        'Crypto.Util.winrandom': Mock(),
+        'Crypto.pct_warnings': Mock(),
+    })
