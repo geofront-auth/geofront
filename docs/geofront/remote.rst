@@ -1,0 +1,3 @@
+
+.. automodule:: geofront.remote
+   :members:
