@@ -146,7 +146,7 @@ class PublicKey:
         return '{} {} {}'.format(
             self.keytype.value,
             self.base64_key,
-            self.comment
+            self.comment or ''
         )
 
     def __bytes__(self):

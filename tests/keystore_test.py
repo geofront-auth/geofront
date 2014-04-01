@@ -125,3 +125,21 @@ def test_public_key_str(fx_public_key, as_bytes):
         assert bytes(fx_public_key) == expected.encode()
     else:
         assert str(fx_public_key) == expected
+
+
+@mark.parametrize('as_bytes', [True, False])
+def test_public_key_str_without_comment(fx_equivalent_key_except_comment,
+                                        as_bytes):
+    expected = (
+        'ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA0ql70Tsi8ToDGm+gkkRGv12Eb15QSgdVQ'
+        'eIFbasK+yHNITAOVHtbM3nlUTIxFh7sSga7UmEjCya0ljU0GJ+zvnFOxKvRypBoUY38W8'
+        'XkR3f2IJQwbWE7/t4Vs4DViramrZr/wnQtRstLZRncIj307ApQuB18uedbtreGdg+cd75'
+        '/KfTvDc3L17ZYlgdmJ+tTdzTi5mYbiPmtn631Qm8/OCBazwUSfidRlG1SN97QJdV5ZFLN'
+        'N+3BRR7RIRzYZ/2KEJqiOI5nqi3TEiPeq49/LJElu4tdJ8icXT7COrGllnhBbpZdxRM26'
+        'hhVXv62vOTQwXm1fumg0PgMACP2S1WVNw=='
+    )
+    if as_bytes:
+        expected = expected.encode()
+        assert bytes(fx_equivalent_key_except_comment).strip() == expected
+    else:
+        assert str(fx_equivalent_key_except_comment).strip() == expected
