@@ -19,7 +19,7 @@ since the most of cloud providers offer their API to list provisioned
 remote nodes.
 
 This module provides :class:`CloudRemoteSet`, a subtype of
-:class:`collections.abc.Set`, that proxies to the list dynamically made by
+:class:`collections.abc.Mapping`, that proxies to the list dynamically made by
 cloud providers.
 
 """
