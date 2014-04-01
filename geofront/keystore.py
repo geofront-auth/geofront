@@ -189,7 +189,7 @@ class KeyStore:
             to the key store
 
         """
-        raise NotImplementedError('lookup() has to be implemented')
+        raise NotImplementedError('list_keys() has to be implemented')
 
     @typed
     def deregister(self, identity: Identity, public_key: PublicKey):
