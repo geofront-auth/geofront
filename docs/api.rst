@@ -21,7 +21,7 @@ headers that are equivalent:
    Which is a standard compliant header.  The form follows also the standard
    e.g. ``Geofront/1.2.3``.
 
-:mailheader:`X-Geofront-Server`
+:mailheader:`X-Geofront-Version`
    Which is a non-standard extended header.  The form consists of only the
    version number e.g. ``1.2.3``.
 
