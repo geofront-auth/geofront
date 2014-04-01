@@ -58,3 +58,12 @@ under AGPL3 or later.
 
 __ http://dahlia.kr/
 .. _Spoqa: http://www.spoqa.com/
+
+
+Missing features
+----------------
+
+- Google Apps backend
+- Bitbucket backend
+
+(Contributions would be appreciated!)
