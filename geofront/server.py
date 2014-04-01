@@ -9,17 +9,19 @@ import os.path
 import re
 import warnings
 
-from flask import Flask, Response, current_app, jsonify, request, url_for
+from flask import Flask, Response, current_app, json, jsonify, request, url_for
 from werkzeug.contrib.cache import BaseCache, SimpleCache
-from werkzeug.exceptions import BadRequest, Forbidden, NotFound
+from werkzeug.exceptions import BadRequest, Forbidden, HTTPException, NotFound
 from werkzeug.routing import BaseConverter, ValidationError
 
+from .identity import Identity
+from .keystore import KeyStore
 from .team import AuthenticationError, Team
 from .util import typed
 from .version import VERSION
 
 __all__ = {'TokenIdConverter', 'app', 'authenticate', 'create_access_token',
-           'get_team', 'get_token_store', 'main', 'main_parser'}
+           'get_identity', 'get_team', 'get_token_store', 'main', 'main_parser'}
 
 
 class TokenIdConverter(BaseConverter):
@@ -171,6 +173,85 @@ def authenticate(token_id: str):
         raise BadRequest()
     token_store.set(token_id, (True, identity))
     return 'Authentication success: close the browser tab, and back to CLI'
+
+
+@typed
+def get_identity(token_id: str) -> Identity:
+    """Get the identity object from the given ``token_id``.
+
+    :param token_id: the token id to get the identity it holds
+    :type token_id: :class:`str`
+    :return: the identity the token holds
+    :rtype: :class:`~.identity.Identity`
+    :raise werkzeug.exceptions.HTTPException:
+        :http:statuscode:`404` when the token does not exist.
+        :http:statuscode:`412` when the authentication process is not
+        finished yet.
+        :http:statuscode:`403` when the token is not unauthorized
+
+    """
+    store = get_token_store()
+    team = get_team()
+    pair = store.get(token_id)
+    if not pair:
+        response = jsonify(
+            error='token-not-found',
+            message='Access token {0} does not exist.'.format(token_id)
+        )
+        response.status_code = 404
+        raise HTTPException(response=response)
+    finished, identity = pair
+    if not finished:
+        response = jsonify(
+            error='unfinished-authentication',
+            message='Authentication process is not finished yet.'
+        )
+        response.status_code = 412  # Precondition Failed
+        raise HTTPException(response=response)
+    if team.authorize(identity):
+        return identity
+    response = jsonify(
+        error='not-authorized',
+        message='Access token {0} is unauthorized.'.format(token_id)
+    )
+    response.status_code = 403
+    raise HTTPException(response=response)
+
+
+def get_key_store() -> KeyStore:
+    """Get the configured key store implementation, an instance of
+    :class:`~.keystore.KeyStore`.
+
+    It raises :exc:`RuntimeError` if ``'KEY_STORE'`` is not configured.
+
+    """
+    try:
+        key_store = current_app.config['KEY_STORE']
+    except KeyError:
+        raise RuntimeError('KEY_STORE configuration is not present')
+    if isinstance(key_store, KeyStore):
+        return key_store
+    raise RuntimeError(
+        'KEY_STORE configuration must be an instance of {0.__module__}.'
+        '{0.__qualname__}, not {1!r}'.format(KeyStore, key_store)
+    )
+
+
+@app.route('/tokens/<token_id:token_id>/keys/')
+@typed
+def list_keys(token_id: str):
+    """List registered keys to the token owner.
+
+    :param token_id: the token id that holds the identity
+    :type token_id: :class:`str`
+    :status 200: when listing is successful, even if there are no keys
+
+    """
+    identity = get_identity(token_id)
+    key_store = get_key_store()
+    keys = key_store.list_keys(identity)
+    data = json.dumps([str(key) for key in keys])
+    return data, 200, {'Content-Type': 'application/json'}
 
 
 def main_parser() -> argparse.ArgumentParser:

@@ -1,16 +1,20 @@
 import os
 import random
+import collections.abc
 
-from flask import json, url_for
-from pytest import fixture, mark, raises, skip, yield_fixture
+from flask import json, request, url_for
+from paramiko import RSAKey
+from pytest import fail, fixture, mark, raises, skip, yield_fixture
 from werkzeug.contrib.cache import (BaseCache, FileSystemCache, RedisCache,
                                     SimpleCache)
-from werkzeug.exceptions import NotFound
+from werkzeug.exceptions import HTTPException, NotFound
 from werkzeug.routing import Map, Rule
 from werkzeug.urls import url_decode, url_encode
 
 from geofront.identity import Identity
-from geofront.server import TokenIdConverter, app, get_team, get_token_store
+from geofront.keystore import DuplicatePublicKeyError, KeyStore, PublicKey
+from geofront.server import (TokenIdConverter, app, get_identity,
+                             get_key_store, get_team, get_token_store)
 from geofront.team import AuthenticationError, Team
 
 
@@ -124,7 +128,8 @@ class DummyTeam(Team):
         return Identity(type(self), len(self.states))
 
     def authorize(self, identity: Identity) -> bool:
-        return False
+        return (issubclass(identity.team_type, type(self)) and
+                identity.access_token is not False)
 
 
 def test_get_team__no_config():
@@ -152,12 +157,14 @@ def test_get_team(fx_team):
 
 
 @yield_fixture
-def fx_app(fx_team, fx_token_store):
+def fx_app(fx_team, fx_token_store, fx_key_store):
     app.config['TEAM'] = fx_team
     app.config['TOKEN_STORE'] = fx_token_store
+    app.config['KEY_STORE'] = fx_key_store
     yield app
     del app.config['TEAM']
     del app.config['TOKEN_STORE']
+    del app.config['KEY_STORE']
 
 
 @fixture
@@ -197,3 +204,128 @@ def test_authenticate(fx_app, fx_token_store, fx_token_id):
         assert response.status_code == 200
         token = fx_token_store.get(fx_token_id)
         assert token == (True, Identity(DummyTeam, 0))
+
+
+@fixture
+def fx_authorized_identity(fx_token_store, fx_token_id):
+    identity = Identity(DummyTeam, 1, True)
+    fx_token_store.set(fx_token_id, (True, identity))
+    return identity
+
+
+def test_get_identity(fx_app, fx_authorized_identity, fx_token_id):
+    with fx_app.test_request_context():
+        identity = get_identity(fx_token_id)
+        assert identity == fx_authorized_identity
+
+
+def test_get_identity_403(fx_app, fx_token_store, fx_token_id):
+    fx_token_store.set(fx_token_id, (True, Identity(DummyTeam, 1, False)))
+    with fx_app.test_request_context():
+        try:
+            result = get_identity(fx_token_id)
+        except HTTPException as e:
+            response = e.get_response(request.environ)
+            assert response.status_code == 403
+            data = json.loads(response.data)
+            assert data['error'] == 'not-authorized'
+        else:
+            fail('get_identity() does not raise HTTPException, but returns ' +
+                 repr(result))
+
+
+def test_get_identity_404(fx_app, fx_token_id):
+    with fx_app.test_request_context():
+        try:
+            result = get_identity(fx_token_id)
+        except HTTPException as e:
+            response = e.get_response(request.environ)
+            assert response.status_code == 404
+            data = json.loads(response.data)
+            assert data['error'] == 'token-not-found'
+        else:
+            fail('get_identity() does not raise HTTPException, but returns ' +
+                 repr(result))
+
+
+def test_get_identity_412(fx_app, fx_token_store, fx_token_id):
+    fx_token_store.set(fx_token_id, (False, 'nonce'))
+    with fx_app.test_request_context():
+        try:
+            result = get_identity(fx_token_id)
+        except HTTPException as e:
+            response = e.get_response(request.environ)
+            assert response.status_code == 412
+            data = json.loads(response.data)
+            assert data['error'] == 'unfinished-authentication'
+        else:
+            fail('get_identity() does not raise HTTPException, but returns ' +
+                 repr(result))
+
+
+class DummyKeyStore(KeyStore):
+
+    def __init__(self):
+        self.keys = {}
+        self.identities = {}
+
+    def register(self, identity: Identity, public_key: PublicKey):
+        if public_key in self.keys:
+            raise DuplicatePublicKeyError()
+        self.keys[public_key] = identity
+        self.identities.setdefault(identity, set()).add(public_key)
+
+    def list_keys(self, identity: Identity) -> collections.abc.Set:
+        try:
+            keys = self.identities[identity]
+        except KeyError:
+            return frozenset()
+        return frozenset(keys)
+
+    def deregister(self, identity: Identity, public_key: PublicKey):
+        try:
+            del self.keys[public_key]
+            del self.identities[identity]
+        except KeyError:
+            pass
+
+
+def test_get_key_store__no_config():
+    with raises(RuntimeError):
+        with app.app_context():
+            get_key_store()
+
+
+def test_get_key_store__invalid_type():
+    app.config['KEY_STORE'] = 'invalid type'
+    with raises(RuntimeError):
+        with app.app_context():
+            get_key_store()
+
+
+@fixture
+def fx_key_store():
+    return DummyKeyStore()
+
+
+def test_get_key_store(fx_key_store):
+    app.config['KEY_STORE'] = fx_key_store
+    with app.app_context():
+        assert get_key_store() is fx_key_store
+
+
+def test_list_keys(fx_app, fx_key_store, fx_authorized_identity, fx_token_id):
+    with fx_app.test_client() as c:
+        response = c.get(get_url('list_keys', token_id=fx_token_id))
+        assert response.status_code == 200
+        assert response.mimetype == 'application/json'
+        assert response.data == b'[]'
+    key = PublicKey.from_pkey(RSAKey.generate(1024))
+    fx_key_store.register(fx_authorized_identity, key)
+    with fx_app.test_client() as c:
+        response = c.get(get_url('list_keys', token_id=fx_token_id))
+        assert response.status_code == 200
+        assert response.mimetype == 'application/json'
+        data = {PublicKey.parse_line(k) for k in json.loads(response.data)}
+        assert data == {key}
+
