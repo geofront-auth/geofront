@@ -277,7 +277,8 @@ intersphinx_mapping = {
     'python': ('http://docs.python.org/3/', None),
     'paramiko': ('http://docs.paramiko.org/en/1.13/', None),
     'werkzeug': ('http://werkzeug.pocoo.org/docs/', None),
-    'flask': ('http://flask.pocoo.org/docs/', None)
+    'flask': ('http://flask.pocoo.org/docs/', None),
+    'libcloud': ('https://libcloud.readthedocs.org/en/latest/', None),
 }
 
 
