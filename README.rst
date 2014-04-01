@@ -42,6 +42,13 @@ Idea
    of the requested server.
 
 
+Prerequisites
+-------------
+
+- Linux, BSD, Mac
+- Python 3.3+
+
+
 Author and license
 ------------------
 
