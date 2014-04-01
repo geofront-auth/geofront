@@ -15,7 +15,7 @@ from werkzeug.urls import url_encode, url_decode_stream
 from werkzeug.wrappers import Request
 
 from ..identity import Identity
-from ..keystore import KeyStore, PublicKey
+from ..keystore import DuplicatePublicKeyError, KeyStore, PublicKey
 from ..team import AuthenticationError, Team
 from ..util import typed
 
@@ -191,7 +191,27 @@ class GitHubKeyStore(KeyStore):
             'title': public_key.comment,
             'key': str(public_key)
         })
-        request(identity, self.LIST_URL, 'POST', data=data.encode())
+        try:
+            request(identity, self.LIST_URL, 'POST', data=data.encode())
+        except urllib.request.HTTPError as e:
+            if e.code != 422:
+                raise
+            content_type = e.headers.get('Content-Type')
+            mimetype, options = parse_options_header(content_type)
+            if mimetype != 'application/json':
+                raise
+            charset = options.get('charset', 'utf-8')
+            response = json.loads(e.read().decode(charset))
+            for error in response.get('errors', []):
+                if not isinstance(error, dict):
+                    continue
+                elif error.get('field') != 'key':
+                    continue
+                message = error.get('message', '').strip().lower()
+                if message != 'key is already in use':
+                    continue
+                raise DuplicatePublicKeyError(message)
+            raise
 
     @typed
     def list_keys(self, identity: Identity) -> collections.abc.Set:

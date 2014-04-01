@@ -1,12 +1,12 @@
 import collections.abc
 
 from paramiko.rsakey import RSAKey
-from pytest import fixture, skip, yield_fixture
+from pytest import fixture, raises, skip, yield_fixture
 
 from geofront.backends.github import (GitHubKeyStore, GitHubOrganization,
                                       request)
 from geofront.identity import Identity
-from geofront.keystore import KeyType, PublicKey
+from geofront.keystore import DuplicatePublicKeyError, KeyType, PublicKey
 
 
 @fixture
@@ -69,16 +69,26 @@ def fx_github_keystore(fx_github_identity):
 
 
 def test_github_keystore(fx_github_identity, fx_github_keystore):
+    # "List registered public keys of the given ``identity``."
     keys = fx_github_keystore.list_keys(fx_github_identity)
     assert isinstance(keys, collections.abc.Set)
     assert not keys
+    # "Register the given ``public_key`` to the ``identity``."
     rsa_key = RSAKey.generate(1024)
     key = PublicKey.from_pkey(rsa_key)
     fx_github_keystore.register(fx_github_identity, key)
     keys = fx_github_keystore.list_keys(fx_github_identity)
     assert isinstance(keys, collections.abc.Set)
     assert keys == {key}
+    # ":raise geofront.keystore.DuplicatePublicKeyError:
+    # when the ``public_key`` is already in use"
+    with raises(DuplicatePublicKeyError):
+        fx_github_keystore.register(fx_github_identity, key)
+    # "Remove the given ``public_key`` of the ``identity``."
     fx_github_keystore.deregister(fx_github_identity, key)
     keys = fx_github_keystore.list_keys(fx_github_identity)
     assert isinstance(keys, collections.abc.Set)
     assert not keys
+    # "It silently does nothing if there isn't the given ``public_key``
+    # in the store."
+    fx_github_keystore.deregister(fx_github_identity, key)

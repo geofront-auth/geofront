@@ -11,7 +11,8 @@ from paramiko import PKey
 from .identity import Identity
 from .util import typed
 
-__all__ = {'KeyStore', 'KeyType', 'PublicKey'}
+__all__ = {'AuthorizationError', 'DuplicatePublicKeyError', 'KeyStore',
+           'KeyStoreError', 'KeyType', 'PublicKey'}
 
 
 class KeyType(enum.Enum):
@@ -158,7 +159,11 @@ class PublicKey:
 
 
 class KeyStore:
-    """The key store backend interface."""
+    """The key store backend interface.  Every key store has to guarantee
+    that public keys are unique for all identities i.e. the same public key
+    can't be registered across more than an identity.
+
+    """
 
     @typed
     def register(self, identity: Identity, public_key: PublicKey):
@@ -171,6 +176,8 @@ class KeyStore:
         :raise geofront.keystore.AuthorizationError:
             when the given ``identity`` has no required permission
             to the key store
+        :raise geofront.keystore.DuplicatePublicKeyError:
+            when the ``public_key`` is already in use
 
 
         """
@@ -209,8 +216,16 @@ class KeyStore:
         raise NotImplementedError('deregister() has to be implemented')
 
 
-class AuthorizationError(Exception):
+class KeyStoreError(Exception):
+    """Exceptions related to :class:`KeyStore` are an instance of this."""
+
+
+class AuthorizationError(KeyStoreError):
     """Authorization exception that rise when the given identity has
     no required permission to the key store.
 
     """
+
+
+class DuplicatePublicKeyError(KeyStoreError):
+    """Exception that rise when the given public key is already registered."""
