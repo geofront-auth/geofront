@@ -16,6 +16,7 @@ from geofront.keystore import DuplicatePublicKeyError, KeyStore, PublicKey
 from geofront.server import (TokenIdConverter, app, get_identity,
                              get_key_store, get_team, get_token_store)
 from geofront.team import AuthenticationError, Team
+from geofront.version import VERSION
 
 
 @fixture
@@ -42,6 +43,13 @@ def test_token_id_converter_match_failure(fx_url_map: Map, sample_id):
     urls = fx_url_map.bind('example.com', '/tokens/' + sample_id)
     with raises(NotFound):
         urls.match('/tokens/' + sample_id)
+
+
+def test_server_version():
+    with app.test_client() as client:
+        response = client.get('/')
+        assert 'Geofront/' + VERSION in response.headers['Server']
+        assert response.headers['X-Geofront-Version'] == VERSION
 
 
 def test_get_token_store__no_config():

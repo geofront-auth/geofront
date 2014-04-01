@@ -21,7 +21,8 @@ from .util import typed
 from .version import VERSION
 
 __all__ = {'TokenIdConverter', 'app', 'authenticate', 'create_access_token',
-           'get_identity', 'get_team', 'get_token_store', 'main', 'main_parser'}
+           'get_identity', 'get_key_store', 'get_team', 'get_token_store',
+           'list_keys', 'main', 'main_parser', 'server_version'}
 
 
 class TokenIdConverter(BaseConverter):
@@ -48,6 +49,18 @@ class TokenIdConverter(BaseConverter):
 #: (:class:`flask.Flask`) The WSGI application of the server.
 app = Flask(__name__)
 app.url_map.converters['token_id'] = TokenIdConverter
+
+
+@app.after_request
+def server_version(response: Response) -> Response:
+    """Indicate the version of Geofront server using :mailheader:`Server`
+    and :mailheader:`X-Geofront-Version` headers.
+
+    """
+    headers = response.headers
+    headers['Server'] = 'Geofront/' + VERSION
+    headers['X-Geofront-Version'] = VERSION
+    return response
 
 
 def get_team() -> Team:
