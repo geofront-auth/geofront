@@ -73,8 +73,7 @@ def test_github_keystore(fx_github_identity, fx_github_keystore):
     assert isinstance(keys, collections.abc.Set)
     assert not keys
     rsa_key = RSAKey.generate(1024)
-    key = PublicKey(KeyType(rsa_key.get_name()),
-                    base64_key=rsa_key.get_base64())
+    key = PublicKey.from_pkey(rsa_key)
     fx_github_keystore.register(fx_github_identity, key)
     keys = fx_github_keystore.list_keys(fx_github_identity)
     assert isinstance(keys, collections.abc.Set)

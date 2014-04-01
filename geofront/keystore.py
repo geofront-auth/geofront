@@ -6,6 +6,8 @@ import base64
 import collections.abc
 import enum
 
+from paramiko import PKey
+
 from .identity import Identity
 from .util import typed
 
@@ -89,6 +91,20 @@ class PublicKey:
         else:
             raise ValueError('line should consist of two or three columns')
         return cls(KeyType(keytype), base64_key=key, comment=comment)
+
+    @classmethod
+    @typed
+    def from_pkey(cls, pkey: PKey):
+        """Make a public key from :class:`paramiko.pkey.PKey` instance.
+        Its only public part remains, and the private part is ignored.
+
+        :param pkey: paramiko public key object
+        :type pkey: :class:`paramiko.pkey.PKey`
+        :return: geofront public key object
+        :rtype: :class:`PublicKey`
+
+        """
+        return cls(KeyType(pkey.get_name()), base64_key=pkey.get_base64())
 
     @typed
     def __init__(self, keytype: KeyType, *,

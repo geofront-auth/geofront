@@ -1,3 +1,4 @@
+from paramiko import RSAKey
 from pytest import fixture, mark
 
 from geofront.keystore import KeyType, PublicKey
@@ -38,6 +39,13 @@ def test_parse_line(as_bytes):
         b'\x2c\xbd\x27\x6b\x4d\x60\x39'
     )
     assert key.comment == 'dahlia@hongminhee-thinkpad-e435'
+
+
+def test_from_pkey():
+    rsakey = RSAKey.generate(1024)
+    key = PublicKey.from_pkey(rsakey)
+    assert key.keytype == KeyType.ssh_rsa
+    assert key.base64_key == rsakey.get_base64()
 
 
 @fixture
