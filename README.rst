@@ -47,6 +47,17 @@ Prerequisites
 
 - Linux, BSD, Mac
 - Python 3.3+
+- Third-party packages (automatically installed together)
+
+  - Paramiko_ 1.13.0+
+  - Werkzeug_ 0.9+
+  - Flask_ 0.10+
+  - Apache Libcloud_ 0.14.0+
+
+.. _Paramiko: http://www.paramiko.org/
+.. _Werkzeug: http://werkzeug.pocoo.org/
+.. _Flask: http://flask.pocoo.org/
+.. _Libcloud: http://libcloud.apache.org/
 
 
 Author and license
