@@ -1,9 +1,13 @@
+import io
 import os.path
 
+from libcloud.storage.drivers import dummy
+from libcloud.storage.drivers.dummy import DummyStorageDriver
 from paramiko.rsakey import RSAKey
 from pytest import raises
 
-from geofront.masterkey import (EmptyStoreError, FileSystemMasterKeyStore,
+from geofront.masterkey import (CloudMasterKeyStore, EmptyStoreError,
+                                FileSystemMasterKeyStore,
                                 read_private_key_file)
 
 
@@ -47,3 +51,22 @@ def test_read_private_key_file():
         'MPEGYr5KZCx7IeJ/4udBuKc/gOXb8tPiTTNxtYXEBcqhBdCa/M6pEdW5LiHxxoF5b6xY9'
         'q0nmi7Rn0weXK0SufhGgKrpSH+B'
     )
+
+
+def test_cloud_master_key_store():
+    driver = DummyStorageDriver('', '')
+    container = driver.create_container('geofront-test')
+    s = CloudMasterKeyStore(driver, container, 'test_id_rsa')
+    with raises(EmptyStoreError):
+        s.load()
+    key = RSAKey.generate(1024)
+    s.save(key)
+    driver.get_object(container.name, 'test_id_rsa')  # assert object exists
+    # Mocking implementation
+    with io.StringIO() as mock:
+        key.write_private_key(mock)
+        mock.seek(0)
+        dummy.DummyFileObject = lambda *a, **k: mock
+        stored_key = s.load()
+        assert isinstance(stored_key, RSAKey)
+        assert stored_key.get_base64() == stored_key.get_base64()

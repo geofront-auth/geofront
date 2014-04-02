@@ -5,12 +5,15 @@
 import io
 import os.path
 
+from libcloud.storage.base import Container, StorageDriver
+from libcloud.storage.types import ObjectDoesNotExistError
 from paramiko.pkey import PKey
 from paramiko.ssh_exception import SSHException
 
 from .util import typed
 
-__all__ = {'EmptyStoreError', 'FileSystemMasterKeyStore', 'MasterKeyStore',
+__all__ = {'CloudMasterKeyStore', 'EmptyStoreError',
+           'FileSystemMasterKeyStore', 'MasterKeyStore',
            'read_private_key_file'}
 
 
@@ -108,3 +111,71 @@ class FileSystemMasterKeyStore(MasterKeyStore):
     @typed
     def save(self, master_key: PKey):
         master_key.write_private_key_file(self.path)
+
+
+class CloudMasterKeyStore(MasterKeyStore):
+    """Store the master key into the cloud object storage e.g. AWS S3_.
+    It supports more than 20 cloud providers through the efforts of Libcloud_.
+    ::
+
+        from geofront.masterkey import CloudMasterKeyStore
+        from libcloud.storage.types import Provider
+        from libcloud.storage.providers import get_driver
+
+        driver_cls = get_driver(Provider.S3)
+        driver = driver_cls('api key', 'api secret key')
+        container = driver.get_container(container_name='my-master-key-bucket')
+        MASTER_KEY_STORE = CloudMasterKeyStore(container)
+
+    :param driver: the libcloud storage driver
+    :type driver: :class:`libcloud.storage.base.StorageDriver`
+    :param container: the block storage container
+    :type container: :class:`libcloud.storage.base.Container`
+    :param object_name: the object name to use
+    :type object_name: :class:`str`
+
+    .. seealso::
+
+       `Object Storage`__ --- Libcloud
+          Storage API allows you to manage cloud object storage and
+          services such as Amazon S3, Rackspace CloudFiles,
+          Google Storage and others.
+
+    .. _S3: http://aws.amazon.com/s3/
+    .. _Libcloud: http://libcloud.apache.org/
+    __ https://libcloud.readthedocs.org/en/latest/storage/
+    
+    """
+
+    @typed
+    def __init__(self,
+                 driver: StorageDriver,
+                 container: Container,
+                 object_name: str):
+        self.driver = driver
+        self.container = container
+        self.object_name = object_name
+
+    @typed
+    def load(self) -> PKey:
+        try:
+            obj = self.driver.get_object(self.container.name, self.object_name)
+        except ObjectDoesNotExistError:
+            raise EmptyStoreError()
+        with io.StringIO() as buffer_:
+            for chunk in self.driver.download_object_as_stream(obj):
+                buffer_.write(chunk)
+            buffer_.seek(0)
+            return read_private_key_file(buffer_)
+
+    @typed
+    def save(self, master_key: PKey):
+        with io.StringIO() as buffer_:
+            master_key.write_private_key(buffer_)
+            pem = buffer_.getvalue()
+        self.driver.upload_object_via_stream(
+            [pem],
+            self.container,
+            self.object_name,
+            {'content_type': 'application/x-pem-key'}
+        )
