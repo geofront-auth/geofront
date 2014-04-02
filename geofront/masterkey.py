@@ -2,6 +2,7 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 """
+import io
 import os.path
 
 from paramiko.pkey import PKey
@@ -9,7 +10,8 @@ from paramiko.ssh_exception import SSHException
 
 from .util import typed
 
-__all__ = {'EmptyStoreError', 'FileSystemMasterKeyStore', 'MasterKeyStore'}
+__all__ = {'EmptyStoreError', 'FileSystemMasterKeyStore', 'MasterKeyStore',
+           'read_private_key_file'}
 
 
 class MasterKeyStore:
@@ -45,6 +47,29 @@ class MasterKeyStore:
 
 class EmptyStoreError(Exception):
     """Exception that rises when there's no master key yet in the store."""
+
+
+def read_private_key_file(file_: io.IOBase) -> PKey:
+    """Read a private key file.  Similar to :meth:`PKey.from_private_key()
+    <paramiko.pkey.PKey.from_private_key>` except it guess the key type.
+
+    :param file_: a stream of the private key to read
+    :type file_: :class:`io.IOBase`
+    :return: the read private key
+    :rtype: :class:`paramiko.pkey.PKery`
+    :raise paramiko.ssh_exception.SSHException: when something goes wrong
+
+    """
+    classes = PKey.__subclasses__()
+    last = len(classes) + 1
+    for i, cls in enumerate(classes):
+        try:
+            return cls.from_private_key(file_)
+        except SSHException:
+            if i == last:
+                raise
+            file_.seek(0)
+            continue
 
 
 class FileSystemMasterKeyStore(MasterKeyStore):
