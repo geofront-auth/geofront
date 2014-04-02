@@ -3,6 +3,7 @@
 
 """
 import argparse
+import collections.abc
 import logging
 import os
 import os.path
@@ -21,8 +22,9 @@ from .util import typed
 from .version import VERSION
 
 __all__ = {'TokenIdConverter', 'app', 'authenticate', 'create_access_token',
-           'get_identity', 'get_key_store', 'get_team', 'get_token_store',
-           'list_keys', 'main', 'main_parser', 'server_version'}
+           'get_identity', 'get_key_store', 'get_remote_set', 'get_team',
+           'get_token_store', 'list_keys', 'main', 'main_parser',
+           'server_version'}
 
 
 class TokenIdConverter(BaseConverter):
@@ -232,10 +234,12 @@ def get_identity(token_id: str) -> Identity:
 
 
 def get_key_store() -> KeyStore:
-    """Get the configured key store implementation, an instance of
-    :class:`~.keystore.KeyStore`.
+    """Get the configured key store implementation.
 
-    It raises :exc:`RuntimeError` if ``'KEY_STORE'`` is not configured.
+    :return: the configured key store
+    :rtype: :class:`~.keystore.KeyStore`
+    :raise RuntimeError: when ``'KEY_STORE'`` is not configured, or
+                         it's not an instance of :class:`~.keystore.KeyStore`
 
     """
     try:
@@ -265,6 +269,27 @@ def list_keys(token_id: str):
     keys = key_store.list_keys(identity)
     data = json.dumps([str(key) for key in keys])
     return data, 200, {'Content-Type': 'application/json'}
+
+
+def get_remote_set() -> collections.abc.Mapping:
+    """Get the configured remote set.
+
+    :return: the configured remote set
+    :rtype: :class:`collections.abc.Mapping`
+    :raise RuntimeError: if ``'REMOTE_SET'`` is not configured,
+                         or it's not a mapping object
+
+    """
+    try:
+        set_ = current_app.config['REMOTE_SET']
+    except KeyError:
+        raise RuntimeError('REMOTE_SET configuration is not present')
+    if isinstance(set_, collections.abc.Mapping):
+        return set_
+    raise RuntimeError(
+        'REMOTE_SET configuration must be an instance of {0.__module__}.'
+        '{0.__qualname__}, not {1!r}'.format(collections.abc.Mapping, set_)
+    )
 
 
 def main_parser() -> argparse.ArgumentParser:

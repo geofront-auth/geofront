@@ -1,6 +1,7 @@
+import collections.abc
+import ipaddress
 import os
 import random
-import collections.abc
 
 from flask import json, request, url_for
 from paramiko import RSAKey
@@ -14,7 +15,8 @@ from werkzeug.urls import url_decode, url_encode
 from geofront.identity import Identity
 from geofront.keystore import DuplicatePublicKeyError, KeyStore, PublicKey
 from geofront.server import (TokenIdConverter, app, get_identity,
-                             get_key_store, get_team, get_token_store)
+                             get_key_store, get_remote_set, get_team,
+                             get_token_store)
 from geofront.team import AuthenticationError, Team
 from geofront.version import VERSION
 
@@ -337,3 +339,25 @@ def test_list_keys(fx_app, fx_key_store, fx_authorized_identity, fx_token_id):
         data = {PublicKey.parse_line(k) for k in json.loads(response.data)}
         assert data == {key}
 
+
+def test_get_remote_set__no_config():
+    with raises(RuntimeError):
+        with app.app_context():
+            get_remote_set()
+
+
+def test_get_remote_set__invalid_type():
+    app.config['REMOTE_SET'] = 'invalid type'
+    with raises(RuntimeError):
+        with app.app_context():
+            get_remote_set()
+
+
+def test_get_remote_set():
+    remote_set = {
+        'web-1': ipaddress.ip_address('192.168.0.5'),
+        'web-2': ipaddress.ip_address('192.168.0.6')
+    }
+    app.config['REMOTE_SET'] = remote_set
+    with app.app_context():
+        assert get_remote_set() == remote_set
