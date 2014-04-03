@@ -6,13 +6,43 @@ import base64
 import collections.abc
 import enum
 
+from paramiko.dsskey import DSSKey
+from paramiko.rsakey import RSAKey
 from paramiko.pkey import PKey
 
 from .identity import Identity
 from .util import typed
 
-__all__ = {'AuthorizationError', 'DuplicatePublicKeyError', 'KeyStore',
-           'KeyStoreError'}
+__all__ = {'KEY_TYPES', 'AuthorizationError', 'DuplicatePublicKeyError',
+           'KeyStore', 'KeyStoreError', 'parse_openssh_pubkey'}
+
+
+#: (:class:`collections.Mapping`) The mapping of supported key types.
+KEY_TYPES = {
+    'ssh-rsa': RSAKey,
+    'ssh-dss': DSSKey
+}
+
+
+@typed
+def parse_openssh_pubkey(line: str) -> PKey:
+    """Parse an OpenSSH public key line, used by :file:`authorized_keys`,
+    :file:`id_rsa.pub`, etc.
+
+    :param line: a line of public key
+    :type line: :class:`str`
+    :return: the parsed public key
+    :rtype: :class:`paramiko.pkey.PKey`
+    :raise ValueError: when the given ``line`` is an invalid format,
+                       or it's an unsupported key type
+
+    """
+    keytype, b64, *_ = line.split()
+    try:
+        cls = KEY_TYPES[keytype]
+    except KeyError:
+        raise ValueError('unsupported key type: ' + repr(keytype))
+    return cls(data=base64.b64decode(b64))
 
 
 class KeyStore:

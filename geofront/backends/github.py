@@ -18,7 +18,7 @@ from werkzeug.urls import url_encode, url_decode_stream
 from werkzeug.wrappers import Request
 
 from ..identity import Identity
-from ..keystore import DuplicatePublicKeyError, KeyStore
+from ..keystore import DuplicatePublicKeyError, KeyStore, parse_openssh_pubkey
 from ..team import AuthenticationError, Team
 from ..util import typed
 
@@ -229,8 +229,7 @@ class GitHubKeyStore(KeyStore):
     @typed
     def deregister(self, identity: Identity, public_key: PKey):
         keys = request(identity, self.LIST_URL)
-        needle = public_key.get_name(), public_key.get_base64()
         for key in keys:
-            if tuple(key['key'].split()[:2]) == needle:
+            if parse_openssh_pubkey(key['key']) == public_key:
                 request(identity, self.DEREGISTER_URL.format(**key), 'DELETE')
                 break

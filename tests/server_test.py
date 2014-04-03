@@ -14,7 +14,8 @@ from werkzeug.routing import Map, Rule
 from werkzeug.urls import url_decode, url_encode
 
 from geofront.identity import Identity
-from geofront.keystore import DuplicatePublicKeyError, KeyStore
+from geofront.keystore import (DuplicatePublicKeyError, KeyStore,
+                               parse_openssh_pubkey)
 from geofront.server import (TokenIdConverter, app, get_identity,
                              get_key_store, get_remote_set, get_team,
                              get_token_store)
@@ -337,8 +338,8 @@ def test_list_keys(fx_app, fx_key_store, fx_authorized_identity, fx_token_id):
         response = c.get(get_url('list_keys', token_id=fx_token_id))
         assert response.status_code == 200
         assert response.mimetype == 'application/json'
-        data = [k.split()[:2] for k in json.loads(response.data)]
-        assert data == [[key.get_name(), key.get_base64()]]
+        data = {parse_openssh_pubkey(k) for k in json.loads(response.data)}
+        assert data == {key}
 
 
 def test_get_remote_set__no_config():
