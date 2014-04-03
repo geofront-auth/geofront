@@ -16,7 +16,7 @@ from werkzeug.exceptions import BadRequest, Forbidden, HTTPException, NotFound
 from werkzeug.routing import BaseConverter, ValidationError
 
 from .identity import Identity
-from .keystore import KeyStore
+from .keystore import KeyStore, format_openssh_pubkey
 from .team import AuthenticationError, Team
 from .util import typed
 from .version import VERSION
@@ -267,10 +267,7 @@ def list_keys(token_id: str):
     identity = get_identity(token_id)
     key_store = get_key_store()
     keys = key_store.list_keys(identity)
-    data = json.dumps([
-        '{} {}'.format(key.get_name(), key.get_base64())
-        for key in keys
-    ])
+    data = json.dumps([format_openssh_pubkey(key) for key in keys])
     return data, 200, {'Content-Type': 'application/json'}
 
 

@@ -2,7 +2,7 @@ from paramiko.dsskey import DSSKey
 from paramiko.rsakey import RSAKey
 from pytest import raises
 
-from geofront.keystore import parse_openssh_pubkey
+from geofront.keystore import format_openssh_pubkey, parse_openssh_pubkey
 
 
 def test_parse_openssh_pubkey_rsa():
@@ -53,3 +53,10 @@ def test_parse_openssh_unsupported():
             'TYAAABBBDs0y6X8UquYBtTvDjbK+RZIAWduMbfWfUmh2MRtWpo2ZqEyQiyeTRDJ/4'
             '1A5heiONtm7QhUJoBF5VBUjsxiIFk= dahlia@hongminhee-thinkpad-e435'
         )
+
+
+def test_format_openssh_pubkey():
+    rsakey = RSAKey.generate(1024)
+    assert parse_openssh_pubkey(format_openssh_pubkey(rsakey)) == rsakey
+    dsskey = DSSKey.generate(1024)
+    assert parse_openssh_pubkey(format_openssh_pubkey(dsskey)) == dsskey

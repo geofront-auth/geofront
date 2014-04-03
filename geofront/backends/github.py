@@ -18,7 +18,8 @@ from werkzeug.urls import url_encode, url_decode_stream
 from werkzeug.wrappers import Request
 
 from ..identity import Identity
-from ..keystore import DuplicatePublicKeyError, KeyStore, parse_openssh_pubkey
+from ..keystore import (DuplicatePublicKeyError, KeyStore,
+                        format_openssh_pubkey,  parse_openssh_pubkey)
 from ..team import AuthenticationError, Team
 from ..util import typed
 
@@ -193,10 +194,7 @@ class GitHubKeyStore(KeyStore):
         title = ''.join(map('{:02x}'.format, public_key.get_fingerprint()))
         data = json.dumps({
             'title': title,
-            'key': '{} {}'.format(
-                public_key.get_name(),
-                public_key.get_base64()
-            )
+            'key': format_openssh_pubkey(public_key)
         })
         try:
             request(identity, self.LIST_URL, 'POST', data=data.encode())

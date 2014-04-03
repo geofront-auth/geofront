@@ -14,7 +14,8 @@ from .identity import Identity
 from .util import typed
 
 __all__ = {'KEY_TYPES', 'AuthorizationError', 'DuplicatePublicKeyError',
-           'KeyStore', 'KeyStoreError', 'parse_openssh_pubkey'}
+           'KeyStore', 'KeyStoreError', 'format_openssh_pubkey',
+           'parse_openssh_pubkey'}
 
 
 #: (:class:`collections.Mapping`) The mapping of supported key types.
@@ -43,6 +44,20 @@ def parse_openssh_pubkey(line: str) -> PKey:
     except KeyError:
         raise ValueError('unsupported key type: ' + repr(keytype))
     return cls(data=base64.b64decode(b64))
+
+
+@typed
+def format_openssh_pubkey(key: PKey) -> str:
+    """Format the given ``key`` to an OpenSSH public key line, used by
+    :file:`authorized_keys`, :file:`id_rsa.pub`, etc.
+
+    :param key: the key object to format
+    :type key: :class:`paramiko.pkey.PKey`
+    :return: a formatted openssh public key line
+    :rtype: :class:`str`
+
+    """
+    return '{} {} '.format(key.get_name(), key.get_base64())
 
 
 class KeyStore:
