@@ -4,7 +4,8 @@ import os
 import random
 
 from flask import json, request, url_for
-from paramiko import RSAKey
+from paramiko.pkey import PKey
+from paramiko.rsakey import RSAKey
 from pytest import fail, fixture, mark, raises, skip, yield_fixture
 from werkzeug.contrib.cache import (BaseCache, FileSystemCache, RedisCache,
                                     SimpleCache)
@@ -13,7 +14,7 @@ from werkzeug.routing import Map, Rule
 from werkzeug.urls import url_decode, url_encode
 
 from geofront.identity import Identity
-from geofront.keystore import DuplicatePublicKeyError, KeyStore, PublicKey
+from geofront.keystore import DuplicatePublicKeyError, KeyStore
 from geofront.server import (TokenIdConverter, app, get_identity,
                              get_key_store, get_remote_set, get_team,
                              get_token_store)
@@ -279,7 +280,7 @@ class DummyKeyStore(KeyStore):
         self.keys = {}
         self.identities = {}
 
-    def register(self, identity: Identity, public_key: PublicKey):
+    def register(self, identity: Identity, public_key: PKey):
         if public_key in self.keys:
             raise DuplicatePublicKeyError()
         self.keys[public_key] = identity
@@ -292,7 +293,7 @@ class DummyKeyStore(KeyStore):
             return frozenset()
         return frozenset(keys)
 
-    def deregister(self, identity: Identity, public_key: PublicKey):
+    def deregister(self, identity: Identity, public_key: PKey):
         try:
             del self.keys[public_key]
             del self.identities[identity]
@@ -330,14 +331,14 @@ def test_list_keys(fx_app, fx_key_store, fx_authorized_identity, fx_token_id):
         assert response.status_code == 200
         assert response.mimetype == 'application/json'
         assert response.data == b'[]'
-    key = PublicKey.from_pkey(RSAKey.generate(1024))
+    key = RSAKey.generate(1024)
     fx_key_store.register(fx_authorized_identity, key)
     with fx_app.test_client() as c:
         response = c.get(get_url('list_keys', token_id=fx_token_id))
         assert response.status_code == 200
         assert response.mimetype == 'application/json'
-        data = {PublicKey.parse_line(k) for k in json.loads(response.data)}
-        assert data == {key}
+        data = [k.split()[:2] for k in json.loads(response.data)]
+        assert data == [[key.get_name(), key.get_base64()]]
 
 
 def test_get_remote_set__no_config():

@@ -2,6 +2,7 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 """
+import base64
 import collections
 import collections.abc
 import contextlib
@@ -10,12 +11,14 @@ import json
 import logging
 import urllib.request
 
+from paramiko.pkey import PKey
+from paramiko.rsakey import RSAKey
 from werkzeug.http import parse_options_header
 from werkzeug.urls import url_encode, url_decode_stream
 from werkzeug.wrappers import Request
 
 from ..identity import Identity
-from ..keystore import DuplicatePublicKeyError, KeyStore, PublicKey
+from ..keystore import DuplicatePublicKeyError, KeyStore
 from ..team import AuthenticationError, Team
 from ..util import typed
 
@@ -186,10 +189,14 @@ class GitHubKeyStore(KeyStore):
     DEREGISTER_URL = 'https://api.github.com/user/keys/{id}'
 
     @typed
-    def register(self, identity: Identity, public_key: PublicKey):
+    def register(self, identity: Identity, public_key: PKey):
+        title = ''.join(map('{:02x}'.format, public_key.get_fingerprint()))
         data = json.dumps({
-            'title': public_key.comment,
-            'key': str(public_key)
+            'title': title,
+            'key': '{} {}'.format(
+                public_key.get_name(),
+                public_key.get_base64()
+            )
         })
         try:
             request(identity, self.LIST_URL, 'POST', data=data.encode())
@@ -216,12 +223,14 @@ class GitHubKeyStore(KeyStore):
     @typed
     def list_keys(self, identity: Identity) -> collections.abc.Set:
         keys = request(identity, self.LIST_URL)
-        return {PublicKey.parse_line(key['key']) for key in keys}
+        return {RSAKey(data=base64.b64decode(key['key'].split()[1]))
+                for key in keys}
 
     @typed
-    def deregister(self, identity: Identity, public_key: PublicKey):
+    def deregister(self, identity: Identity, public_key: PKey):
         keys = request(identity, self.LIST_URL)
+        needle = public_key.get_name(), public_key.get_base64()
         for key in keys:
-            if PublicKey.parse_line(key['key']) == public_key:
+            if tuple(key['key'].split()[:2]) == needle:
                 request(identity, self.DEREGISTER_URL.format(**key), 'DELETE')
                 break
