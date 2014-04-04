@@ -7,7 +7,7 @@ import collections.abc
 from .identity import Identity
 from .util import typed
 
-__all__ = {'AuthenticationError', 'Team'}
+__all__ = 'AuthenticationError', 'Team'
 
 
 class Team:

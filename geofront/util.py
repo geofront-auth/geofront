@@ -6,7 +6,7 @@ import functools
 import inspect
 import types
 
-__all__ = {'typed'}
+__all__ = 'typed',
 
 
 def typed(function: types.FunctionType) -> types.FunctionType:

@@ -24,7 +24,7 @@ from ..team import AuthenticationError, Team
 from ..util import typed
 
 
-__all__ = {'GitHubKeyStore', 'GitHubOrganization', 'request'}
+__all__ = 'GitHubKeyStore', 'GitHubOrganization', 'request'
 
 
 def request(access_token, url: str, method: str='GET', data: bytes=None):

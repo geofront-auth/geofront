@@ -21,10 +21,10 @@ from .team import AuthenticationError, Team
 from .util import typed
 from .version import VERSION
 
-__all__ = {'TokenIdConverter', 'app', 'authenticate', 'create_access_token',
+__all__ = ('TokenIdConverter', 'app', 'authenticate', 'create_access_token',
            'get_identity', 'get_key_store', 'get_remote_set', 'get_team',
            'get_token_store', 'list_keys', 'main', 'main_parser',
-           'server_version'}
+           'server_version')
 
 
 class TokenIdConverter(BaseConverter):

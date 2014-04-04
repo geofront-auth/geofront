@@ -13,9 +13,9 @@ from paramiko.pkey import PKey
 from .identity import Identity
 from .util import typed
 
-__all__ = {'KEY_TYPES', 'AuthorizationError', 'DuplicatePublicKeyError',
+__all__ = ('KEY_TYPES', 'AuthorizationError', 'DuplicatePublicKeyError',
            'KeyStore', 'KeyStoreError', 'format_openssh_pubkey',
-           'parse_openssh_pubkey'}
+           'parse_openssh_pubkey')
 
 
 #: (:class:`collections.Mapping`) The mapping of supported key types.

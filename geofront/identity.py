@@ -6,7 +6,7 @@ import collections.abc
 
 from .util import typed
 
-__all__ = {'Identity'}
+__all__ = 'Identity',
 
 
 class Identity(collections.abc.Hashable):

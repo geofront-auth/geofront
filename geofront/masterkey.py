@@ -12,9 +12,9 @@ from paramiko.ssh_exception import SSHException
 
 from .util import typed
 
-__all__ = {'CloudMasterKeyStore', 'EmptyStoreError',
+__all__ = ('CloudMasterKeyStore', 'EmptyStoreError',
            'FileSystemMasterKeyStore', 'MasterKeyStore',
-           'read_private_key_file'}
+           'read_private_key_file')
 
 
 class MasterKeyStore:

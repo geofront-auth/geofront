@@ -30,7 +30,7 @@ from libcloud.compute.base import NodeDriver
 
 from .util import typed
 
-__all__ = {'Address', 'CloudRemoteSet'}
+__all__ = 'Address', 'CloudRemoteSet'
 
 
 #: (:class:`type`) Alias of :class:`ipaddress._BaseAddress`.
