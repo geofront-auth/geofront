@@ -30,7 +30,9 @@ if sys.version_info < (3, 4):
     install_requires.append('enum34')
 
 tests_require = [
-    'pytest >= 2.5.0', 'redis'
+    'pytest >= 2.5.0',
+    'sftpserver == 0.2py3',  # https://github.com/spoqa/sftpserver/releases
+    'redis'
 ]
 
 docs_require = [

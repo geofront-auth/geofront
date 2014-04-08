@@ -24,13 +24,18 @@ cloud providers.
 
 """
 import collections.abc
+import io
 import ipaddress
+import itertools
+import numbers
 
 from libcloud.compute.base import NodeDriver
+from paramiko.sftp_client import SFTPClient
 
+from .keystore import format_openssh_pubkey, parse_openssh_pubkey
 from .util import typed
 
-__all__ = 'Address', 'CloudRemoteSet'
+__all__ = 'Address', 'AuthorizedKeyList', 'CloudRemoteSet'
 
 
 #: (:class:`type`) Alias of :class:`ipaddress._BaseAddress`.
@@ -42,6 +47,116 @@ __all__ = 'Address', 'CloudRemoteSet'
 #: - :class:`ipaddress.IPv4Address`
 #: - :class:`ipaddress.IPv6Address`
 Address = ipaddress._BaseAddress
+
+
+class AuthorizedKeyList(collections.abc.MutableSequence):
+    """List-like abstraction for remote :file:`authorized_keys`.
+
+    Note that the contents are all lazily evaluated, so in order to
+    pretend heavy duplicate communications over SFTP use :func:`list()`
+    to eagerly evaluate e.g.::
+
+        lazy_list = AuthorizedKeyList(sftp_client)
+        eager_list = list(lazy_list)
+        # ... some modifications on eager_list ...
+        lazy_list[:] = eager_list
+
+    :param sftp_client: the remote sftp connection to access
+                        :file:`authorized_keys`
+    :type sftp_client: :class:`paramiko.sftp_client.SFTPClient`
+
+    """
+
+    #: (:class:`str`) The path of :file:`authorized_keys` file.
+    FILE_PATH = '.ssh/authorized_keys'
+
+    @typed
+    def __init__(self, sftp_client: SFTPClient):
+        self.sftp_client = sftp_client
+
+    def _iterate_lines(self):
+        with io.BytesIO() as fo:
+            self.sftp_client.getfo(self.FILE_PATH, fo)
+            fo.seek(0)
+            for line in fo:
+                line = line.decode().strip()
+                if line:
+                    yield line
+
+    def _save(self, authorized_keys: str):
+        with io.BytesIO(authorized_keys.encode()) as fo:
+            self.sftp_client.putfo(fo, self.FILE_PATH)
+
+    def __iter__(self):
+        for line in self._iterate_lines():
+            line = line.strip()
+            if line:
+                yield parse_openssh_pubkey(line)
+
+    def __len__(self):
+        i = 0
+        for _ in self._iterate_lines():
+            i += 1
+        return i
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            lines = list(self._iterate_lines())
+            return list(map(parse_openssh_pubkey, lines[index]))
+        elif isinstance(index, numbers.Integral):
+            if index >= 0:
+                for i, line in enumerate(self._iterate_lines()):
+                    if i == index:
+                        return parse_openssh_pubkey(line)
+            else:
+                lines = list(self._iterate_lines())
+                line = lines[index]
+                return parse_openssh_pubkey(line)
+            raise IndexError('authorized_keys out of range: ' + repr(index))
+        raise TypeError(
+            'authorized_keys indices must be integers, not '
+            '{0.__module__}.{0.__qualname__}'.format(type(index))
+        )
+
+    def __setitem__(self, index, value):
+        lines = list(self._iterate_lines())
+        if isinstance(index, slice):
+            lines[index] = map(format_openssh_pubkey, value)
+        elif isinstance(index, numbers.Integral):
+            lines[index] = format_openssh_pubkey(value)
+        else:
+            raise TypeError(
+                'authorized_keys indices must be integers, not '
+                '{0.__module__}.{0.__qualname__}'.format(type(index))
+            )
+        self._save('\n'.join(lines))
+
+    def insert(self, index, value):
+        if not isinstance(index, numbers.Integral):
+            raise TypeError(
+                'authorized_keys indices must be integers, not '
+                '{0.__module__}.{0.__qualname__}'.format(type(index))
+            )
+        lines = list(self._iterate_lines())
+        lines.insert(index, format_openssh_pubkey(value))
+        self._save('\n'.join(lines))
+
+    def extend(self, values):
+        lines = itertools.chain(
+            self._iterate_lines(),
+            map(format_openssh_pubkey, values)
+        )
+        self._save('\n'.join(lines))
+
+    def __delitem__(self, index):
+        if not isinstance(index, (numbers.Integral, slice)):
+            raise TypeError(
+                'authorized_keys indices must be integers, not '
+                '{0.__module__}.{0.__qualname__}'.format(type(index))
+            )
+        lines = list(self._iterate_lines())
+        del lines[index]
+        self._save('\n'.join(lines))
 
 
 class CloudRemoteSet(collections.abc.Mapping):

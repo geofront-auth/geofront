@@ -9,6 +9,7 @@ env:
 services:
 - redis-server
 install:
+- pip install -f https://github.com/spoqa/sftpserver/releases sftpserver==0.2py3  # FIXME
 - pip install -e .[tests]
 script:
 - python -mgeofront.version
