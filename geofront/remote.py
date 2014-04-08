@@ -2,16 +2,16 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Every remote set is represented as a mapping (which is immutable, or mutable)
-of alias :class:`str` to :class:`Address` object e.g.::
+of alias :class:`str` to :class:`Remote` object e.g.::
 
     {
-        'web-1': ipaddress.ip_address('192.168.0.5'),
-        'web-2': ipaddress.ip_address('192.168.0.6'),
-        'web-3': ipaddress.ip_address('192.168.0.7'),
-        'worker-1': ipaddress.ip_address('192.168.0.25'),
-        'worker-2': ipaddress.ip_address('192.168.0.26'),
-        'db-1': ipaddress.ip_address('192.168.0.50'),
-        'db-2': ipaddress.ip_address('192.168.0.51')
+        'web-1': Remote('ubuntu', ipaddress.ip_address('192.168.0.5')),
+        'web-2': Remote('ubuntu, ipaddress.ip_address('192.168.0.6')),
+        'web-3': Remote('ubuntu', ipaddress.ip_address('192.168.0.7')),
+        'worker-1': Remote('ubuntu', ipaddress.ip_address('192.168.0.25')),
+        'worker-2': Remote('ubuntu', ipaddress.ip_address('192.168.0.26')),
+        'db-1': Remote('ubuntu', ipaddress.ip_address('192.168.0.50')),
+        'db-2': Remote('ubuntu', ipaddress.ip_address('192.168.0.51'))
     }
 
 However, in the age of the cloud, you don't have to manage the remote set
@@ -35,7 +35,7 @@ from paramiko.sftp_client import SFTPClient
 from .keystore import format_openssh_pubkey, parse_openssh_pubkey
 from .util import typed
 
-__all__ = 'Address', 'AuthorizedKeyList', 'CloudRemoteSet'
+__all__ = 'Address', 'AuthorizedKeyList', 'CloudRemoteSet', 'Remote'
 
 
 #: (:class:`type`) Alias of :class:`ipaddress._BaseAddress`.
@@ -48,6 +48,54 @@ __all__ = 'Address', 'AuthorizedKeyList', 'CloudRemoteSet'
 #: - :class:`ipaddress.IPv6Address`
 Address = ipaddress._BaseAddress
 
+
+class Remote:
+    """Remote node to SSH.
+
+    :param user: the username to :program:`ssh`
+    :type user: :class:`str`
+    :param address: the adress, already resolved, to access
+    :type address: :class:`Address`
+    :param port: the port number to :program:`ssh`.
+                 the default is 22 which is the default :program:`ssh` port
+    :type port: :class:`numbers.Integral`
+
+    """
+
+    #: (:class:`str`) The username to SSH.
+    user = None
+
+    #: (:class:`Address`) The address, already resolved, to access.
+    address = None
+
+    #: (:class:`numbers.Integral`) The port number to SSH.
+    port = None
+
+    @typed
+    def __init__(self, user: str, address: Address, port: numbers.Integral=22):
+        self.user = user
+        self.address = address
+        self.port = port
+
+    def __eq__(self, other):
+        return (isinstance(other, type(self)) and
+                self.user == other.user and
+                self.address == other.address and
+                self.port == other.port)
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __hash__(self):
+        return hash((self.user, self.address, self.port))
+
+    def __str__(self):
+        return '{}@{}:{}'.format(self.user, self.address, self.port)
+
+    def __repr__(self):
+        return '{0.__module__}.{0.__qualname__}({1!r}, {2!r}, {3!r})'.format(
+            type(self), self.user, self.address, self.port
+        )
 
 class AuthorizedKeyList(collections.abc.MutableSequence):
     """List-like abstraction for remote :file:`authorized_keys`.
@@ -173,6 +221,13 @@ class CloudRemoteSet(collections.abc.Mapping):
 
     :param driver: libcloud compute driver
     :type driver: :class:`libcloud.compute.base.NodeDriver`
+    :param user: the username to :program:`ssh`.
+                 the default is ``'ec2-user'`` which is the default user
+                 of amazon linux ami
+    :type user: :class:`str`
+    :param port: the port number to :program:`ssh`.
+                the default is 22 which is the default :program:`ssh` port
+    :type port: :class:`numbers.Integral`
 
     .. seealso::
 
@@ -187,8 +242,13 @@ class CloudRemoteSet(collections.abc.Mapping):
     """
 
     @typed
-    def __init__(self, driver: NodeDriver):
+    def __init__(self,
+                 driver: NodeDriver,
+                 user: str='ec2-user',
+                 port: numbers.Integral=22):
         self.driver = driver
+        self.user = user
+        self.port = port
         self._nodes = None
 
     def _get_nodes(self, refresh: bool=False) -> dict:
@@ -204,6 +264,7 @@ class CloudRemoteSet(collections.abc.Mapping):
     def __iter__(self) -> collections.abc.Iterator:
         return iter(self._get_nodes(True))
 
-    def __getitem__(self, alias: str) -> Address:
+    def __getitem__(self, alias: str) -> Remote:
         node = self._get_nodes()[alias]
-        return ipaddress.ip_address(node.public_ips[0])
+        address = ipaddress.ip_address(node.public_ips[0])
+        return Remote(self.user, address, self.port)

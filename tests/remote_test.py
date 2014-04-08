@@ -5,10 +5,10 @@ from libcloud.compute.drivers.dummy import DummyNodeDriver
 from paramiko.rsakey import RSAKey
 from paramiko.sftp_client import SFTPClient
 from paramiko.transport import Transport
-from pytest import fixture, raises, yield_fixture
+from pytest import fixture, mark, raises, yield_fixture
 
 from geofront.keystore import format_openssh_pubkey, parse_openssh_pubkey
-from geofront.remote import Address, AuthorizedKeyList, CloudRemoteSet
+from geofront.remote import Address, AuthorizedKeyList, CloudRemoteSet, Remote
 from .sftpd import start_server
 
 
@@ -17,12 +17,29 @@ def test_address():
     assert isinstance(ipaddress.ip_address('2001:db8::'), Address)
 
 
+@mark.parametrize(('b', 'equal'), [
+    (Remote('a', ipaddress.ip_address('192.168.0.1'), 22), True),
+    (Remote('a', ipaddress.ip_address('192.168.0.1'), 2222), False),
+    (Remote('b', ipaddress.ip_address('192.168.0.1'), 22), False),
+    (Remote('b', ipaddress.ip_address('192.168.0.1'), 2222), False),
+    (Remote('a', ipaddress.ip_address('192.168.0.2'), 22), False),
+    (Remote('b', ipaddress.ip_address('192.168.0.2'), 22), False),
+    (Remote('a', ipaddress.ip_address('192.168.0.2'), 2222), False),
+    (Remote('b', ipaddress.ip_address('192.168.0.2'), 2222), False)
+])
+def test_remote(b, equal):
+    a = Remote('a', ipaddress.ip_address('192.168.0.1'))
+    assert (a == b) is equal
+    assert (a != b) is (not equal)
+    assert (hash(a) == hash(b)) is equal
+
+
 def test_cloud_remote_set():
     driver = DummyNodeDriver('')
     set_ = CloudRemoteSet(driver)
     assert dict(set_) == {
-        'dummy-1': ipaddress.ip_address('127.0.0.1'),
-        'dummy-2': ipaddress.ip_address('127.0.0.1')
+        'dummy-1': Remote('ec2-user', ipaddress.ip_address('127.0.0.1')),
+        'dummy-2': Remote('ec2-user', ipaddress.ip_address('127.0.0.1'))
     }
 
 
