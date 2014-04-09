@@ -279,6 +279,8 @@ intersphinx_mapping = {
     'werkzeug': ('http://werkzeug.pocoo.org/docs/', None),
     'flask': ('http://flask.pocoo.org/docs/', None),
     'libcloud': ('https://libcloud.readthedocs.org/en/latest/', None),
+    'waitress': ('http://docs.pylonsproject.org/projects/waitress/en/latest/',
+                 None),
 }
 
 

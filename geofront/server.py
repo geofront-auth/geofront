@@ -12,6 +12,7 @@ import warnings
 
 from flask import Flask, Response, current_app, json, jsonify, request, url_for
 from paramiko.rsakey import RSAKey
+from waitress import serve
 from werkzeug.contrib.cache import BaseCache, SimpleCache
 from werkzeug.exceptions import BadRequest, Forbidden, HTTPException, NotFound
 from werkzeug.routing import BaseConverter, ValidationError
@@ -345,7 +346,8 @@ def main_parser() -> argparse.ArgumentParser:
                              'implies --create-master-key option')
     parser.add_argument('-d', '--debug',
                         action='store_true',
-                        help='debug mode')
+                        help='debug mode.  note that this option may make '
+                             'slowdown')
     parser.add_argument('-v', '--version',
                         action='version',
                         version='%(prog)s ' + VERSION)
@@ -401,7 +403,10 @@ def main():
                 main_logger.info('master key store is successfully updated; '
                                  'deauthorize the existing master key...')
             main_logger.info('master key renewal has finished')
-    app.run(args.host, args.port, debug=args.debug)
+    if args.debug:
+        app.run(args.host, args.port, debug=True)
+    else:
+        serve(app, host=args.host, port=args.port, asyncore_use_poll=True)
 
 
 # If there is ``GEOFRONT_CONFIG`` environment variable, implicitly load

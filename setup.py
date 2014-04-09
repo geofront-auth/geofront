@@ -23,7 +23,8 @@ install_requires = [
     'paramiko >= 1.13.0, == dev',
     'Werkzeug >= 0.9',
     'Flask >= 0.10',
-    'apache-libcloud >= 0.14.0'
+    'apache-libcloud >= 0.14.0',
+    'waitress >= 0.8.8'
 ]
 
 if sys.version_info < (3, 4):
