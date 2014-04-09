@@ -1,15 +1,11 @@
 import ipaddress
-import threading
 
 from libcloud.compute.drivers.dummy import DummyNodeDriver
 from paramiko.rsakey import RSAKey
-from paramiko.sftp_client import SFTPClient
-from paramiko.transport import Transport
-from pytest import fixture, mark, raises, yield_fixture
+from pytest import mark, raises
 
 from geofront.keystore import format_openssh_pubkey, parse_openssh_pubkey
 from geofront.remote import Address, AuthorizedKeyList, CloudRemoteSet, Remote
-from .sftpd import start_server
 
 
 def test_address():
@@ -41,49 +37,6 @@ def test_cloud_remote_set():
         'dummy-1': Remote('ec2-user', ipaddress.ip_address('127.0.0.1')),
         'dummy-2': Remote('ec2-user', ipaddress.ip_address('127.0.0.1'))
     }
-
-
-@yield_fixture
-def fx_sftpd(request, tmpdir):
-    getopt = request.config.getoption
-    port_min = getopt('--sshd-port-min')
-    port_max = getopt('--sshd-port-max')
-    servers = {}
-    for port in range(port_min, port_max + 1):
-        path = tmpdir.mkdir(str(port))
-        t = threading.Thread(
-            target=start_server,
-            args=(str(path), '127.0.0.1', port)
-        )
-        servers[port] = (t, path)
-    yield servers
-    for port, (t, _) in servers.items():
-        assert not t.is_alive(), '{!r} (for port #{}) is still alive'.format(
-            t, port
-        )
-
-
-@fixture
-def fx_authorized_keys():
-    return [RSAKey.generate(1024) for _ in range(5)]
-
-
-@yield_fixture
-def fx_authorized_sftp(fx_sftpd, fx_authorized_keys):
-    port, (thread, path) = fx_sftpd.popitem()
-    thread.start()
-    key = RSAKey.generate(1024)
-    dot_ssh = path.mkdir('.ssh')
-    with dot_ssh.join('authorized_keys').open('w') as f:
-        print(format_openssh_pubkey(key), file=f)
-        for authorized_key in fx_authorized_keys:
-            print(format_openssh_pubkey(authorized_key), file=f)
-    transport = Transport(('127.0.0.1', port))
-    transport.connect(pkey=key)
-    sftp_client = SFTPClient.from_transport(transport)
-    yield sftp_client, path, [key] + fx_authorized_keys
-    sftp_client.close()
-    transport.close()
 
 
 def test_authorized_keys_list_iter(fx_authorized_sftp):
