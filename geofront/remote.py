@@ -6,7 +6,7 @@ of alias :class:`str` to :class:`Remote` object e.g.::
 
     {
         'web-1': Remote('ubuntu', ipaddress.ip_address('192.168.0.5')),
-        'web-2': Remote('ubuntu, ipaddress.ip_address('192.168.0.6')),
+        'web-2': Remote('ubuntu', ipaddress.ip_address('192.168.0.6')),
         'web-3': Remote('ubuntu', ipaddress.ip_address('192.168.0.7')),
         'worker-1': Remote('ubuntu', ipaddress.ip_address('192.168.0.25')),
         'worker-2': Remote('ubuntu', ipaddress.ip_address('192.168.0.26')),
