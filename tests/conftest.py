@@ -1,3 +1,4 @@
+import os
 import threading
 
 from paramiko.rsakey import RSAKey
@@ -7,6 +8,10 @@ from pytest import fixture, yield_fixture
 
 from geofront.keystore import format_openssh_pubkey
 from .sftpd import start_server
+
+
+def env_default(env):
+    return {'default': os.environ[env]} if env in os.environ else {}
 
 
 def pytest_addoption(parser):
@@ -20,7 +25,10 @@ def pytest_addoption(parser):
                      type=int,
                      default=12224,
                      help='the maximum unused port number [%default(s)]')
-    parser.addoption('--redis-host', metavar='HOST', help='redis host')
+    parser.addoption('--redis-host',
+                     metavar='HOST',
+                     help='redis host',
+                     **env_default('REDIS_HOST'))
     parser.addoption('--redis-port',
                      metavar='PORT',
                      type=int,
@@ -28,6 +36,7 @@ def pytest_addoption(parser):
                      help='redis port [%default(s)]')
     parser.addoption('--redis-password',
                      metavar='PASSWORD',
+                     default=None,
                      help='redis password')
     parser.addoption('--redis-db',
                      metavar='DB',
@@ -37,7 +46,8 @@ def pytest_addoption(parser):
     parser.addoption('--github-access-token',
                      metavar='TOKEN',
                      help='github access token for key store test (caution: '
-                          'it will remove all ssh keys of the account)')
+                          'it will remove all ssh keys of the account)',
+                     **env_default('GITHUB_ACCESS_TOKEN'))
 
 
 @yield_fixture
