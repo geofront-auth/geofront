@@ -1,6 +1,20 @@
 """:mod:`geofront.team` --- Team authentication
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Geofront doesn't force you to manage team members by yourself.
+Instead it hides how to manage team members, and offers :class:`Team`,
+the layering interface to implement custom team data provider
+e.g. :class:`~.backends.github.GitHubOrganization`.
+
+It is theologically possible to implement a straightforward RDBMS-backed
+team provider, but we rather recommend to adapt your existing team data
+instead e.g. `GitHub organization`__, `Google Apps organization`__,
+`Bitbucket team`__.
+
+__ https://github.com/blog/674-introducing-organizations
+__ https://support.google.com/a/answer/182433?hl=en
+__ http://blog.bitbucket.org/2012/05/30/bitbucket-teams/
+
 """
 import collections.abc
 
