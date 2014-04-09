@@ -4,13 +4,14 @@ import os.path
 
 from libcloud.storage.drivers import dummy
 from libcloud.storage.drivers.dummy import DummyStorageDriver
+from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
 from pytest import raises
 
 from geofront.keystore import parse_openssh_pubkey
 from geofront.masterkey import (CloudMasterKeyStore, EmptyStoreError,
                                 FileSystemMasterKeyStore, TwoPhaseRenewal,
-                                read_private_key_file)
+                                read_private_key_file, renew_master_key)
 from geofront.remote import Remote
 
 
@@ -97,6 +98,54 @@ def test_two_phase_renewal_stop(fx_authorized_servers, fx_master_key):
             raise SomeException('something went wrong')
     for t, path in fx_authorized_servers.values():
         assert old_key in authorized_key_set(path)
+
+
+def test_renew_master_key(fx_authorized_servers, fx_master_key, tmpdir):
+    remote_set = {
+        Remote('user', ipaddress.ip_address('127.0.0.1'), port)
+        for port in fx_authorized_servers
+    }
+    store = FileSystemMasterKeyStore(str(tmpdir.join('id_rsa')))
+    store.save(fx_master_key)
+    for t, path in fx_authorized_servers.values():
+        assert authorized_key_set(path) == {fx_master_key}
+    new_key = renew_master_key(remote_set, store)
+    assert new_key != fx_master_key
+    assert store.load() == new_key
+    for t, path in fx_authorized_servers.values():
+        assert authorized_key_set(path) == {new_key}
+
+
+class FailureTestMasterKeyStore(FileSystemMasterKeyStore):
+
+    def save(self, master_key: PKey):
+        try:
+            self.load()
+        except EmptyStoreError:
+            super().save(master_key)
+        else:
+            raise RenewalFailure()
+
+
+class RenewalFailure(Exception):
+
+    pass
+
+
+def test_renew_master_key_fail(fx_authorized_servers, fx_master_key, tmpdir):
+    remote_set = {
+        Remote('user', ipaddress.ip_address('127.0.0.1'), port)
+        for port in fx_authorized_servers
+    }
+    store = FailureTestMasterKeyStore(str(tmpdir.join('id_rsa')))
+    store.save(fx_master_key)
+    for t, path in fx_authorized_servers.values():
+        assert authorized_key_set(path) == {fx_master_key}
+    with raises(RenewalFailure):
+        renew_master_key(remote_set, store)
+    assert store.load() == fx_master_key
+    for t, path in fx_authorized_servers.values():
+        assert fx_master_key in authorized_key_set(path)
 
 
 def test_cloud_master_key_store():

@@ -19,7 +19,7 @@ from werkzeug.routing import BaseConverter, ValidationError
 
 from .identity import Identity
 from .keystore import KeyStore, format_openssh_pubkey, get_key_fingerprint
-from .masterkey import EmptyStoreError, MasterKeyStore, TwoPhaseRenewal
+from .masterkey import EmptyStoreError, MasterKeyStore, renew_master_key
 from .team import AuthenticationError, Team
 from .util import typed
 from .version import VERSION
@@ -362,47 +362,28 @@ def main():
         app.config.from_pyfile(os.path.abspath(args.config), silent=False)
     except FileNotFoundError:
         parser.error('unable to load configuration file: ' + args.config)
-    main_logger = logging.getLogger(__name__ + '.main')
+    logger = logging.getLogger('geofront')
     handler = logging.StreamHandler()
-    if args.debug:
-        logger = logging.getLogger('geofront')
-        handler.setLevel(logging.DEBUG)
-        logger.addHandler(handler)
-        logger.setLevel(logging.DEBUG)
-    else:
-        main_logger.addHandler(handler)
-        handler.setLevel(logging.INFO)
-        main_logger.setLevel(logging.INFO)
+    level = logging.DEBUG if args.debug else logging.INFO
+    handler.setLevel(level)
+    logger.addHandler(handler)
+    logger.setLevel(level)
     master_key_store = get_master_key_store()
     try:
         key = master_key_store.load()
     except EmptyStoreError:
         if args.create_master_key or args.renew_master_key:
-            main_logger.warn('no master key;  create one...')
+            logger.warn('no master key;  create one...')
             key = RSAKey.generate(1024)
             master_key_store.save(key)
-            main_logger.info('created new master key: %s',
-                             get_key_fingerprint(key))
+            logger.info('created new master key: %s', get_key_fingerprint(key))
         else:
             parser.error('no master key;  try --create-master-key option '
                          'if you want to create one')
     else:
         if args.renew_master_key and not os.environ.get('WERKZEUG_RUN_MAIN'):
-            main_logger.info('renew the master key...')
-            main_logger.info('the existing master key: %s',
-                             get_key_fingerprint(key))
-            new_key = RSAKey.generate(1024)
-            main_logger.info('created new master key: %s',
-                             get_key_fingerprint(new_key))
             servers = frozenset(get_remote_set().values())
-            main_logger.info('authorize the new master key...')
-            with TwoPhaseRenewal(servers, key, new_key):
-                main_logger.info('the new master key is authorized; '
-                                 'update the key store...')
-                master_key_store.save(new_key)
-                main_logger.info('master key store is successfully updated; '
-                                 'deauthorize the existing master key...')
-            main_logger.info('master key renewal has finished')
+            renew_master_key(servers, master_key_store)
     if args.debug:
         app.run(args.host, args.port, debug=True)
     else:

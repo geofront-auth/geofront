@@ -16,22 +16,25 @@ For more details, see also :class:`TwoPhaseRenewal`.
 """
 import collections.abc
 import io
+import logging
 import os.path
 
 from libcloud.storage.base import Container, StorageDriver
 from libcloud.storage.types import ObjectDoesNotExistError
 from paramiko.pkey import PKey
+from paramiko.rsakey import RSAKey
 from paramiko.sftp_client import SFTPClient
 from paramiko.ssh_exception import SSHException
 from paramiko.transport import Transport
 
+from .keystore import get_key_fingerprint
 from .remote import AuthorizedKeyList, Remote
 from .util import typed
 
 __all__ = ('CloudMasterKeyStore', 'EmptyStoreError',
            'FileSystemMasterKeyStore', 'MasterKeyStore',
            'TwoPhaseRenewal',
-           'read_private_key_file')
+           'read_private_key_file', 'renew_master_key')
 
 
 class MasterKeyStore:
@@ -158,6 +161,41 @@ class TwoPhaseRenewal:
             client.close()
             transport.close()
         self.sftp_clients = None
+
+
+def renew_master_key(servers: collections.abc.Set,
+                     key_store: MasterKeyStore) -> PKey:
+    """Renew the master key.  It creates a new master key, makes ``servers``
+    to authorize the new key, replaces the existing master key with the
+    new key in the ``key_store``, and then makes ``servers`` to deauthorize
+    the old key.  All these operations are done in a two-phase renewal
+    transaction.
+
+    :param servers: servers to renew the master key.
+                    every element has to be an instance of
+                    :class:`~.remote.Remote`
+    :type servers: :class:`collections.abc.Set`
+    :param key_store: the master key store to update
+    :type key_store: :class:`MasterKeyStore`
+    :returns: the created new master key
+    :rtype: :class:`paramiko.pkey.PKey`
+
+    """
+    logger = logging.getLogger(__name__ + '.renew_master_key')
+    logger.info('renew the master key...')
+    old_key = key_store.load()
+    logger.info('the existing master key: %s', get_key_fingerprint(old_key))
+    new_key = RSAKey.generate(1024)
+    logger.info('created new master key: %s', get_key_fingerprint(new_key))
+    logger.info('authorize the new master key...')
+    with TwoPhaseRenewal(servers, old_key, new_key):
+        logger.info('the new master key is authorized; '
+                    'update the key store...')
+        key_store.save(new_key)
+        logger.info('master key store is successfully updated; '
+                    'deauthorize the existing master key...')
+    logger.info('master key renewal has finished')
+    return new_key
 
 
 class FileSystemMasterKeyStore(MasterKeyStore):
