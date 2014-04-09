@@ -1,6 +1,8 @@
+import datetime
 import io
 import ipaddress
 import os.path
+import time
 
 from libcloud.storage.drivers import dummy
 from libcloud.storage.drivers.dummy import DummyStorageDriver
@@ -10,7 +12,8 @@ from pytest import raises
 
 from geofront.keystore import parse_openssh_pubkey
 from geofront.masterkey import (CloudMasterKeyStore, EmptyStoreError,
-                                FileSystemMasterKeyStore, TwoPhaseRenewal,
+                                FileSystemMasterKeyStore, PeriodicalRenewal,
+                                TwoPhaseRenewal,
                                 read_private_key_file, renew_master_key)
 from geofront.remote import Remote
 
@@ -146,6 +149,37 @@ def test_renew_master_key_fail(fx_authorized_servers, fx_master_key, tmpdir):
     assert store.load() == fx_master_key
     for t, path in fx_authorized_servers.values():
         assert fx_master_key in authorized_key_set(path)
+
+
+def test_periodical_renewal(fx_authorized_servers, fx_master_key, tmpdir):
+    remote_set = {
+        Remote('user', ipaddress.ip_address('127.0.0.1'), port)
+        for port in fx_authorized_servers
+    }
+    store = FileSystemMasterKeyStore(str(tmpdir.join('id_rsa')))
+    store.save(fx_master_key)
+    for t, path in fx_authorized_servers.values():
+        assert authorized_key_set(path) == {fx_master_key}
+    p = PeriodicalRenewal(remote_set, store, datetime.timedelta(seconds=3))
+    assert store.load() == fx_master_key
+    for t, path in fx_authorized_servers.values():
+        assert fx_master_key in authorized_key_set(path)
+    time.sleep(6)
+    second_key = store.load()
+    assert second_key != fx_master_key
+    for t, path in fx_authorized_servers.values():
+        assert authorized_key_set(path) == {second_key}
+    time.sleep(6)
+    third_key = store.load()
+    assert third_key != fx_master_key
+    assert third_key != second_key
+    for t, path in fx_authorized_servers.values():
+        assert authorized_key_set(path) == {third_key}
+    p.terminate()
+    time.sleep(6)
+    assert store.load() == third_key
+    for t, path in fx_authorized_servers.values():
+        assert authorized_key_set(path) == {third_key}
 
 
 def test_cloud_master_key_store():

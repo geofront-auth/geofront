@@ -43,6 +43,9 @@ def pytest_addoption(parser):
 @yield_fixture
 def fx_sftpd(request, tmpdir):
     getopt = request.config.getoption
+    requests = 1
+    if request.function.__name__ == 'test_periodical_renewal':  # FIXME
+        requests = 2
     port_min = getopt('--sshd-port-min')
     port_max = getopt('--sshd-port-max')
     servers = {}
@@ -50,7 +53,7 @@ def fx_sftpd(request, tmpdir):
         path = tmpdir.mkdir(str(port))
         t = threading.Thread(
             target=start_server,
-            args=(str(path), '127.0.0.1', port)
+            args=(str(path), '127.0.0.1', port, requests)
         )
         servers[port] = (t, path)
     yield servers

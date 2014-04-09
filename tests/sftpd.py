@@ -40,19 +40,20 @@ class StubServer(ServerInterface):
         return OPEN_SUCCEEDED
 
 
-def start_server(path: str, host: str, port: int):
+def start_server(path: str, host: str, port: int, requests: int):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
     server_socket.bind((host, port))
     server_socket.listen(1)
     stub_cls = type('StubSFTPServer', (StubSFTPServer,), {'ROOT': path})
     host_key = RSAKey.generate(1024)
-    conn, addr = server_socket.accept()
-    transport = Transport(conn)
-    transport.add_server_key(host_key)
-    transport.set_subsystem_handler('sftp', SFTPServer, stub_cls)
-    server = StubServer(path)
-    transport.start_server(server=server)
-    channel = transport.accept()
-    while channel is not None and transport.is_active():
-        time.sleep(1)
+    for _ in range(requests):
+        conn, addr = server_socket.accept()
+        transport = Transport(conn)
+        transport.add_server_key(host_key)
+        transport.set_subsystem_handler('sftp', SFTPServer, stub_cls)
+        server = StubServer(path)
+        transport.start_server(server=server)
+        channel = transport.accept()
+        while channel is not None and transport.is_active():
+            time.sleep(1)
