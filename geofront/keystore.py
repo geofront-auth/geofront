@@ -14,7 +14,7 @@ from .util import typed
 
 __all__ = ('KEY_TYPES', 'AuthorizationError', 'DuplicatePublicKeyError',
            'KeyStore', 'KeyStoreError', 'format_openssh_pubkey',
-           'parse_openssh_pubkey')
+           'get_key_fingerprint', 'parse_openssh_pubkey')
 
 
 #: (:class:`collections.Mapping`) The mapping of supported key types.
@@ -57,6 +57,22 @@ def format_openssh_pubkey(key: PKey) -> str:
 
     """
     return '{} {} '.format(key.get_name(), key.get_base64())
+
+
+@typed
+def get_key_fingerprint(key: PKey, glue: str=':') -> str:
+    """Get the hexadecimal fingerprint string of the ``key``.
+
+    :param key: the key to get fingerprint
+    :type key: :class:`paramiko.pkey.PKey`
+    :param glue: glue character to be placed between bytes.
+                 ``':'`` by default
+    :type glue: :class:`str`
+    :return: the fingerprint string
+    :rtype: :class:`str`
+
+    """
+    return glue.join(map('{:02x}'.format, key.get_fingerprint()))
 
 
 class KeyStore:

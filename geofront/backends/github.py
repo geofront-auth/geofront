@@ -19,7 +19,8 @@ from werkzeug.wrappers import Request
 
 from ..identity import Identity
 from ..keystore import (DuplicatePublicKeyError, KeyStore,
-                        format_openssh_pubkey,  parse_openssh_pubkey)
+                        format_openssh_pubkey, get_key_fingerprint,
+                        parse_openssh_pubkey)
 from ..team import AuthenticationError, Team
 from ..util import typed
 
@@ -195,7 +196,7 @@ class GitHubKeyStore(KeyStore):
 
     @typed
     def register(self, identity: Identity, public_key: PKey):
-        title = ''.join(map('{:02x}'.format, public_key.get_fingerprint()))
+        title = get_key_fingerprint(public_key)
         data = json.dumps({
             'title': title,
             'key': format_openssh_pubkey(public_key)
