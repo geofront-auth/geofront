@@ -11,20 +11,22 @@ import re
 import warnings
 
 from flask import Flask, Response, current_app, json, jsonify, request, url_for
+from paramiko.rsakey import RSAKey
 from werkzeug.contrib.cache import BaseCache, SimpleCache
 from werkzeug.exceptions import BadRequest, Forbidden, HTTPException, NotFound
 from werkzeug.routing import BaseConverter, ValidationError
 
 from .identity import Identity
-from .keystore import KeyStore, format_openssh_pubkey
+from .keystore import KeyStore, format_openssh_pubkey, get_key_fingerprint
+from .masterkey import EmptyStoreError, MasterKeyStore, TwoPhaseRenewal
 from .team import AuthenticationError, Team
 from .util import typed
 from .version import VERSION
 
 __all__ = ('TokenIdConverter', 'app', 'authenticate', 'create_access_token',
-           'get_identity', 'get_key_store', 'get_remote_set', 'get_team',
-           'get_token_store', 'list_keys', 'main', 'main_parser',
-           'server_version')
+           'get_identity', 'get_key_store', 'get_master_key_store',
+           'get_remote_set', 'get_team', 'get_token_store', 'list_keys',
+           'main', 'main_parser', 'server_version')
 
 
 class TokenIdConverter(BaseConverter):
@@ -73,7 +75,7 @@ def get_team() -> Team:
 
     """
     try:
-        team = current_app.config['TEAM']
+        team = app.config['TEAM']
     except KeyError:
         raise RuntimeError('TEAM configuration is not present')
     if isinstance(team, Team):
@@ -99,9 +101,9 @@ def get_token_store() -> BaseCache:
 
     """
     try:
-        store = current_app.config['TOKEN_STORE']
+        store = app.config['TOKEN_STORE']
     except KeyError:
-        if current_app.debug:
+        if app.debug:
             warnings.warn(
                 'TOKEN_STORE configuration is not present, so use '
                 '{0.__module__}.{0.__qualname__} instead.  This defaulting is '
@@ -110,7 +112,7 @@ def get_token_store() -> BaseCache:
                 RuntimeWarning
             )
             store = SimpleCache()
-            current_app.config['TOKEN_STORE'] = store
+            app.config['TOKEN_STORE'] = store
         else:
             raise RuntimeError('TOKEN_STORE configuration is not present')
     if isinstance(store, BaseCache):
@@ -233,6 +235,28 @@ def get_identity(token_id: str) -> Identity:
     raise HTTPException(response=response)
 
 
+def get_master_key_store() -> MasterKeyStore:
+    """Get the configured master key store implementation.
+
+    :return: the configured master key store
+    :rtype: :class:`~.masterkey.MasterKeyStore`
+    :raise RuntimeError: when ``'MASTER_KEY_STORE'`` is not configured,
+                         or it's not an instance of
+                         :class:`~.masterkey.MasterKeyStore`
+
+    """
+    try:
+        master_key_store = app.config['MASTER_KEY_STORE']
+    except KeyError:
+        raise RuntimeError('MASTER_KEY_STORE configuration is not present')
+    if isinstance(master_key_store, MasterKeyStore):
+        return master_key_store
+    raise RuntimeError(
+        'MASTER_KEY_STORE configuration must be an instance of {0.__module__}.'
+        '{0.__qualname__}, not {1!r}'.format(MasterKeyStore, master_key_store)
+    )
+
+
 def get_key_store() -> KeyStore:
     """Get the configured key store implementation.
 
@@ -243,7 +267,7 @@ def get_key_store() -> KeyStore:
 
     """
     try:
-        key_store = current_app.config['KEY_STORE']
+        key_store = app.config['KEY_STORE']
     except KeyError:
         raise RuntimeError('KEY_STORE configuration is not present')
     if isinstance(key_store, KeyStore):
@@ -281,7 +305,7 @@ def get_remote_set() -> collections.abc.Mapping:
 
     """
     try:
-        set_ = current_app.config['REMOTE_SET']
+        set_ = app.config['REMOTE_SET']
     except KeyError:
         raise RuntimeError('REMOTE_SET configuration is not present')
     if isinstance(set_, collections.abc.Mapping):
@@ -312,6 +336,13 @@ def main_parser() -> argparse.ArgumentParser:
     parser.add_argument('-p', '--port',
                         default=5000,
                         help='port to bind [%(default)s]')
+    parser.add_argument('--create-master-key',
+                        action='store_true',
+                        help='create a new master key if no master key yet')
+    parser.add_argument('--renew-master-key',
+                        action='store_true',
+                        help='renew the master key before the server starts. '
+                             'implies --create-master-key option')
     parser.add_argument('-d', '--debug',
                         action='store_true',
                         help='debug mode')
@@ -329,13 +360,47 @@ def main():
         app.config.from_pyfile(os.path.abspath(args.config), silent=False)
     except FileNotFoundError:
         parser.error('unable to load configuration file: ' + args.config)
+    main_logger = logging.getLogger(__name__ + '.main')
+    handler = logging.StreamHandler()
     if args.debug:
         logger = logging.getLogger('geofront')
-        handler = logging.StreamHandler()
         handler.setLevel(logging.DEBUG)
-        handler.setFormatter(logging.Formatter(app.debug_log_format))
         logger.addHandler(handler)
         logger.setLevel(logging.DEBUG)
+    else:
+        main_logger.addHandler(handler)
+        handler.setLevel(logging.INFO)
+        main_logger.setLevel(logging.INFO)
+    master_key_store = get_master_key_store()
+    try:
+        key = master_key_store.load()
+    except EmptyStoreError:
+        if args.create_master_key or args.renew_master_key:
+            main_logger.warn('no master key;  create one...')
+            key = RSAKey.generate(1024)
+            master_key_store.save(key)
+            main_logger.info('created new master key: %s',
+                             get_key_fingerprint(key))
+        else:
+            parser.error('no master key;  try --create-master-key option '
+                         'if you want to create one')
+    else:
+        if args.renew_master_key and not os.environ.get('WERKZEUG_RUN_MAIN'):
+            main_logger.info('renew the master key...')
+            main_logger.info('the existing master key: %s',
+                             get_key_fingerprint(key))
+            new_key = RSAKey.generate(1024)
+            main_logger.info('created new master key: %s',
+                             get_key_fingerprint(new_key))
+            servers = frozenset(get_remote_set().values())
+            main_logger.info('authorize the new master key...')
+            with TwoPhaseRenewal(servers, key, new_key):
+                main_logger.info('the new master key is authorized; '
+                                 'update the key store...')
+                master_key_store.save(new_key)
+                main_logger.info('master key store is successfully updated; '
+                                 'deauthorize the existing master key...')
+            main_logger.info('master key renewal has finished')
     app.run(args.host, args.port, debug=args.debug)
 
 
