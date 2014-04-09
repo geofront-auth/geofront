@@ -1,4 +1,5 @@
 import io
+import ipaddress
 import os.path
 
 from libcloud.storage.drivers import dummy
@@ -6,9 +7,11 @@ from libcloud.storage.drivers.dummy import DummyStorageDriver
 from paramiko.rsakey import RSAKey
 from pytest import raises
 
+from geofront.keystore import parse_openssh_pubkey
 from geofront.masterkey import (CloudMasterKeyStore, EmptyStoreError,
-                                FileSystemMasterKeyStore,
+                                FileSystemMasterKeyStore, TwoPhaseRenewal,
                                 read_private_key_file)
+from geofront.remote import Remote
 
 
 def test_fs_master_key_store_load():
@@ -51,6 +54,49 @@ def test_read_private_key_file():
         'MPEGYr5KZCx7IeJ/4udBuKc/gOXb8tPiTTNxtYXEBcqhBdCa/M6pEdW5LiHxxoF5b6xY9'
         'q0nmi7Rn0weXK0SufhGgKrpSH+B'
     )
+
+
+def authorized_key_set(path):
+    dotssh = path.join('.ssh')
+    if not dotssh.isdir():
+        dotssh = path.mkdir('.ssh')
+    with dotssh.join('authorized_keys').open() as f:
+        return {parse_openssh_pubkey(line.strip()) for line in f}
+
+
+def test_two_phase_renewal(fx_authorized_servers, fx_master_key):
+    remote_set = {
+        Remote('user', ipaddress.ip_address('127.0.0.1'), port)
+        for port in fx_authorized_servers
+    }
+    old_key = fx_master_key
+    new_key = RSAKey.generate(1024)
+    for t, path in fx_authorized_servers.values():
+        assert authorized_key_set(path) == {old_key}
+    with TwoPhaseRenewal(remote_set, old_key, new_key):
+        for t, path in fx_authorized_servers.values():
+            assert authorized_key_set(path) == {old_key, new_key}
+    for t, path in fx_authorized_servers.values():
+        assert authorized_key_set(path) == {new_key}
+
+
+def test_two_phase_renewal_stop(fx_authorized_servers, fx_master_key):
+    remote_set = {
+        Remote('user', ipaddress.ip_address('127.0.0.1'), port)
+        for port in fx_authorized_servers
+    }
+    old_key = fx_master_key
+    new_key = RSAKey.generate(1024)
+    for t, path in fx_authorized_servers.values():
+        assert authorized_key_set(path) == {old_key}
+    SomeException = type('SomeException', (Exception,), {})
+    with raises(SomeException):
+        with TwoPhaseRenewal(remote_set, old_key, new_key):
+            for t, path in fx_authorized_servers.values():
+                assert authorized_key_set(path) == {old_key, new_key}
+            raise SomeException('something went wrong')
+    for t, path in fx_authorized_servers.values():
+        assert old_key in authorized_key_set(path)
 
 
 def test_cloud_master_key_store():

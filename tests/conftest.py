@@ -55,6 +55,8 @@ def fx_sftpd(request, tmpdir):
         servers[port] = (t, path)
     yield servers
     for port, (t, _) in servers.items():
+        if t.is_alive():
+            t.join(5)
         assert not t.is_alive(), '{!r} (for port #{}) is still alive'.format(
             t, port
         )
@@ -81,3 +83,17 @@ def fx_authorized_sftp(fx_sftpd, fx_authorized_keys):
     yield sftp_client, path, [key] + fx_authorized_keys
     sftp_client.close()
     transport.close()
+
+
+@fixture
+def fx_master_key():
+    return RSAKey.generate(1024)
+
+
+@fixture
+def fx_authorized_servers(fx_sftpd, fx_master_key):
+    for port, (thread, path) in fx_sftpd.items():
+        with path.mkdir('.ssh').join('authorized_keys').open('w') as f:
+            f.write(format_openssh_pubkey(fx_master_key))
+        thread.start()
+    return fx_sftpd

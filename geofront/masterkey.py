@@ -1,19 +1,36 @@
 """:mod:`geofront.masterkey` --- Master key management
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Master key renewal process:
+
+1. Create a new master key without updating the master key store.
+2. Update every :file:`authorized_keys` to authorize both the previous
+   and the new master keys.
+3. Store the new master key to the master key store,
+   and remove the previous master key.
+4. Update very :file:`authorized_keys` to authorize only
+   the new master key.
+
+For more details, see also :class:`TwoPhaseRenewal`.
+
 """
+import collections.abc
 import io
 import os.path
 
 from libcloud.storage.base import Container, StorageDriver
 from libcloud.storage.types import ObjectDoesNotExistError
 from paramiko.pkey import PKey
+from paramiko.sftp_client import SFTPClient
 from paramiko.ssh_exception import SSHException
+from paramiko.transport import Transport
 
+from .remote import AuthorizedKeyList, Remote
 from .util import typed
 
 __all__ = ('CloudMasterKeyStore', 'EmptyStoreError',
            'FileSystemMasterKeyStore', 'MasterKeyStore',
+           'TwoPhaseRenewal',
            'read_private_key_file')
 
 
@@ -73,6 +90,74 @@ def read_private_key_file(file_: io.IOBase) -> PKey:
                 raise
             file_.seek(0)
             continue
+
+
+class TwoPhaseRenewal:
+    """Renew the master key for the given ``servers``.  It's a context
+    manager for :keyword:`with` statement.
+
+    ::
+
+        # State: servers allow only old_key;
+        #        old_key is in the master_key_store
+        with TwoPhaseRenewal(servers, old_key, new_key):
+            # State: *servers allow both old_key and new_key;*
+            #        old_key is in the master_key_store
+            master_key_store.save(new_key)
+            # State: servers allow both old_key and new_key;
+            #        *new_key is in the master_key_store.*
+        # State: *servers allow only new_key;*
+        #        new_key is in the master_key_store
+
+    :param servers: the set of :class:`~geofront.remote.Remote` servers
+                    to renew their master key
+    :type servers: :class:`collections.abc.Set`
+    :param old_key: the previous master key to expire
+    :type old_key: :class:`paramiko.pkey.PKey`
+    :param new_key: the new master key to replace ``old_key``
+    :type new_key: :class:`paramiko.pkey.PKey`
+
+    """
+
+    def __init__(self,
+                 servers: collections.abc.Set,
+                 old_key: PKey,
+                 new_key: PKey):
+        for server in servers:
+            if not isinstance(server, Remote):
+                raise TypeError('{0!r} is not an instance of {1.__module__}.'
+                                '{1.__qualname__}'.format(server, Remote))
+        self.servers = servers
+        self.old_key = old_key
+        self.new_key = new_key
+        self.sftp_clients = None
+
+    def __enter__(self):
+        assert self.sftp_clients is None, 'the context is already started'
+        sftp_clients = {}
+        for server in self.servers:
+            transport = Transport((str(server.address), server.port))
+            try:
+                transport.connect(pkey=self.old_key)
+            except SSHException:
+                for t, _, __ in sftp_clients.values():
+                    t.close()
+                raise
+            sftp_client = SFTPClient.from_transport(transport)
+            authorized_keys = AuthorizedKeyList(sftp_client)
+            sftp_clients[server] = transport, sftp_client, authorized_keys
+            authorized_keys.append(self.new_key)
+        self.sftp_clients = sftp_clients
+        return self.servers
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        assert self.sftp_clients is not None, 'the context is not started yet'
+        for transport, client, authorized_keys in self.sftp_clients.values():
+            if exc_val is None:
+                authorized_keys[:] = [self.new_key]
+            client.close()
+            transport.close()
+        self.sftp_clients = None
 
 
 class FileSystemMasterKeyStore(MasterKeyStore):
