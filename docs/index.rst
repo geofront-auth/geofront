@@ -9,6 +9,7 @@ References
 
    api
    geofront-server
+   config
    geofront
 
 
