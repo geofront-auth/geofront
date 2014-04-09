@@ -122,7 +122,9 @@ class DummyTeam(Team):
     def __init__(self):
         self.states = []
 
-    def request_authentication(self, auth_nonce: str, redirect_url: str) -> str:
+    def request_authentication(self,
+                               auth_nonce: str,
+                               redirect_url: str) -> str:
         self.states.append((auth_nonce, redirect_url))
         return 'http://example.com/auth/?' + url_encode({
             'auth_nonce': auth_nonce,

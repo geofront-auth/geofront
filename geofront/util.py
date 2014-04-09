@@ -26,6 +26,7 @@ def typed(function: types.FunctionType) -> types.FunctionType:
     if not isinstance(function, types.FunctionType):
         raise TypeError('expected a function, not ' + repr(function))
     sig = inspect.signature(function)
+
     @functools.wraps(function)
     def wrapped(*args, **kwargs):
         annotations = function.__annotations__

@@ -97,6 +97,7 @@ class Remote:
             type(self), self.user, self.address, self.port
         )
 
+
 class AuthorizedKeyList(collections.abc.MutableSequence):
     """List-like abstraction for remote :file:`authorized_keys`.
 

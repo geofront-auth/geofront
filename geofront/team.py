@@ -32,7 +32,9 @@ class Team:
     """
 
     @typed
-    def request_authentication(self, auth_nonce: str, redirect_url: str) -> str:
+    def request_authentication(self,
+                               auth_nonce: str,
+                               redirect_url: str) -> str:
         """First step of authentication process, to prepare the "sign in"
         interaction with the owner.  It typically returns a url to
         the login web page.

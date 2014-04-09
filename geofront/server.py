@@ -312,7 +312,9 @@ def main_parser() -> argparse.ArgumentParser:
     parser.add_argument('-p', '--port',
                         default=5000,
                         help='port to bind [%(default)s]')
-    parser.add_argument('-d', '--debug', action='store_true', help='debug mode')
+    parser.add_argument('-d', '--debug',
+                        action='store_true',
+                        help='debug mode')
     parser.add_argument('-v', '--version',
                         action='version',
                         version='%(prog)s ' + VERSION)

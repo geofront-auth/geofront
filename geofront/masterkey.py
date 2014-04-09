@@ -229,7 +229,7 @@ class CloudMasterKeyStore(MasterKeyStore):
     .. _S3: http://aws.amazon.com/s3/
     .. _Libcloud: http://libcloud.apache.org/
     __ https://libcloud.readthedocs.org/en/latest/storage/
-    
+
     """
 
     @typed

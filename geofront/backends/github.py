@@ -111,7 +111,9 @@ class GitHubOrganization(Team):
         self.org_login = org_login
 
     @typed
-    def request_authentication(self, auth_nonce: str, redirect_url: str) -> str:
+    def request_authentication(self,
+                               auth_nonce: str,
+                               redirect_url: str) -> str:
         query = url_encode({
             'client_id': self.client_id,
             'redirect_uri': redirect_url,
@@ -146,7 +148,9 @@ class GitHubOrganization(Team):
             token_data = url_decode_stream(response)
         elif mimetype == 'application/json':
             charset = options.get('charset')
-            token_data = json.load(io.TextIOWrapper(response, encoding=charset))
+            token_data = json.load(
+                io.TextIOWrapper(response, encoding=charset)
+            )
         else:
             response.close()
             raise AuthenticationError(
