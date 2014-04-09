@@ -11,8 +11,8 @@ services:
 install:
 - pip install -f https://github.com/spoqa/sftpserver/releases sftpserver==0.2py3  # FIXME
 - pip install -e .[tests]
-- pip install pep8
+- pip install flake8
 script:
 - python -mgeofront.version
 - py.test -v --durations=20 --redis-host=localhost --github-access-token $GITHUB_ACCESS_TOKEN
-- pep8
+- flake8

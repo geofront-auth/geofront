@@ -4,7 +4,6 @@
 """
 import base64
 import collections.abc
-import enum
 
 from paramiko.dsskey import DSSKey
 from paramiko.rsakey import RSAKey
