@@ -1,6 +1,42 @@
 """:mod:`geofront.server` --- Key management service
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Although Geofront provides :program:`geofront-server`, a CLI to run
+the server, it also provides an interface as a WSGI application as well.
+Note that there might some limitations like lack of periodical master key
+renewal.
+
+First of all, the server need a configuration, there are several ways to
+configure it.
+
+:meth:`app.config.from_pyfile() <flask.Config.from_pyfile>`
+    If you can freely execute arbitrary Python code before start the server,
+    the method is the most straightforward way to configure the server.
+    Note that the argument should be an absolute path, because it interprets
+    paths relative to the path of Geofront program, not the current
+    working directory (CWD).
+
+    There also are other methods as well:
+
+    - :meth:`~flask.Config.from_object()`
+    - :meth:`~flask.Config.from_json()`
+    - :meth:`~flask.Config.from_envvar()`
+
+:envvar:`GEOFRONT_CONFIG`
+    If you can't execute any arbitrary Python code,
+    set the :envvar:`GEOFRONT_CONFIG` environment variable.
+    It's useful when to use a CLI frontend of the WSGI server e.g.
+    :program:`gunicorn`, :program:`waitress-serve`.
+
+    .. code-block:: console
+
+       $ GEOFRONT_CONFIG="/etc/geofront.cfg.py" gunicorn geofront.server:app
+
+Then you can run a Geofront server using your favorite WSGI server.
+Pass the following WSGI application object to the server.  It's a documented
+endpoint for WSGI:
+
+    :data:`geofront.server:app <app>`
 """
 import argparse
 import collections.abc
