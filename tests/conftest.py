@@ -18,7 +18,7 @@ def pytest_addoption(parser):
     parser.addoption('--sshd-port-max',
                      metavar='PORT',
                      type=int,
-                     default=12224,
+                     default=12399,
                      help='the maximum unused port number [%default(s)]')
     parser.addoption('--redis-host', metavar='HOST', help='redis host')
     parser.addoption('--redis-port',
@@ -40,28 +40,33 @@ def pytest_addoption(parser):
                           'it will remove all ssh keys of the account)')
 
 
+used_port = 0
+
+
 @yield_fixture
 def fx_sftpd(request, tmpdir):
+    global used_port
     getopt = request.config.getoption
-    requests = 1
-    if request.function.__name__ == 'test_periodical_renewal':  # FIXME
-        requests = 2
-    port_min = getopt('--sshd-port-min')
-    port_max = getopt('--sshd-port-max')
+    port_min = max(used_port + 1, getopt('--sshd-port-min'))
+    port_max = min(port_min + 2, getopt('--sshd-port-max'))
+    used_port = port_max
     servers = {}
     for port in range(port_min, port_max + 1):
         path = tmpdir.mkdir(str(port))
-        t = threading.Thread(
+        terminated = threading.Event()
+        thread = threading.Thread(
             target=start_server,
-            args=(str(path), '127.0.0.1', port, requests)
+            args=(str(path), '127.0.0.1', port, terminated)
         )
-        servers[port] = (t, path)
+        servers[port] = thread, path, terminated
     yield servers
-    for port, (t, _) in servers.items():
-        if t.is_alive():
-            t.join(5)
-        assert not t.is_alive(), '{!r} (for port #{}) is still alive'.format(
-            t, port
+    for port, (th, _, ev) in servers.items():
+        ev.set()
+    for port, (th, _, ev) in servers.items():
+        if th.is_alive():
+            th.join(10)
+        assert not th.is_alive(), '{!r} (for port #{}) is still alive'.format(
+            th, port
         )
 
 
@@ -72,7 +77,7 @@ def fx_authorized_keys():
 
 @yield_fixture
 def fx_authorized_sftp(fx_sftpd, fx_authorized_keys):
-    port, (thread, path) = fx_sftpd.popitem()
+    port, (thread, path, ev) = fx_sftpd.popitem()
     thread.start()
     key = RSAKey.generate(1024)
     dot_ssh = path.mkdir('.ssh')
@@ -95,7 +100,7 @@ def fx_master_key():
 
 @fixture
 def fx_authorized_servers(fx_sftpd, fx_master_key):
-    for port, (thread, path) in fx_sftpd.items():
+    for port, (thread, path, ev) in fx_sftpd.items():
         with path.mkdir('.ssh').join('authorized_keys').open('w') as f:
             f.write(format_openssh_pubkey(fx_master_key))
         thread.start()

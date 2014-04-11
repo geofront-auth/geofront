@@ -75,12 +75,12 @@ def test_two_phase_renewal(fx_authorized_servers, fx_master_key):
     }
     old_key = fx_master_key
     new_key = RSAKey.generate(1024)
-    for t, path in fx_authorized_servers.values():
+    for t, path, ev in fx_authorized_servers.values():
         assert authorized_key_set(path) == {old_key}
     with TwoPhaseRenewal(remote_set, old_key, new_key):
-        for t, path in fx_authorized_servers.values():
+        for t, path, ev in fx_authorized_servers.values():
             assert authorized_key_set(path) == {old_key, new_key}
-    for t, path in fx_authorized_servers.values():
+    for t, path, ev in fx_authorized_servers.values():
         assert authorized_key_set(path) == {new_key}
 
 
@@ -91,15 +91,15 @@ def test_two_phase_renewal_stop(fx_authorized_servers, fx_master_key):
     }
     old_key = fx_master_key
     new_key = RSAKey.generate(1024)
-    for t, path in fx_authorized_servers.values():
+    for t, path, ev in fx_authorized_servers.values():
         assert authorized_key_set(path) == {old_key}
     SomeException = type('SomeException', (Exception,), {})
     with raises(SomeException):
         with TwoPhaseRenewal(remote_set, old_key, new_key):
-            for t, path in fx_authorized_servers.values():
+            for t, path, ev in fx_authorized_servers.values():
                 assert authorized_key_set(path) == {old_key, new_key}
             raise SomeException('something went wrong')
-    for t, path in fx_authorized_servers.values():
+    for t, path, ev in fx_authorized_servers.values():
         assert old_key in authorized_key_set(path)
 
 
@@ -110,12 +110,12 @@ def test_renew_master_key(fx_authorized_servers, fx_master_key, tmpdir):
     }
     store = FileSystemMasterKeyStore(str(tmpdir.join('id_rsa')))
     store.save(fx_master_key)
-    for t, path in fx_authorized_servers.values():
+    for t, path, ev in fx_authorized_servers.values():
         assert authorized_key_set(path) == {fx_master_key}
     new_key = renew_master_key(remote_set, store)
     assert new_key != fx_master_key
     assert store.load() == new_key
-    for t, path in fx_authorized_servers.values():
+    for t, path, ev in fx_authorized_servers.values():
         assert authorized_key_set(path) == {new_key}
 
 
@@ -142,13 +142,20 @@ def test_renew_master_key_fail(fx_authorized_servers, fx_master_key, tmpdir):
     }
     store = FailureTestMasterKeyStore(str(tmpdir.join('id_rsa')))
     store.save(fx_master_key)
-    for t, path in fx_authorized_servers.values():
+    for t, path, ev in fx_authorized_servers.values():
         assert authorized_key_set(path) == {fx_master_key}
     with raises(RenewalFailure):
         renew_master_key(remote_set, store)
     assert store.load() == fx_master_key
-    for t, path in fx_authorized_servers.values():
+    for t, path, ev in fx_authorized_servers.values():
         assert fx_master_key in authorized_key_set(path)
+
+
+def wait_for(seconds: int, condition):
+    for _ in range(seconds * 2):
+        if condition():
+            break
+        time.sleep(0.5)
 
 
 def test_periodical_renewal(fx_authorized_servers, fx_master_key, tmpdir):
@@ -158,28 +165,31 @@ def test_periodical_renewal(fx_authorized_servers, fx_master_key, tmpdir):
     }
     store = FileSystemMasterKeyStore(str(tmpdir.join('id_rsa')))
     store.save(fx_master_key)
-    for t, path in fx_authorized_servers.values():
+    for t, path, ev in fx_authorized_servers.values():
         assert authorized_key_set(path) == {fx_master_key}
     p = PeriodicalRenewal(remote_set, store, datetime.timedelta(seconds=3))
     assert store.load() == fx_master_key
-    for t, path in fx_authorized_servers.values():
+    for t, path, ev in fx_authorized_servers.values():
         assert fx_master_key in authorized_key_set(path)
-    time.sleep(6)
+    wait_for(20, lambda: store.load() != fx_master_key)
     second_key = store.load()
     assert second_key != fx_master_key
-    for t, path in fx_authorized_servers.values():
-        assert authorized_key_set(path) == {second_key}
-    time.sleep(6)
+    for t, path, ev in fx_authorized_servers.values():
+        key_set = authorized_key_set(path)
+        assert second_key in key_set
+    wait_for(20, lambda: store.load() != second_key)
     third_key = store.load()
     assert third_key != fx_master_key
     assert third_key != second_key
-    for t, path in fx_authorized_servers.values():
-        assert authorized_key_set(path) == {third_key}
+    for t, path, ev in fx_authorized_servers.values():
+        key_set = authorized_key_set(path)
+        assert third_key in key_set
     p.terminate()
-    time.sleep(6)
-    assert store.load() == third_key
-    for t, path in fx_authorized_servers.values():
-        assert authorized_key_set(path) == {third_key}
+    last_key = store.load()
+    time.sleep(10)
+    assert store.load() == last_key
+    for t, path, ev in fx_authorized_servers.values():
+        assert authorized_key_set(path) == {last_key}
 
 
 def test_cloud_master_key_store():

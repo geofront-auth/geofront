@@ -18,10 +18,9 @@ import collections.abc
 import datetime
 import io
 import logging
-import multiprocessing
 import os.path
+import threading
 
-from Crypto.Random import atfork
 from libcloud.storage.base import Container, StorageDriver
 from libcloud.storage.types import ObjectDoesNotExistError
 from paramiko.pkey import PKey
@@ -142,8 +141,8 @@ class TwoPhaseRenewal:
         assert self.sftp_clients is None, 'the context is already started'
         sftp_clients = {}
         for server in self.servers:
-            transport = Transport((str(server.address), server.port))
             try:
+                transport = Transport((str(server.address), server.port))
                 transport.connect(pkey=self.old_key)
             except SSHException:
                 for t, _, __ in sftp_clients.values():
@@ -201,8 +200,8 @@ def renew_master_key(servers: collections.abc.Set,
     return new_key
 
 
-class PeriodicalRenewal(multiprocessing.Process):
-    """Periodically renew the master key in the separated background process.
+class PeriodicalRenewal(threading.Thread):
+    """Periodically renew the master key in the separated background thread.
 
     :param servers: servers to renew the master key.
                     every element has to be an instance of
@@ -212,7 +211,7 @@ class PeriodicalRenewal(multiprocessing.Process):
     :type key_store: :class:`MasterKeyStore`
     :param interval: the interval to renew
     :type interval: :class:`datetime.timedelta`
-    :param start: whether to start the background process immediately.
+    :param start: whether to start the background thread immediately.
                   :const:`True` by default
     :type start: :class:`bool`
 
@@ -227,26 +226,23 @@ class PeriodicalRenewal(multiprocessing.Process):
         self.servers = servers
         self.key_store = key_store
         self.interval = interval
-        self.condition = multiprocessing.Condition()
+        self.terminated = threading.Event()
         if self.start:
             self.start()
 
     def run(self):
-        atfork()
         seconds = self.interval.total_seconds()
-        while True:
-            with self.condition:
-                notified = self.condition.wait(seconds)
-            if notified:
+        terminated = self.terminated
+        while not terminated.is_set():
+            terminated.wait(seconds)
+            if terminated.is_set():
                 break
             renew_master_key(self.servers, self.key_store)
 
     def terminate(self):
         """Graceful termination."""
-        with self.condition:
-            self.condition.notify_all()
+        self.terminated.set()
         self.join(5)
-        super().terminate()
 
 
 class FileSystemMasterKeyStore(MasterKeyStore):
