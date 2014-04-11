@@ -175,3 +175,14 @@ be uppercase.
 
    .. _S3: http://aws.amazon.com/s3/
 
+.. data:: MASTER_KEY_RENEWAL
+
+   (:class:`datetime.timedelta`) The interval of master key renewal.
+   :const:`None` means never.  For example, if you want to renew the master
+   key every week::
+
+       import datetime
+
+       MASTER_KEY_RENEWAL = datetime.timedelta(days=7)
+
+   A day by default.

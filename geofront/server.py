@@ -4,6 +4,7 @@
 """
 import argparse
 import collections.abc
+import datetime
 import logging
 import os
 import os.path
@@ -19,15 +20,17 @@ from werkzeug.routing import BaseConverter, ValidationError
 
 from .identity import Identity
 from .keystore import KeyStore, format_openssh_pubkey, get_key_fingerprint
-from .masterkey import EmptyStoreError, MasterKeyStore, renew_master_key
+from .masterkey import (EmptyStoreError, MasterKeyStore, PeriodicalRenewal,
+                        renew_master_key)
 from .team import AuthenticationError, Team
 from .util import typed
 from .version import VERSION
 
 __all__ = ('TokenIdConverter', 'app', 'authenticate', 'create_access_token',
-           'get_identity', 'get_key_store', 'get_master_key_store',
-           'get_remote_set', 'get_team', 'get_token_store', 'list_keys',
-           'main', 'main_parser', 'server_version')
+           'get_identity', 'get_key_store', 'get_master_key_renewal_interval',
+           'get_master_key_store', 'get_remote_set', 'get_team',
+           'get_token_store', 'list_keys', 'main', 'main_parser',
+           'server_version')
 
 
 class TokenIdConverter(BaseConverter):
@@ -54,6 +57,9 @@ class TokenIdConverter(BaseConverter):
 #: (:class:`flask.Flask`) The WSGI application of the server.
 app = Flask(__name__)
 app.url_map.converters['token_id'] = TokenIdConverter
+app.config.update(  # Config defaults
+    MASTER_KEY_RENEWAL=datetime.timedelta(days=1)
+)
 
 
 @app.after_request
@@ -317,6 +323,27 @@ def get_remote_set() -> collections.abc.Mapping:
     )
 
 
+def get_master_key_renewal_interval() -> datetime.timedelta:
+    """Get the configured interval of master key renewal.
+
+    :return: the configured interval
+    :rtype: :class:`datetime.timedelta`
+    :raise RuntimeError: if ``'MASTER_KEY_RENEWAL'`` is not configured, or
+                         it's not an instance of :class:`datetime.timedelta`
+
+    """
+    try:
+        interval = app.config['MASTER_KEY_RENEWAL']
+    except KeyError:
+        raise RuntimeError('MASTER_KEY_RENEWAL configuration is not present')
+    if interval is None or isinstance(interval, datetime.timedelta):
+        return interval
+    raise RuntimeError(
+        'MASTER_KEY_RENEWAL configuration must be an instance of '
+        'datetime.timedelta, not {!r}'.format(interval)
+    )
+
+
 def main_parser() -> argparse.ArgumentParser:
     """Create an :class:`~argparse.ArgumentParser` object for
     :program:`geofront-server` CLI program.
@@ -369,6 +396,7 @@ def main():
     logger.addHandler(handler)
     logger.setLevel(level)
     master_key_store = get_master_key_store()
+    servers = frozenset(get_remote_set().values())
     try:
         key = master_key_store.load()
     except EmptyStoreError:
@@ -382,12 +410,22 @@ def main():
                          'if you want to create one')
     else:
         if args.renew_master_key and not os.environ.get('WERKZEUG_RUN_MAIN'):
-            servers = frozenset(get_remote_set().values())
             renew_master_key(servers, master_key_store)
-    if args.debug:
-        app.run(args.host, args.port, debug=True)
-    else:
-        serve(app, host=args.host, port=args.port, asyncore_use_poll=True)
+    master_key_renewal_interval = get_master_key_renewal_interval()
+    if master_key_renewal_interval is not None:
+        master_key_renewal = PeriodicalRenewal(
+            servers,
+            master_key_store,
+            master_key_renewal_interval
+        )
+    try:
+        if args.debug:
+            app.run(args.host, args.port, debug=True)
+        else:
+            serve(app, host=args.host, port=args.port, asyncore_use_poll=True)
+    finally:
+        if master_key_renewal_interval is not None:
+            master_key_renewal.terminate()
 
 
 # If there is ``GEOFRONT_CONFIG`` environment variable, implicitly load

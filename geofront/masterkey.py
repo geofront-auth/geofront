@@ -217,6 +217,7 @@ class PeriodicalRenewal(threading.Thread):
 
     """
 
+    @typed
     def __init__(self,
                  servers: collections.abc.Set,
                  key_store: MasterKeyStore,
