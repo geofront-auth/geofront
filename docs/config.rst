@@ -186,3 +186,10 @@ be uppercase.
        MASTER_KEY_RENEWAL = datetime.timedelta(days=7)
 
    A day by default.
+
+
+Example
+-------
+
+.. include:: ../example.cfg.py
+   :code:
