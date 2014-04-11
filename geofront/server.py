@@ -37,6 +37,7 @@ Pass the following WSGI application object to the server.  It's a documented
 endpoint for WSGI:
 
     :data:`geofront.server:app <app>`
+
 """
 import argparse
 import collections.abc

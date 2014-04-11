@@ -53,6 +53,7 @@ setup(
     version=VERSION,
     description='Simple SSH key management service',
     long_description=readme(),
+    url='https://github.com/spoqa/geofront',
     author='Hong Minhee',
     author_email='minhee' '@' 'dahlia.kr',
     maintainer='Spoqa',
