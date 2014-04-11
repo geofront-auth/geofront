@@ -53,11 +53,13 @@ Prerequisites
   - Werkzeug_ 0.9+
   - Flask_ 0.10+
   - Apache Libcloud_ 0.14.0+
+  - Waitress_ 0.8.8+
 
 .. _Paramiko: http://www.paramiko.org/
 .. _Werkzeug: http://werkzeug.pocoo.org/
 .. _Flask: http://flask.pocoo.org/
 .. _Libcloud: http://libcloud.apache.org/
+.. _Waitress: https://github.com/Pylons/waitress
 
 
 Author and license
