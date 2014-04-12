@@ -187,6 +187,14 @@ be uppercase.
 
    A day by default.
 
+.. data:: TOKEN_EXPIRE
+
+   (:class:`datetime.timedelta`) The time to expire each access token.
+   As shorter it becomes more secure but more frequent to require team members
+   to authenticate.  So too short time would interrupt team members.
+
+   30 days by default.
+
 
 Example
 -------

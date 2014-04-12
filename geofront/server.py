@@ -63,11 +63,11 @@ from .team import AuthenticationError, Team
 from .util import typed
 from .version import VERSION
 
-__all__ = ('TokenIdConverter', 'app', 'authenticate', 'create_access_token',
-           'get_identity', 'get_key_store', 'get_master_key_renewal_interval',
-           'get_master_key_store', 'get_remote_set', 'get_team',
-           'get_token_store', 'list_keys', 'main', 'main_parser',
-           'server_version')
+__all__ = ('Token', 'TokenIdConverter',
+           'app', 'authenticate', 'create_access_token', 'get_identity',
+           'get_key_store', 'get_master_key_store', 'get_remote_set',
+           'get_team', 'get_token_store', 'list_keys',
+           'main', 'main_parser', 'server_version')
 
 
 class TokenIdConverter(BaseConverter):
@@ -95,7 +95,8 @@ class TokenIdConverter(BaseConverter):
 app = Flask(__name__)
 app.url_map.converters['token_id'] = TokenIdConverter
 app.config.update(  # Config defaults
-    MASTER_KEY_RENEWAL=datetime.timedelta(days=1)
+    MASTER_KEY_RENEWAL=datetime.timedelta(days=1),
+    TOKEN_EXPIRE=datetime.timedelta(days=30)
 )
 
 
@@ -167,6 +168,10 @@ def get_token_store() -> BaseCache:
     )
 
 
+#: (:class:`type`) The named tuple type that stores a token.
+Token = collections.namedtuple('Token', 'identity, expires_at')
+
+
 @app.route('/tokens/<token_id:token_id>/', methods=['PUT'])
 @typed
 def create_access_token(token_id: str):
@@ -178,14 +183,13 @@ def create_access_token(token_id: str):
     :status 202: when the access token is prepared
     :resheader Link: the link owner's browser should redirect to
 
-    .. todo:: Token should be expired.
-
     """
     token_store = get_token_store()
     team = get_team()
     auth_nonce = ''.join(map('{:02x}'.format, os.urandom(16)))
     current_app.logger.debug('created auth_nonce: %r', auth_nonce)
-    token_store.set(token_id, (False, auth_nonce))
+    timeout = 60 * 30  # wait for 30 minutes
+    token_store.set(token_id, auth_nonce, timeout)
     next_url = team.request_authentication(
         auth_nonce,
         url_for('authenticate', token_id=token_id, _external=True)
@@ -194,6 +198,8 @@ def create_access_token(token_id: str):
     assert isinstance(response, Response)
     response.status_code = 202
     response.headers['Link'] = '<{0}>; rel=next'.format(next_url)
+    response.expires = (datetime.datetime.now(datetime.timezone.utc) +
+                        datetime.timedelta(seconds=timeout))
     return response
 
 
@@ -212,13 +218,20 @@ def authenticate(token_id: str):
     """
     token_store = get_token_store()
     team = get_team()
+    token_expire = app.config['TOKEN_EXPIRE']
+    if not isinstance(token_expire, datetime.timedelta):
+        raise RuntimeError(
+            'TOKEN_EXPIRE configuration must be an instance of '
+            'datetime.timedelta, not {!r}'.format(token_expire)
+        )
     try:
-        finished, auth_nonce = token_store.get(token_id)
+        auth_nonce = token_store.get(token_id)
         current_app.logger.debug('stored auth_nonce: %r', auth_nonce)
     except TypeError:
         raise NotFound()
-    if finished:
+    if not isinstance(auth_nonce, str):
         raise Forbidden()
+    expires_at = datetime.datetime.now(datetime.timezone.utc) + token_expire
     requested_redirect_url = url_for(
         'authenticate',
         token_id=token_id,
@@ -232,7 +245,7 @@ def authenticate(token_id: str):
         )
     except AuthenticationError:
         raise BadRequest()
-    token_store.set(token_id, (True, identity))
+    token_store.set(token_id, Token(identity, expires_at))
     return 'Authentication success: close the browser tab, and back to CLI'
 
 
@@ -253,24 +266,31 @@ def get_identity(token_id: str) -> Identity:
     """
     store = get_token_store()
     team = get_team()
-    pair = store.get(token_id)
-    if not pair:
+    token = store.get(token_id)
+    if not token:
         response = jsonify(
             error='token-not-found',
             message='Access token {0} does not exist.'.format(token_id)
         )
         response.status_code = 404
         raise HTTPException(response=response)
-    finished, identity = pair
-    if not finished:
+    elif not isinstance(token, Token):
         response = jsonify(
             error='unfinished-authentication',
             message='Authentication process is not finished yet.'
         )
         response.status_code = 412  # Precondition Failed
         raise HTTPException(response=response)
-    if team.authorize(identity):
-        return identity
+    elif token.expires_at < datetime.datetime.now(datetime.timezone.utc):
+        response = jsonify(
+            error='expired-token',
+            message='Access token {0} was expired. '
+                    'Please authenticate again.'.format(token_id)
+        )
+        response.status_code = 410  # Gone
+        raise HTTPException(response=response)
+    elif team.authorize(token.identity):
+        return token.identity
     response = jsonify(
         error='not-authorized',
         message='Access token {0} is unauthorized.'.format(token_id)
@@ -360,27 +380,6 @@ def get_remote_set() -> collections.abc.Mapping:
     )
 
 
-def get_master_key_renewal_interval() -> datetime.timedelta:
-    """Get the configured interval of master key renewal.
-
-    :return: the configured interval
-    :rtype: :class:`datetime.timedelta`
-    :raise RuntimeError: if ``'MASTER_KEY_RENEWAL'`` is not configured, or
-                         it's not an instance of :class:`datetime.timedelta`
-
-    """
-    try:
-        interval = app.config['MASTER_KEY_RENEWAL']
-    except KeyError:
-        raise RuntimeError('MASTER_KEY_RENEWAL configuration is not present')
-    if interval is None or isinstance(interval, datetime.timedelta):
-        return interval
-    raise RuntimeError(
-        'MASTER_KEY_RENEWAL configuration must be an instance of '
-        'datetime.timedelta, not {!r}'.format(interval)
-    )
-
-
 def main_parser() -> argparse.ArgumentParser:
     """Create an :class:`~argparse.ArgumentParser` object for
     :program:`geofront-server` CLI program.
@@ -448,7 +447,13 @@ def main():
     else:
         if args.renew_master_key and not os.environ.get('WERKZEUG_RUN_MAIN'):
             renew_master_key(servers, master_key_store)
-    master_key_renewal_interval = get_master_key_renewal_interval()
+    master_key_renewal_interval = app.config['MASTER_KEY_RENEWAL']
+    if not (master_key_renewal_interval is None or
+            isinstance(master_key_renewal_interval, datetime.timedelta)):
+        raise RuntimeError(
+            'MASTER_KEY_RENEWAL configuration must be an instance of '
+            'datetime.timedelta, not {!r}'.format(master_key_renewal_interval)
+        )
     if master_key_renewal_interval is not None:
         master_key_renewal = PeriodicalRenewal(
             servers,

@@ -1,4 +1,5 @@
 import collections.abc
+import datetime
 import ipaddress
 import os
 import random
@@ -18,7 +19,7 @@ from geofront.keystore import (DuplicatePublicKeyError, KeyStore,
                                parse_openssh_pubkey)
 from geofront.server import (TokenIdConverter, app, get_identity,
                              get_key_store, get_remote_set, get_team,
-                             get_token_store)
+                             get_token_store, Token)
 from geofront.team import AuthenticationError, Team
 from geofront.version import VERSION
 
@@ -217,13 +218,16 @@ def test_authenticate(fx_app, fx_token_store, fx_token_id):
         response = c.get(auth_url)
         assert response.status_code == 200
         token = fx_token_store.get(fx_token_id)
-        assert token == (True, Identity(DummyTeam, 0))
+        assert isinstance(token, Token)
+        assert token.identity == Identity(DummyTeam, 0)
 
 
 @fixture
 def fx_authorized_identity(fx_token_store, fx_token_id):
     identity = Identity(DummyTeam, 1, True)
-    fx_token_store.set(fx_token_id, (True, identity))
+    expires_at = (datetime.datetime.now(datetime.timezone.utc) +
+                  datetime.timedelta(hours=1))
+    fx_token_store.set(fx_token_id, Token(identity, expires_at))
     return identity
 
 
@@ -234,7 +238,12 @@ def test_get_identity(fx_app, fx_authorized_identity, fx_token_id):
 
 
 def test_get_identity_403(fx_app, fx_token_store, fx_token_id):
-    fx_token_store.set(fx_token_id, (True, Identity(DummyTeam, 1, False)))
+    expires_at = (datetime.datetime.now(datetime.timezone.utc) +
+                  datetime.timedelta(hours=1))
+    fx_token_store.set(
+        fx_token_id,
+        Token(Identity(DummyTeam, 1, False), expires_at)
+    )
     with fx_app.test_request_context():
         try:
             result = get_identity(fx_token_id)
@@ -263,7 +272,7 @@ def test_get_identity_404(fx_app, fx_token_id):
 
 
 def test_get_identity_412(fx_app, fx_token_store, fx_token_id):
-    fx_token_store.set(fx_token_id, (False, 'nonce'))
+    fx_token_store.set(fx_token_id, 'nonce')
     with fx_app.test_request_context():
         try:
             result = get_identity(fx_token_id)
