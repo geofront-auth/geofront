@@ -355,7 +355,9 @@ def list_keys(token_id: str):
     identity = get_identity(token_id)
     key_store = get_key_store()
     keys = key_store.list_keys(identity)
-    data = json.dumps([format_openssh_pubkey(key) for key in keys])
+    data = json.dumps({
+        get_key_fingerprint(key): format_openssh_pubkey(key) for key in keys
+    })
     return data, 200, {'Content-Type': 'application/json'}
 
 

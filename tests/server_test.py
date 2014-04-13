@@ -16,7 +16,7 @@ from werkzeug.urls import url_decode, url_encode
 
 from geofront.identity import Identity
 from geofront.keystore import (DuplicatePublicKeyError, KeyStore,
-                               parse_openssh_pubkey)
+                               get_key_fingerprint, parse_openssh_pubkey)
 from geofront.server import (TokenIdConverter, app, get_identity,
                              get_key_store, get_remote_set, get_team,
                              get_token_store, Token)
@@ -342,15 +342,16 @@ def test_list_keys(fx_app, fx_key_store, fx_authorized_identity, fx_token_id):
         response = c.get(get_url('list_keys', token_id=fx_token_id))
         assert response.status_code == 200
         assert response.mimetype == 'application/json'
-        assert response.data == b'[]'
+        assert response.data == b'{}'
     key = RSAKey.generate(1024)
     fx_key_store.register(fx_authorized_identity, key)
     with fx_app.test_client() as c:
         response = c.get(get_url('list_keys', token_id=fx_token_id))
         assert response.status_code == 200
         assert response.mimetype == 'application/json'
-        data = {parse_openssh_pubkey(k) for k in json.loads(response.data)}
-        assert data == {key}
+        data = {f: parse_openssh_pubkey(k)
+                for f, k in json.loads(response.data).items()}
+        assert data == {get_key_fingerprint(key): key}
 
 
 def test_get_remote_set__no_config():
