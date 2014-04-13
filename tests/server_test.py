@@ -17,9 +17,9 @@ from werkzeug.urls import url_decode, url_encode
 from geofront.identity import Identity
 from geofront.keystore import (DuplicatePublicKeyError, KeyStore,
                                get_key_fingerprint, parse_openssh_pubkey)
-from geofront.server import (TokenIdConverter, app, get_identity,
-                             get_key_store, get_remote_set, get_team,
-                             get_token_store, Token)
+from geofront.server import (FingerprintConverter, Token, TokenIdConverter,
+                             app, get_identity, get_key_store,
+                             get_remote_set, get_team, get_token_store)
 from geofront.team import AuthenticationError, Team
 from geofront.version import VERSION
 
@@ -27,16 +27,21 @@ from geofront.version import VERSION
 @fixture
 def fx_url_map():
     return Map([
-        Rule('/tokens/<token_id:token_id>', endpoint='create_session')
-    ], converters={'token_id': TokenIdConverter})
+        Rule('/tokens/<token_id:token_id>', endpoint='create_session'),
+        Rule('/fp/<fingerprint:fingerprint>', endpoint='get_key')
+    ], converters={
+        'token_id': TokenIdConverter,
+        'fingerprint': FingerprintConverter
+    })
 
 
 @mark.parametrize('sample_id', {
     'VALID_ID', 'valid.id', 'Valid1234', '1234valid', '-._-._-._'
 })
 def test_token_id_converter_match_success(fx_url_map: Map, sample_id):
-    urls = fx_url_map.bind('example.com', '/tokens/' + sample_id)
-    endpoint, values = urls.match('/tokens/' + sample_id)
+    path = '/tokens/' + sample_id
+    urls = fx_url_map.bind('example.com', path)
+    endpoint, values = urls.match(path)
     assert endpoint == 'create_session'
     assert values == {'token_id': sample_id}
 
@@ -45,9 +50,40 @@ def test_token_id_converter_match_success(fx_url_map: Map, sample_id):
     'invalid', '#INVALID', '/invalid', '@invalid', 'i', ('invalid' * 15)[:101]
 })
 def test_token_id_converter_match_failure(fx_url_map: Map, sample_id):
-    urls = fx_url_map.bind('example.com', '/tokens/' + sample_id)
+    path = '/tokens/' + sample_id
+    urls = fx_url_map.bind('example.com', path)
     with raises(NotFound):
-        urls.match('/tokens/' + sample_id)
+        urls.match(path)
+
+
+@mark.parametrize(('f_hex', 'f_bytes'), {
+    ('89:6d:a8:23:18:7a:c7:c0:24:f9:20:e7:7d:75:18:1c',
+     b'\x89m\xa8#\x18z\xc7\xc0$\xf9 \xe7}u\x18\x1c'),
+    ('f7:08:76:37:03:56:47:5a:e6:e3:bf:44:f4:18:11:1d',
+     b'\xf7\x08v7\x03VGZ\xe6\xe3\xbfD\xf4\x18\x11\x1d'),
+    ('e5:68:2e:93:36:70:d5:70:66:8c:79:56:c5:f1:3c:62',
+     b'\xe5h.\x936p\xd5pf\x8cyV\xc5\xf1<b')
+})
+def test_fingerprint_converter_match_success(fx_url_map: Map, f_hex, f_bytes):
+    path = '/fp/' + f_hex
+    urls = fx_url_map.bind('example.com', path)
+    endpoint, values = urls.match(path)
+    assert endpoint == 'get_key'
+    assert values == {'fingerprint': f_bytes}
+
+
+@mark.parametrize('sample_fp', {
+    'invalid',
+    '89:6d:a8:23:18:7a:c7:c0:24:f9:20:e7:7d:75:18:1c:00',
+    '89:6d:a8:23:18:7a:c7:c0:24:f9:20:e7:7d:75:18:1c:',
+    '89:6d:a8:23:18:7a:c7:c0:24:f9:20:e7:7d:75:18:',
+    '89:6d:a8:23:18:7a:c7:c0:24:f9:20:e7:7d:75:18',
+})
+def test_fingerprint_converter_match_failure(fx_url_map: Map, sample_fp):
+    path = '/fp/' + sample_fp
+    urls = fx_url_map.bind('example.com', path)
+    with raises(NotFound):
+        urls.match(path)
 
 
 def test_server_version():
@@ -337,21 +373,53 @@ def test_get_key_store(fx_key_store):
         assert get_key_store() is fx_key_store
 
 
-def test_list_keys(fx_app, fx_key_store, fx_authorized_identity, fx_token_id):
+def test_list_public_keys(fx_app, fx_key_store,
+                          fx_authorized_identity,
+                          fx_token_id):
     with fx_app.test_client() as c:
-        response = c.get(get_url('list_keys', token_id=fx_token_id))
+        response = c.get(get_url('list_public_keys', token_id=fx_token_id))
         assert response.status_code == 200
         assert response.mimetype == 'application/json'
         assert response.data == b'{}'
     key = RSAKey.generate(1024)
     fx_key_store.register(fx_authorized_identity, key)
     with fx_app.test_client() as c:
-        response = c.get(get_url('list_keys', token_id=fx_token_id))
+        response = c.get(get_url('list_public_keys', token_id=fx_token_id))
         assert response.status_code == 200
         assert response.mimetype == 'application/json'
         data = {f: parse_openssh_pubkey(k)
                 for f, k in json.loads(response.data).items()}
         assert data == {get_key_fingerprint(key): key}
+
+
+def test_public_key(fx_app, fx_key_store,
+                    fx_authorized_identity,
+                    fx_token_id):
+    key = RSAKey.generate(1024)
+    fx_key_store.register(fx_authorized_identity, key)
+    with fx_app.test_client() as client:
+        response = client.get(
+            get_url(
+                'public_key',
+                token_id=fx_token_id,
+                fingerprint=key.get_fingerprint()
+            )
+        )
+        assert response.status_code == 200
+        assert response.mimetype == 'text/plain'
+        assert parse_openssh_pubkey(response.data.decode()) == key
+    with fx_app.test_client() as client:
+        response = client.get(
+            get_url(
+                'public_key',
+                token_id=fx_token_id,
+                fingerprint=os.urandom(16)
+            )
+        )
+        assert response.status_code == 404
+        assert response.mimetype == 'application/json'
+        error = json.loads(response.data.decode('utf-8'))
+        assert error['error'] == 'not-found'
 
 
 def test_get_remote_set__no_config():

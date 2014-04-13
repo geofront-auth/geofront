@@ -63,11 +63,11 @@ from .team import AuthenticationError, Team
 from .util import typed
 from .version import VERSION
 
-__all__ = ('Token', 'TokenIdConverter',
+__all__ = ('FingerprintConverter', 'Token', 'TokenIdConverter',
            'app', 'authenticate', 'create_access_token', 'get_identity',
            'get_key_store', 'get_master_key_store', 'get_remote_set',
-           'get_team', 'get_token_store', 'list_keys',
-           'main', 'main_parser', 'server_version')
+           'get_team', 'get_token_store', 'list_public_keys',
+           'main', 'main_parser', 'public_key', 'server_version')
 
 
 class TokenIdConverter(BaseConverter):
@@ -91,9 +91,34 @@ class TokenIdConverter(BaseConverter):
         raise ValueError(repr(value) + ' is an invalid token id')
 
 
+class FingerprintConverter(BaseConverter):
+    """Werkzeug custom converter which accepts valid public key
+    fingerprints.
+
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.regex = r'(?:[A-Fa-f0-9]{2}:){15}[A-Fa-f0-9]{2}'
+        self.pattern = re.compile('^\s*({})\s*$'.format(self.regex))
+
+    def to_python(self, value):
+        match = self.pattern.match(value)
+        if match:
+            return bytes(int(hex_, 16) for hex_ in match.group(1).split(':'))
+        raise ValidationError()
+
+    @typed
+    def to_url(self, value: bytes):
+        return ':'.join(map('{:02x}'.format, value))
+
+
 #: (:class:`flask.Flask`) The WSGI application of the server.
 app = Flask(__name__)
-app.url_map.converters['token_id'] = TokenIdConverter
+app.url_map.converters.update(
+    token_id=TokenIdConverter,
+    fingerprint=FingerprintConverter
+)
 app.config.update(  # Config defaults
     MASTER_KEY_RENEWAL=datetime.timedelta(days=1),
     TOKEN_EXPIRE=datetime.timedelta(days=30)
@@ -344,7 +369,7 @@ def get_key_store() -> KeyStore:
 
 @app.route('/tokens/<token_id:token_id>/keys/')
 @typed
-def list_keys(token_id: str):
+def list_public_keys(token_id: str):
     """List registered keys to the token owner.
 
     :param token_id: the token id that holds the identity
@@ -359,6 +384,35 @@ def list_keys(token_id: str):
         get_key_fingerprint(key): format_openssh_pubkey(key) for key in keys
     })
     return data, 200, {'Content-Type': 'application/json'}
+
+
+@app.route('/tokens/<token_id:token_id>/keys/<fingerprint:fingerprint>/')
+def public_key(token_id: str, fingerprint: bytes):
+    """Find the public key by its ``fingerprint`` if it's registered.
+
+    :param token_id: the token id that holds the identity
+    :type token_id: :class:`str`
+    :param fingerprint: the fingerprint of a public key to find
+    :type fingerprint: :class:`bytes`
+    :status 200: when the public key is registered
+    :status 404: when there's no such public key
+
+    """
+    identity = get_identity(token_id)
+    key_store = get_key_store()
+    keys = key_store.list_keys(identity)
+    for key in keys:
+        if key.get_fingerprint() != fingerprint:
+            continue
+        return format_openssh_pubkey(key), 200, {'Content-Type': 'text/plain'}
+    response = jsonify(
+        error='not-found',
+        message='No such public key: {}.'.format(
+            ':'.join(map('{:02x}'.format, fingerprint))
+        )
+    )
+    response.status_code = 404
+    raise HTTPException(response=response)
 
 
 def get_remote_set() -> collections.abc.Mapping:
