@@ -2,6 +2,7 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 """
+import builtins
 import functools
 import inspect
 import types
@@ -38,6 +39,12 @@ def typed(function: types.FunctionType) -> types.FunctionType:
             else:
                 if not (isinstance(arg, cls) or
                         arg is sig.parameters[param].default):
+                    if cls.__module__ == 'builtins' and \
+                       getattr(builtins, cls.__name__, None) is cls:
+                        raise TypeError(
+                            '{0} must be an instance of {1.__name__}, not '
+                            '{1!r}'.format(param, cls, arg)
+                        )
                     raise TypeError(
                         '{0} must be an instance of {1.__module__}.'
                         '{1.__qualname__}, not {2!r}'.format(param, cls, arg)
