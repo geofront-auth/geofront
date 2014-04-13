@@ -48,7 +48,9 @@ import os.path
 import re
 import warnings
 
-from flask import Flask, Response, current_app, json, jsonify, request, url_for
+from flask import (Flask, Response, current_app, json, jsonify, make_response,
+                   request, url_for)
+from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
 from waitress import serve
 from werkzeug.contrib.cache import BaseCache, SimpleCache
@@ -64,10 +66,11 @@ from .util import typed
 from .version import VERSION
 
 __all__ = ('FingerprintConverter', 'Token', 'TokenIdConverter',
-           'app', 'authenticate', 'create_access_token', 'get_identity',
-           'get_key_store', 'get_master_key_store', 'get_remote_set',
-           'get_team', 'get_token_store', 'list_public_keys',
-           'main', 'main_parser', 'public_key', 'server_version')
+           'app', 'authenticate', 'create_access_token', 'delete_public_key',
+           'get_identity', 'get_key_store', 'get_master_key_store',
+           'get_public_key', 'get_remote_set', 'get_team', 'get_token_store',
+           'list_public_keys', 'main', 'main_parser', 'public_key',
+           'server_version')
 
 
 class TokenIdConverter(BaseConverter):
@@ -386,6 +389,35 @@ def list_public_keys(token_id: str):
     return data, 200, {'Content-Type': 'application/json'}
 
 
+@typed
+def get_public_key(token_id: str, fingerprint: bytes) -> PKey:
+    """Internal function to find the public key by its ``fingerprint``.
+
+    :param token_id: the token id that holds the identity
+    :type token_id: :class:`str`
+    :param fingerprint: the fingerprint of a public key to find
+    :type fingerprint: :class:`bytes`
+    :return: the found public key
+    :rtype: :class:`paramiko.pkey.PKey`
+    :raise werkzeug.exceptions.HTTPException: when there's no such public key
+
+    """
+    identity = get_identity(token_id)
+    key_store = get_key_store()
+    keys = key_store.list_keys(identity)
+    for key in keys:
+        if key.get_fingerprint() == fingerprint:
+            return key
+    response = jsonify(
+        error='not-found',
+        message='No such public key: {}.'.format(
+            ':'.join(map('{:02x}'.format, fingerprint))
+        )
+    )
+    response.status_code = 404
+    raise HTTPException(response=response)
+
+
 @app.route('/tokens/<token_id:token_id>/keys/<fingerprint:fingerprint>/')
 def public_key(token_id: str, fingerprint: bytes):
     """Find the public key by its ``fingerprint`` if it's registered.
@@ -398,21 +430,26 @@ def public_key(token_id: str, fingerprint: bytes):
     :status 404: when there's no such public key
 
     """
-    identity = get_identity(token_id)
-    key_store = get_key_store()
-    keys = key_store.list_keys(identity)
-    for key in keys:
-        if key.get_fingerprint() != fingerprint:
-            continue
-        return format_openssh_pubkey(key), 200, {'Content-Type': 'text/plain'}
-    response = jsonify(
-        error='not-found',
-        message='No such public key: {}.'.format(
-            ':'.join(map('{:02x}'.format, fingerprint))
-        )
-    )
-    response.status_code = 404
-    raise HTTPException(response=response)
+    key = get_public_key(token_id, fingerprint)
+    return format_openssh_pubkey(key), 200, {'Content-Type': 'text/plain'}
+
+
+@app.route('/tokens/<token_id:token_id>/keys/<fingerprint:fingerprint>/',
+           methods=['DELETE'])
+def delete_public_key(token_id: str, fingerprint: bytes):
+    """Delete a public key.
+
+    :param token_id: the token id that holds the identity
+    :type token_id: :class:`str`
+    :param fingerprint: the fingerprint of a public key to delete
+    :type fingerprint: :class:`bytes`
+    :status 200: when the public key is successfully deleted
+    :status 404: when there's no such public key
+
+    """
+    key = get_public_key(token_id, fingerprint)
+    get_key_store().deregister(get_identity(token_id), key)
+    return make_response(list_public_keys(token_id))
 
 
 def get_remote_set() -> collections.abc.Mapping:

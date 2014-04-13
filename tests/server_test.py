@@ -18,7 +18,7 @@ from geofront.identity import Identity
 from geofront.keystore import (DuplicatePublicKeyError, KeyStore,
                                get_key_fingerprint, parse_openssh_pubkey)
 from geofront.server import (FingerprintConverter, Token, TokenIdConverter,
-                             app, get_identity, get_key_store,
+                             app, get_identity, get_key_store, get_public_key,
                              get_remote_set, get_team, get_token_store)
 from geofront.team import AuthenticationError, Team
 from geofront.version import VERSION
@@ -392,6 +392,33 @@ def test_list_public_keys(fx_app, fx_key_store,
         assert data == {get_key_fingerprint(key): key}
 
 
+def test_get_public_key(fx_app, fx_key_store,
+                        fx_authorized_identity,
+                        fx_token_id):
+    key = RSAKey.generate(1024)
+    fx_key_store.register(fx_authorized_identity, key)
+    with fx_app.test_request_context():
+        found = get_public_key(fx_token_id, key.get_fingerprint())
+        assert found == key
+
+
+def test_get_public_key_404(fx_app, fx_key_store,
+                            fx_authorized_identity,
+                            fx_token_id):
+    with fx_app.test_request_context():
+        try:
+            result = get_public_key(fx_token_id, os.urandom(16))
+        except HTTPException as e:
+            response = e.get_response(request.environ)
+            assert response.status_code == 404
+            assert response.mimetype == 'application/json'
+            error = json.loads(response.data.decode('utf-8'))
+            assert error['error'] == 'not-found'
+        else:
+            fail('get_public_key() does not raise HTTPException, but returns '
+                 + repr(result))
+
+
 def test_public_key(fx_app, fx_key_store,
                     fx_authorized_identity,
                     fx_token_id):
@@ -414,6 +441,35 @@ def test_public_key(fx_app, fx_key_store,
                 'public_key',
                 token_id=fx_token_id,
                 fingerprint=os.urandom(16)
+            )
+        )
+        assert response.status_code == 404
+        assert response.mimetype == 'application/json'
+        error = json.loads(response.data.decode('utf-8'))
+        assert error['error'] == 'not-found'
+
+
+def test_delete_public_key(fx_app, fx_key_store,
+                           fx_authorized_identity,
+                           fx_token_id):
+    key = RSAKey.generate(1024)
+    fx_key_store.register(fx_authorized_identity, key)
+    with fx_app.test_client() as client:
+        response = client.delete(
+            get_url(
+                'delete_public_key',
+                token_id=fx_token_id,
+                fingerprint=key.get_fingerprint()
+            )
+        )
+        assert response.status_code == 200
+    assert key not in fx_key_store.list_keys(fx_authorized_identity)
+    with fx_app.test_client() as client:
+        response = client.delete(
+            get_url(
+                'delete_public_key',
+                token_id=fx_token_id,
+                fingerprint=key.get_fingerprint()
             )
         )
         assert response.status_code == 404
