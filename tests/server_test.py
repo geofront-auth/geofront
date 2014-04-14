@@ -3,8 +3,10 @@ import datetime
 import ipaddress
 import os
 import random
+import time
 
 from flask import json, request, url_for
+from iso8601 import parse_date
 from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
 from pytest import fail, fixture, mark, raises, skip, yield_fixture
@@ -17,11 +19,14 @@ from werkzeug.urls import url_decode, url_encode
 from geofront.identity import Identity
 from geofront.keystore import (DuplicatePublicKeyError, KeyStore,
                                get_key_fingerprint, parse_openssh_pubkey)
+from geofront.masterkey import MasterKeyStore
 from geofront.remote import Remote
 from geofront.server import (FingerprintConverter, Token, TokenIdConverter,
                              app, get_identity, get_key_store, get_public_key,
-                             get_remote_set, get_team, get_token_store)
+                             get_remote_set, get_team, get_token_store,
+                             remote_dict)
 from geofront.team import AuthenticationError, Team
+from geofront.util import typed
 from geofront.version import VERSION
 
 
@@ -208,15 +213,34 @@ def test_get_team(fx_team):
         assert get_team() is fx_team
 
 
+class MemoryMasterKeyStore(MasterKeyStore):
+
+    @typed
+    def __init__(self, master_key: PKey):
+        self.save(master_key)
+
+    @typed
+    def load(self) -> PKey:
+        return self.master_key
+
+    @typed
+    def save(self, master_key: PKey):
+        self.master_key = master_key
+
+
 @yield_fixture
-def fx_app(fx_team, fx_token_store, fx_key_store):
-    app.config['TEAM'] = fx_team
-    app.config['TOKEN_STORE'] = fx_token_store
-    app.config['KEY_STORE'] = fx_key_store
+def fx_app(fx_team, fx_token_store, fx_key_store, fx_master_key):
+    app.config.update(
+        TEAM=fx_team,
+        TOKEN_STORE=fx_token_store,
+        KEY_STORE=fx_key_store,
+        MASTER_KEY_STORE=MemoryMasterKeyStore(fx_master_key)
+    )
     yield app
-    del app.config['TEAM']
-    del app.config['TOKEN_STORE']
-    del app.config['KEY_STORE']
+    del app.config['TEAM'], \
+        app.config['TOKEN_STORE'], \
+        app.config['KEY_STORE'], \
+        app.config['MASTER_KEY_STORE']
 
 
 @fixture
@@ -509,6 +533,15 @@ def test_get_remote_set(fx_mock_remote_set):
         assert get_remote_set() == fx_mock_remote_set
 
 
+def test_remote_dict():
+    remote = Remote('username', ipaddress.ip_address('127.0.0.1'), 2222)
+    assert remote_dict(remote) == {
+        'user': 'username',
+        'address': '127.0.0.1',
+        'port': 2222
+    }
+
+
 def test_list_remotes(fx_app, fx_mock_remote_set,
                       fx_authorized_identity, fx_token_id):
     with fx_app.test_client() as client:
@@ -516,10 +549,50 @@ def test_list_remotes(fx_app, fx_mock_remote_set,
         assert response.status_code == 200
         assert response.mimetype == 'application/json'
         assert json.loads(response.data) == {
-            alias: {
-                'user': remote.user,
-                'address': str(remote.address),
-                'port': remote.port
-            }
+            alias: remote_dict(remote)
             for alias, remote in fx_mock_remote_set.items()
         }
+
+
+@yield_fixture
+def fx_authorized_remote_set(fx_authorized_servers):
+    remote_set = {
+        'port-' + str(port): Remote(
+            'user',
+            ipaddress.ip_address('127.0.0.1'),
+            port
+        )
+        for port in fx_authorized_servers
+    }
+    app.config['REMOTE_SET'] = remote_set
+    yield remote_set
+    del app.config['REMOTE_SET']
+
+
+def test_authorize_remote(fx_app, fx_authorized_servers, fx_master_key,
+                          fx_authorized_remote_set, fx_authorized_identity,
+                          fx_token_id, fx_key_store):
+    public_key = RSAKey.generate(1024)
+    fx_key_store.register(fx_authorized_identity, public_key)
+    alias, remote = dict(fx_authorized_remote_set).popitem()
+    with fx_app.test_client() as client:
+        response = client.post(
+            get_url('authorize_remote', token_id=fx_token_id, alias=alias)
+        )
+        assert response.status_code == 200
+        assert response.mimetype == 'application/json'
+        result = json.loads(response.data)
+        assert result['success'] == 'authorized'
+        assert result['remote'] == remote_dict(remote)
+        expires_at = parse_date(result['expires_at'])
+    thread, path, ev = fx_authorized_servers[remote.port]
+    authorized_keys_path = path.join('.ssh', 'authorized_keys')
+    with authorized_keys_path.open() as f:
+        saved_keys = map(parse_openssh_pubkey, f)
+        assert frozenset(saved_keys) == {fx_master_key, public_key}
+    while datetime.datetime.now(datetime.timezone.utc) <= expires_at:
+        time.sleep(1)
+    time.sleep(1)
+    with authorized_keys_path.open() as f:
+        saved_keys = map(parse_openssh_pubkey, f)
+        assert frozenset(saved_keys) == {fx_master_key}

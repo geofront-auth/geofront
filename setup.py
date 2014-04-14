@@ -30,6 +30,7 @@ install_requires = [
 tests_require = [
     'pytest >= 2.5.0',
     'sftpserver == 0.2py3',  # https://github.com/spoqa/sftpserver/releases
+    'iso8601 >= 0.1.10',
     'redis'
 ]
 

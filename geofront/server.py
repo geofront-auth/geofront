@@ -61,16 +61,23 @@ from .identity import Identity
 from .keystore import KeyStore, format_openssh_pubkey, get_key_fingerprint
 from .masterkey import (EmptyStoreError, MasterKeyStore, PeriodicalRenewal,
                         renew_master_key)
+from .remote import Remote, authorize
 from .team import AuthenticationError, Team
 from .util import typed
 from .version import VERSION
 
-__all__ = ('FingerprintConverter', 'Token', 'TokenIdConverter',
-           'app', 'authenticate', 'create_access_token', 'delete_public_key',
-           'get_identity', 'get_key_store', 'get_master_key_store',
-           'get_public_key', 'get_remote_set', 'get_team', 'get_token_store',
-           'list_public_keys', 'main', 'main_parser', 'public_key',
-           'server_version')
+__all__ = ('AUTHORIZATION_TIMEOUT',
+           'FingerprintConverter', 'Token', 'TokenIdConverter',
+           'app', 'authenticate', 'authorize_remote', 'create_access_token',
+           'delete_public_key', 'get_identity', 'get_key_store',
+           'get_master_key_store', 'get_public_key', 'get_remote_set',
+           'get_team', 'get_token_store', 'list_public_keys', 'main',
+           'main_parser', 'public_key', 'remote_dict', 'server_version')
+
+
+#: (:class:`datetime.timedelta`) How long does each temporary authorization
+#: keep alive after it's issued.  A minute.
+AUTHORIZATION_TIMEOUT = datetime.timedelta(minutes=1)
 
 
 class TokenIdConverter(BaseConverter):
@@ -478,6 +485,23 @@ def get_remote_set() -> collections.abc.Mapping:
     )
 
 
+def remote_dict(remote: Remote) -> collections.abc.Mapping:
+    """Convert a ``remote`` to a simple dictionary that can be serialized
+    to JSON.
+
+    :param remote: a remote instance to serialize
+    :type remote: :class:`~.remote.Remote`
+    :return: the converted dictionary
+    :rtype: :class:`collections.abc.Mapping`
+
+    """
+    return {
+        'user': remote.user,
+        'address': str(remote.address),
+        'port': remote.port
+    }
+
+
 @app.route('/tokens/<token_id:token_id>/remotes/')
 def list_remotes(token_id: str):
     """List all available remotes and their aliases.
@@ -511,14 +535,63 @@ def list_remotes(token_id: str):
     """
     get_identity(token_id)  # 404/410 if not authenticated
     remotes = get_remote_set()
-    return jsonify({
-        alias: {
-            'user': remote.user,
-            'address': str(remote.address),
-            'port': remote.port
-        }
-        for alias, remote in remotes.items()
-    }), 200, {'Content-Type': 'application/json'}
+    return jsonify(
+        {alias: remote_dict(remote) for alias, remote in remotes.items()}
+    )
+
+
+@app.route('/tokens/<token_id:token_id>/remotes/<alias>/', methods=['POST'])
+def authorize_remote(token_id: str, alias: str):
+    """Temporarily authorize the token owner to access a remote.
+    A made authorization keeps alive in a minute, and then will be expired.
+
+    .. code-block:: http
+
+       POST /tokens/0123456789abcdef/remotes/web-1/ HTTPS/1.1
+       Accept: application/json
+       Content-Length: 0
+
+    .. code-block:: http
+
+       HTTPS/1.1 200 OK
+       Content-Type: application/json
+
+       {
+           "success": "authorized",
+           "remote": {"user": "ubuntu", "address": "192.168.0.5", "port": 22},
+           "expires_at": "2014-04-14T14:57:49.822844+00:00"
+       }
+
+    :param token_id: the token id that holds the identity
+    :type token_id: :class:`str`
+    :param alias: the alias of the remote to access
+    :type alias: :class:`str`
+    :status 200: when successfully granted a temporary authorization
+    :status 404: when there's no such remote
+
+    """
+    identity = get_identity(token_id)
+    key_store = get_key_store()
+    master_key_store = get_master_key_store()
+    remotes = get_remote_set()
+    try:
+        remote = remotes[alias]
+    except KeyError:
+        response = jsonify(
+            error='not-found',
+            message='No such remote alias: {}.'.format(alias)
+        )
+        response.status_code = 404
+        raise HTTPException(response=response)
+    public_keys = key_store.list_keys(identity)
+    master_key = master_key_store.load()
+    expires_at = authorize(public_keys, master_key, remote,
+                           AUTHORIZATION_TIMEOUT)
+    return jsonify(
+        success='authorized',
+        remote=remote_dict(remote),
+        expires_at=expires_at.isoformat()
+    )
 
 
 def main_parser() -> argparse.ArgumentParser:
