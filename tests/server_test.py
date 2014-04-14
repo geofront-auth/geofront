@@ -17,6 +17,7 @@ from werkzeug.urls import url_decode, url_encode
 from geofront.identity import Identity
 from geofront.keystore import (DuplicatePublicKeyError, KeyStore,
                                get_key_fingerprint, parse_openssh_pubkey)
+from geofront.remote import Remote
 from geofront.server import (FingerprintConverter, Token, TokenIdConverter,
                              app, get_identity, get_key_store, get_public_key,
                              get_remote_set, get_team, get_token_store)
@@ -491,11 +492,34 @@ def test_get_remote_set__invalid_type():
             get_remote_set()
 
 
-def test_get_remote_set():
+@yield_fixture
+def fx_mock_remote_set():
     remote_set = {
-        'web-1': ipaddress.ip_address('192.168.0.5'),
-        'web-2': ipaddress.ip_address('192.168.0.6')
+        'web-1': Remote('user', ipaddress.ip_address('192.168.0.5')),
+        'web-2': Remote('user', ipaddress.ip_address('192.168.0.6'))
     }
     app.config['REMOTE_SET'] = remote_set
+    yield remote_set
+    del app.config['REMOTE_SET']
+
+
+def test_get_remote_set(fx_mock_remote_set):
+    app.config['REMOTE_SET'] = fx_mock_remote_set
     with app.app_context():
-        assert get_remote_set() == remote_set
+        assert get_remote_set() == fx_mock_remote_set
+
+
+def test_list_remotes(fx_app, fx_mock_remote_set,
+                      fx_authorized_identity, fx_token_id):
+    with fx_app.test_client() as client:
+        response = client.get(get_url('list_remotes', token_id=fx_token_id))
+        assert response.status_code == 200
+        assert response.mimetype == 'application/json'
+        assert json.loads(response.data) == {
+            alias: {
+                'user': remote.user,
+                'address': str(remote.address),
+                'port': remote.port
+            }
+            for alias, remote in fx_mock_remote_set.items()
+        }

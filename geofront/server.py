@@ -172,6 +172,11 @@ def get_token_store() -> BaseCache:
                          the value is not an instance of
                          :class:`werkzeug.contrib.cache.BaseCache`
 
+    .. todo::
+
+       Change the backend system from :mod:`werzkeug.contrib.cache`
+       to :mod:`dogpile.cache`.
+
     """
     try:
         store = app.config['TOKEN_STORE']
@@ -471,6 +476,49 @@ def get_remote_set() -> collections.abc.Mapping:
         'REMOTE_SET configuration must be an instance of {0.__module__}.'
         '{0.__qualname__}, not {1!r}'.format(collections.abc.Mapping, set_)
     )
+
+
+@app.route('/tokens/<token_id:token_id>/remotes/')
+def list_remotes(token_id: str):
+    """List all available remotes and their aliases.
+
+    .. code-block:: http
+
+       GET /tokens/0123456789abcdef/remotes/ HTTPS/1.1
+       Accept: application/json
+
+    .. code-block:: http
+
+       HTTPS/1.1 200 OK
+       Content-Type: application/json
+
+       {
+         "web-1": {"user": "ubuntu", "address": "192.168.0.5", "port": 22},
+         "web-2": {"user": "ubuntu", "address": "192.168.0.6", "port": 22},
+         "web-3": {"user": "ubuntu", "address": "192.168.0.7", "port": 22},
+         "worker-1": {"user": "ubuntu", "address": "192.168.0.25", "port": 22},
+         "worker-2": {"user": "ubuntu", "address": "192.168.0.26", "port": 22},
+         "db-1": {"user": "ubuntu", "address": "192.168.0.50", "port": 22},
+         "db-2": {"user": "ubuntu", "address": "192.168.0.51", "port": 22}
+       }
+
+    :param token_id: the token id that holds the identity
+    :type token_id: :class:`str`
+    :status 200: when listing is successful, even if there are no remotes
+
+    .. todo:: Filter by query string.
+
+    """
+    get_identity(token_id)  # 404/410 if not authenticated
+    remotes = get_remote_set()
+    return jsonify({
+        alias: {
+            'user': remote.user,
+            'address': str(remote.address),
+            'port': remote.port
+        }
+        for alias, remote in remotes.items()
+    }), 200, {'Content-Type': 'application/json'}
 
 
 def main_parser() -> argparse.ArgumentParser:
