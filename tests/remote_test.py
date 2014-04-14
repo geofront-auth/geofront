@@ -1,11 +1,14 @@
+import datetime
 import ipaddress
+import time
 
 from libcloud.compute.drivers.dummy import DummyNodeDriver
 from paramiko.rsakey import RSAKey
 from pytest import mark, raises
 
 from geofront.keystore import format_openssh_pubkey, parse_openssh_pubkey
-from geofront.remote import Address, AuthorizedKeyList, CloudRemoteSet, Remote
+from geofront.remote import (Address, AuthorizedKeyList, CloudRemoteSet,
+                             Remote, authorize)
 
 
 def test_address():
@@ -166,3 +169,28 @@ def test_authorized_keys_list_delitem(fx_authorized_sftp):
     with path.join('.ssh', 'authorized_keys').open() as f:
         assert parse_openssh_pubkey(f.readline().strip()) == keys[0]
         assert not f.readline().strip()
+
+
+def test_authorize(fx_sftpd):
+    port, (thread, path, ev) = fx_sftpd.popitem()
+    thread.start()
+    master_key = RSAKey.generate(1024)
+    public_keys = {RSAKey.generate(1024), RSAKey.generate(1024)}
+    authorized_keys_path = path.mkdir('.ssh').join('authorized_keys')
+    with authorized_keys_path.open('w') as f:
+        print(format_openssh_pubkey(master_key), file=f)
+    expires_at = authorize(
+        public_keys,
+        master_key,
+        Remote('user', ipaddress.ip_address('127.0.0.1'), port),
+        timeout=datetime.timedelta(seconds=5)
+    )
+    with authorized_keys_path.open() as f:
+        saved_keys = map(parse_openssh_pubkey, f)
+        assert frozenset(saved_keys) == (public_keys | {master_key})
+    while datetime.datetime.now(datetime.timezone.utc) <= expires_at:
+        time.sleep(1)
+    time.sleep(1)
+    with authorized_keys_path.open() as f:
+        saved_keys = map(parse_openssh_pubkey, f)
+        assert frozenset(saved_keys) == {master_key}

@@ -24,18 +24,24 @@ cloud providers.
 
 """
 import collections.abc
+import datetime
 import io
 import ipaddress
 import itertools
 import numbers
+import threading
+import time
 
 from libcloud.compute.base import NodeDriver
+from paramiko.pkey import PKey
 from paramiko.sftp_client import SFTPClient
+from paramiko.transport import Transport
 
 from .keystore import format_openssh_pubkey, parse_openssh_pubkey
 from .util import typed
 
-__all__ = 'Address', 'AuthorizedKeyList', 'CloudRemoteSet', 'Remote'
+__all__ = ('Address', 'AuthorizedKeyList', 'CloudRemoteSet', 'Remote',
+           'authorize')
 
 
 #: (:class:`type`) Alias of :class:`ipaddress._BaseAddress`.
@@ -269,3 +275,49 @@ class CloudRemoteSet(collections.abc.Mapping):
         node = self._get_nodes()[alias]
         address = ipaddress.ip_address(node.public_ips[0])
         return Remote(self.user, address, self.port)
+
+
+@typed
+def authorize(public_keys: collections.abc.Set,
+              master_key: PKey,
+              remote: Remote,
+              timeout: datetime.timedelta) -> datetime.datetime:
+    """Make an one-time authorization to the ``remote``, and then revokes
+    it when ``timeout`` reaches soon.
+
+    :param public_keys: the set of public keys (:class:`paramiko.pkey.PKey`)
+                        to authorize
+    :type public_keys: :class:`collections.abc.Set`
+    :param master_key: the master key (*not owner's key*)
+    :type master_key: :class:`paramiko.pkey.PKey`
+    :param remote: a remote to grant access permission
+    :type remote: :class:`~.remote.Remote`
+    :param timeout: the time an authorization keeps alive
+    :type timeout: :class:`datetime.timedelta`
+    :return: the expiration time
+    :rtype: :class:`datetime.datetime`
+
+    """
+    transport = Transport((str(remote.address), remote.port))
+    transport.connect(username=remote.user, pkey=master_key)
+    try:
+        sftp_client = SFTPClient.from_transport(transport)
+        try:
+            authorized_keys = AuthorizedKeyList(sftp_client)
+            authorized_keys.extend(public_keys)
+        except:
+            sftp_client.close()
+            raise
+    except:
+        transport.close()
+        raise
+
+    def rollback():
+        time.sleep(timeout.total_seconds())
+        authorized_keys[:] = [master_key]
+        sftp_client.close()
+        transport.close()
+    timer = threading.Thread(target=rollback)
+    expires_at = datetime.datetime.now(datetime.timezone.utc) + timeout
+    timer.start()
+    return expires_at
