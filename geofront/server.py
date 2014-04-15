@@ -217,6 +217,24 @@ Token = collections.namedtuple('Token', 'identity, expires_at')
 def create_access_token(token_id: str):
     """Create a new access token.
 
+    .. code-block:: http
+
+       PUT /tokens/0123456789abcdef/ HTTPS/1.1
+       Accept: application/json
+       Content-Length: 0
+
+    .. code-block:: http
+
+       HTTPS/1.1 202 Accepted
+       Content-Type: application/json
+       Date: Tue, 15 Apr 2014 03:44:43 GMT
+       Expires: Tue, 15 Apr 2014 04:14:43 GMT
+       Link: <https://example.com/login/page/?redirect_uri=...>; rel=next
+
+       {
+         "next_url": "https://example.com/login/page/?redirect_uri=..."
+       }
+
     :param token_id: an arbitrary token id to create.
                      it should be enough random to avoid duplication
     :type token_id: :class:`str`
@@ -246,7 +264,7 @@ def create_access_token(token_id: str):
 @app.route('/tokens/<token_id:token_id>/authenticate/')
 @typed
 def authenticate(token_id: str):
-    """Finalize the authentication process.
+    """Finalize the authentication process.  It will be shown on web browser.
 
     :param token_id: token id created by :func:`create_access_token()`
     :type token_id: :class:`str`
@@ -254,6 +272,8 @@ def authenticate(token_id: str):
     :status 404: when the given ``token_id`` doesn't exist
     :status 403: when the ``token_id`` is already finalized
     :status 200: when authentication is successfully done
+
+    .. todo:: Better HTML template.
 
     """
     token_store = get_token_store()
@@ -387,6 +407,27 @@ def get_key_store() -> KeyStore:
 def list_public_keys(token_id: str):
     """List registered keys to the token owner.
 
+    .. code-block:: http
+
+       GET /tokens/0123456789abcdef/keys/ HTTPS/1.1
+       Accept: application/json
+
+    .. code-block:: http
+
+       HTTPS/1.1 200 OK
+       Content-Type: application/json
+
+       {
+         "50:5a:9a:12:75:8b:b0:88:7d:7a:8d:66:29:63:d0:47":
+           "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDAEMUvjBcX.../MuLLzC/m8Q== ",
+         "72:00:60:24:66:e8:2d:4d:2a:2a:a2:0e:7b:7f:fc:af":
+           "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCom2CDLekY...5CeYsvSdrTWA5 ",
+         "78:8a:09:c8:c1:24:5c:89:76:92:b0:1e:93:95:5d:48":
+           "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAIEA16iSKKjFHOgj...kD62SYXNKY9c= ",
+         "ab:3a:fb:30:44:e3:5e:1e:10:a0:c9:9a:86:f4:67:59":
+           "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAzzF8c07pzgKk...r+b6Q9VnWWQ== "
+       }
+
     :param token_id: the token id that holds the identity
     :type token_id: :class:`str`
     :status 200: when listing is successful, even if there are no keys
@@ -434,6 +475,19 @@ def get_public_key(token_id: str, fingerprint: bytes) -> PKey:
 def public_key(token_id: str, fingerprint: bytes):
     """Find the public key by its ``fingerprint`` if it's registered.
 
+    .. code-block:: http
+
+       GET /tokens/0123456789abcdef/keys/\
+50:5a:9a:12:75:8b:b0:88:7d:7a:8d:66:29:63:d0:47/ HTTPS/1.1
+       Accept: text/plain
+
+    .. code-block:: http
+
+       HTTPS/1.1 200 OK
+       Content-Type: text/plain
+
+       ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDAEMUvjBcX.../MuLLzC/m8Q==
+
     :param token_id: the token id that holds the identity
     :type token_id: :class:`str`
     :param fingerprint: the fingerprint of a public key to find
@@ -450,6 +504,26 @@ def public_key(token_id: str, fingerprint: bytes):
            methods=['DELETE'])
 def delete_public_key(token_id: str, fingerprint: bytes):
     """Delete a public key.
+
+    .. code-block:: http
+
+       DELETE /tokens/0123456789abcdef/keys/\
+50:5a:9a:12:75:8b:b0:88:7d:7a:8d:66:29:63:d0:47/ HTTPS/1.1
+       Accept: application/json
+
+    .. code-block:: http
+
+       HTTPS/1.1 200 OK
+       Content-Type: application/json
+
+       {
+         "72:00:60:24:66:e8:2d:4d:2a:2a:a2:0e:7b:7f:fc:af":
+           "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCom2CDLekY...5CeYsvSdrTWA5 ",
+         "78:8a:09:c8:c1:24:5c:89:76:92:b0:1e:93:95:5d:48":
+           "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAIEA16iSKKjFHOgj...kD62SYXNKY9c= ",
+         "ab:3a:fb:30:44:e3:5e:1e:10:a0:c9:9a:86:f4:67:59":
+           "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAzzF8c07pzgKk...r+b6Q9VnWWQ== "
+       }
 
     :param token_id: the token id that holds the identity
     :type token_id: :class:`str`
