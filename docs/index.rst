@@ -1,6 +1,16 @@
 .. include:: ../README.rst
 
 
+User's guode
+------------
+
+.. toctree::
+   :maxdepth: 2
+
+   install
+   changes
+
+
 References
 ----------
 
