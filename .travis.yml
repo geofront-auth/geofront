@@ -14,5 +14,5 @@ install:
 - pip install flake8
 script:
 - python -mgeofront.version
-- py.test -v --durations=20 --redis-host=localhost --github-access-token $GITHUB_ACCESS_TOKEN
 - flake8
+- py.test -v --durations=20 --redis-host=localhost --github-access-token $GITHUB_ACCESS_TOKEN
