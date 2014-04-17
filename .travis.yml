@@ -5,7 +5,6 @@ python:
 #        https://github.com/travis-ci/travis-ci/issues/1989
 #- 3.4
 env:
-- REDIS_HOST=localhost
 - secure: "iVXzQqVi5GNRRC8FO7m1pH8np0Wq2/Vf6OSL/4mLbTyiPQ1UGg0hijR4jm5QK7V3rIwpmeE7hsdpjNDpxiCUYefqTJJ258q2AfBIHQzhczM0RttFtmjn8UCOL6Vx7M2nKtzb1BBmv1Rl7Yk0NwzbzUCF8tvr4xM0dGahS1ZH6f0="
 services:
 - redis-server
@@ -15,7 +14,8 @@ install:
 - pip install pytest-cov coveralls flake8
 script:
 - python -mgeofront.version
+- REDIS_HOST=localhost py.test -v --cov geofront --durations=20
+- git reset --hard
 - flake8
-- py.test -v --cov geofront --durations=20
 after_success:
 - coveralls
