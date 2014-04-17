@@ -1,4 +1,5 @@
 import datetime
+import os
 import threading
 
 from paramiko.rsakey import RSAKey
@@ -16,6 +17,10 @@ from .sftpd import start_server
 server.AUTHORIZATION_TIMEOUT = datetime.timedelta(seconds=5)
 
 
+def env_default(env):
+    return {'default': os.environ[env]} if env in os.environ else {}
+
+
 def pytest_addoption(parser):
     parser.addoption('--sshd-port-min',
                      metavar='PORT',
@@ -27,7 +32,10 @@ def pytest_addoption(parser):
                      type=int,
                      default=12399,
                      help='the maximum unused port number [%default(s)]')
-    parser.addoption('--redis-host', metavar='HOST', help='redis host')
+    parser.addoption('--redis-host',
+                     metavar='HOST',
+                     help='redis host',
+                     **env_default('REDIS_HOST'))
     parser.addoption('--redis-port',
                      metavar='PORT',
                      type=int,
@@ -35,6 +43,7 @@ def pytest_addoption(parser):
                      help='redis port [%default(s)]')
     parser.addoption('--redis-password',
                      metavar='PASSWORD',
+                     default=None,
                      help='redis password')
     parser.addoption('--redis-db',
                      metavar='DB',
@@ -44,7 +53,8 @@ def pytest_addoption(parser):
     parser.addoption('--github-access-token',
                      metavar='TOKEN',
                      help='github access token for key store test (caution: '
-                          'it will remove all ssh keys of the account)')
+                          'it will remove all ssh keys of the account)',
+                     **env_default('GITHUB_ACCESS_TOKEN'))
 
 
 used_port = 0
