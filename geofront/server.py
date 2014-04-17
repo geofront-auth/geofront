@@ -56,6 +56,7 @@ from waitress import serve
 from werkzeug.contrib.cache import BaseCache, SimpleCache
 from werkzeug.exceptions import BadRequest, Forbidden, HTTPException, NotFound
 from werkzeug.routing import BaseConverter, ValidationError
+from werkzeug.utils import html
 
 from .identity import Identity
 from .keystore import KeyStore, format_openssh_pubkey, get_key_fingerprint
@@ -273,8 +274,6 @@ def authenticate(token_id: str):
     :status 403: when the ``token_id`` is already finalized
     :status 200: when authentication is successfully done
 
-    .. todo:: Better HTML template.
-
     """
     token_store = get_token_store()
     team = get_team()
@@ -307,7 +306,16 @@ def authenticate(token_id: str):
     expires_at = datetime.datetime.now(datetime.timezone.utc) + token_expire
     token_store.set(token_id, Token(identity, expires_at),
                     timeout=int(token_expire.total_seconds()))
-    return 'Authentication success: close the browser tab, and back to CLI'
+    return '<!DOCTYPE html>\n' + html.html(
+        html.head(
+            html.meta(charset='utf-8'),
+            html.title('Geofront: Authentication success')
+        ),
+        html.body(
+            html.h1(html.dfn('Geofront:'), ' Authentication success'),
+            html.p('Close the browser tab, and back to CLI.')
+        )
+    )
 
 
 @typed
