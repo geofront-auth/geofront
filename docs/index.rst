@@ -1,7 +1,7 @@
 .. include:: ../README.rst
 
 
-User's guode
+User's guide
 ------------
 
 .. toctree::
