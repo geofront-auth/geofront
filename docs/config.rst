@@ -193,7 +193,7 @@ be uppercase.
    As shorter it becomes more secure but more frequent to require team members
    to authenticate.  So too short time would interrupt team members.
 
-   30 days by default.
+   A week by default.
 
 
 Example

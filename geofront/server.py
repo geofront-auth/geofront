@@ -131,7 +131,7 @@ app.url_map.converters.update(
 )
 app.config.update(  # Config defaults
     MASTER_KEY_RENEWAL=datetime.timedelta(days=1),
-    TOKEN_EXPIRE=datetime.timedelta(days=30)
+    TOKEN_EXPIRE=datetime.timedelta(days=7)
 )
 
 
@@ -291,7 +291,6 @@ def authenticate(token_id: str):
         raise NotFound()
     if not isinstance(auth_nonce, str):
         raise Forbidden()
-    expires_at = datetime.datetime.now(datetime.timezone.utc) + token_expire
     requested_redirect_url = url_for(
         'authenticate',
         token_id=token_id,
@@ -305,7 +304,9 @@ def authenticate(token_id: str):
         )
     except AuthenticationError:
         raise BadRequest()
-    token_store.set(token_id, Token(identity, expires_at))
+    expires_at = datetime.datetime.now(datetime.timezone.utc) + token_expire
+    token_store.set(token_id, Token(identity, expires_at),
+                    timeout=int(token_expire.total_seconds()))
     return 'Authentication success: close the browser tab, and back to CLI'
 
 
