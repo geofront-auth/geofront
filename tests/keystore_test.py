@@ -2,8 +2,8 @@ from paramiko.dsskey import DSSKey
 from paramiko.rsakey import RSAKey
 from pytest import fixture, raises
 
-from geofront.keystore import (format_openssh_pubkey, get_key_fingerprint,
-                               parse_openssh_pubkey)
+from geofront.keystore import (KeyTypeError, format_openssh_pubkey,
+                               get_key_fingerprint, parse_openssh_pubkey)
 
 
 @fixture
@@ -52,7 +52,7 @@ def test_parse_openssh_pubkey_dsa():
 
 
 def test_parse_openssh_unsupported():
-    with raises(ValueError):
+    with raises(KeyTypeError):
         parse_openssh_pubkey(
             'ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyN'
             'TYAAABBBDs0y6X8UquYBtTvDjbK+RZIAWduMbfWfUmh2MRtWpo2ZqEyQiyeTRDJ/4'

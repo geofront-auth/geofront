@@ -13,8 +13,9 @@ from .identity import Identity
 from .util import typed
 
 __all__ = ('KEY_TYPES', 'AuthorizationError', 'DuplicatePublicKeyError',
-           'KeyStore', 'KeyStoreError', 'format_openssh_pubkey',
-           'get_key_fingerprint', 'parse_openssh_pubkey')
+           'KeyStore', 'KeyStoreError', 'KeyTypeError',
+           'format_openssh_pubkey', 'get_key_fingerprint',
+           'parse_openssh_pubkey')
 
 
 #: (:class:`collections.Mapping`) The mapping of supported key types.
@@ -33,15 +34,15 @@ def parse_openssh_pubkey(line: str) -> PKey:
     :type line: :class:`str`
     :return: the parsed public key
     :rtype: :class:`paramiko.pkey.PKey`
-    :raise ValueError: when the given ``line`` is an invalid format,
-                       or it's an unsupported key type
+    :raise ValueError: when the given ``line`` is an invalid format
+    :raise KeyTypeError: when it's an unsupported key type
 
     """
     keytype, b64, *_ = line.split()
     try:
         cls = KEY_TYPES[keytype]
     except KeyError:
-        raise ValueError('unsupported key type: ' + repr(keytype))
+        raise KeyTypeError('unsupported key type: ' + repr(keytype))
     return cls(data=base64.b64decode(b64))
 
 
@@ -147,3 +148,7 @@ class AuthorizationError(KeyStoreError):
 
 class DuplicatePublicKeyError(KeyStoreError):
     """Exception that rise when the given public key is already registered."""
+
+
+class KeyTypeError(ValueError):
+    """Unsupported public key type raise this type of error."""
