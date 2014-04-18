@@ -18,7 +18,8 @@ from werkzeug.urls import url_decode, url_encode
 
 from geofront.identity import Identity
 from geofront.keystore import (DuplicatePublicKeyError, KeyStore,
-                               get_key_fingerprint, parse_openssh_pubkey)
+                               format_openssh_pubkey, get_key_fingerprint,
+                               parse_openssh_pubkey)
 from geofront.masterkey import MasterKeyStore
 from geofront.remote import Remote
 from geofront.server import (FingerprintConverter, Token, TokenIdConverter,
@@ -415,6 +416,80 @@ def test_list_public_keys(fx_app, fx_key_store,
         data = {f: parse_openssh_pubkey(k)
                 for f, k in json.loads(response.data).items()}
         assert data == {get_key_fingerprint(key): key}
+
+
+def test_add_public_key_415(fx_app, fx_key_store,
+                            fx_authorized_identity, fx_token_id):
+    pkey = RSAKey.generate(1024)
+    with fx_app.test_client() as c:
+        response = c.post(
+            get_url('add_public_key', token_id=fx_token_id),
+            data={'key': format_openssh_pubkey(pkey)}
+        )
+        assert response.status_code == 415
+        error = json.loads(response.data)
+        assert error['error'] == 'unsupported-content-type'
+        assert pkey not in fx_key_store.list_keys(fx_authorized_identity)
+
+
+def test_add_public_key_unsupported_type(fx_app, fx_key_store,
+                                         fx_authorized_identity, fx_token_id):
+    pkey = RSAKey.generate(1024)
+    with fx_app.test_client() as c:
+        response = c.post(
+            get_url('add_public_key', token_id=fx_token_id),
+            content_type='text/plain',
+            data=('invalid-type ' + format_openssh_pubkey(pkey)[7:]).encode()
+        )
+        assert response.status_code == 400
+        error = json.loads(response.data)
+        assert error['error'] == 'unsupported-key-type'
+        assert pkey not in fx_key_store.list_keys(fx_authorized_identity)
+
+
+def test_add_public_key_invalid_key(fx_app, fx_key_store,
+                                    fx_authorized_identity, fx_token_id):
+    with fx_app.test_client() as c:
+        response = c.post(
+            get_url('add_public_key', token_id=fx_token_id),
+            content_type='text/plain',
+            data=b'INVALID-FORMAT!!'
+        )
+        assert response.status_code == 400
+        error = json.loads(response.data)
+        assert error['error'] == 'invalid-key'
+
+
+def test_add_public_key_duplicate_key(fx_app, fx_key_store,
+                                      fx_authorized_identity, fx_token_id):
+    pkey = RSAKey.generate(1024)
+    fx_key_store.register(fx_authorized_identity, pkey)
+    with fx_app.test_client() as c:
+        response = c.post(
+            get_url('add_public_key', token_id=fx_token_id),
+            content_type='text/plain',
+            data=format_openssh_pubkey(pkey).encode()
+        )
+        assert response.status_code == 400
+        error = json.loads(response.data)
+        assert error['error'] == 'duplicate-key'
+
+
+def test_add_public_key(fx_app, fx_key_store,
+                        fx_authorized_identity, fx_token_id):
+    pkey = RSAKey.generate(1024)
+    with fx_app.test_client() as c:
+        response = c.post(
+            get_url('add_public_key', token_id=fx_token_id),
+            content_type='text/plain',
+            data=format_openssh_pubkey(pkey).encode()
+        )
+        assert response.status_code == 201
+        key_data = response.data
+        assert parse_openssh_pubkey(key_data.decode()) == pkey
+        assert pkey in fx_key_store.list_keys(fx_authorized_identity)
+        r = c.get(response.location)
+        assert r.data == key_data
 
 
 def test_get_public_key(fx_app, fx_key_store,

@@ -59,7 +59,9 @@ from werkzeug.routing import BaseConverter, ValidationError
 from werkzeug.utils import html
 
 from .identity import Identity
-from .keystore import KeyStore, format_openssh_pubkey, get_key_fingerprint
+from .keystore import (DuplicatePublicKeyError, KeyStore, KeyTypeError,
+                       format_openssh_pubkey, get_key_fingerprint,
+                       parse_openssh_pubkey)
 from .masterkey import (EmptyStoreError, MasterKeyStore, PeriodicalRenewal,
                         renew_master_key)
 from .remote import Remote, authorize
@@ -69,11 +71,12 @@ from .version import VERSION
 
 __all__ = ('AUTHORIZATION_TIMEOUT',
            'FingerprintConverter', 'Token', 'TokenIdConverter',
-           'app', 'authenticate', 'authorize_remote', 'create_access_token',
-           'delete_public_key', 'get_identity', 'get_key_store',
-           'get_master_key_store', 'get_public_key', 'get_remote_set',
-           'get_team', 'get_token_store', 'list_public_keys', 'main',
-           'main_parser', 'public_key', 'remote_dict', 'server_version')
+           'add_public_key', 'app', 'authenticate', 'authorize_remote',
+           'create_access_token', 'delete_public_key', 'get_identity',
+           'get_key_store', 'get_master_key_store', 'get_public_key',
+           'get_remote_set', 'get_team', 'get_token_store',
+           'list_public_keys', 'main', 'main_parser', 'public_key',
+           'remote_dict', 'server_version')
 
 
 #: (:class:`datetime.timedelta`) How long does each temporary authorization
@@ -449,6 +452,85 @@ def list_public_keys(token_id: str):
         get_key_fingerprint(key): format_openssh_pubkey(key) for key in keys
     })
     return data, 200, {'Content-Type': 'application/json'}
+
+
+@app.route('/tokens/<token_id:token_id>/keys/', methods=['POST'])
+@typed
+def add_public_key(token_id: str):
+    """Register a public key to the token.  It takes an OpenSSH public key
+    line through the request content body.
+
+    .. code-block:: http
+
+       POST /tokens/0123456789abcdef/keys/ HTTPS/1.1
+       Accept: application/json
+       Content-Type: text/plain
+
+       ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDAEMUvjBcX.../MuLLzC/m8Q==
+
+    .. code-block:: http
+
+       HTTPS/1.1 201 Created
+       Content-Type: text/plain
+       Location: /tokens/0123456789abcdef/keys/\
+50:5a:9a:12:75:8b:b0:88:7d:7a:8d:66:29:63:d0:47
+
+       ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDAEMUvjBcX.../MuLLzC/m8Q==
+
+    :param token_id: the token id that holds the identity
+    :type token_id: :class:`str`
+    :status 201: when key registration is successful
+    :status 400: when the key type is unsupported, or the key format is
+                 invalid, or the key is already used
+    :status 415: when the :mailheader:`Content-Type` is not
+                 :mimetype:`text/plain`
+
+    """
+    identity = get_identity(token_id)
+    key_store = get_key_store()
+    if request.mimetype != 'text/plain':
+        response = jsonify(
+            error='unsupported-content-type',
+            message='it accepts only text/plain which is an OpenSSH '
+                    'public key line'
+        )
+        response.status_code = 415  # Unsupported Media Type
+        return response
+    request_body = request.get_data(as_text=True)
+    try:
+        pkey = parse_openssh_pubkey(request_body)
+    except KeyTypeError as e:
+        response = jsonify(
+            error='unsupported-key-type',
+            message=str(e)
+        )
+        response.status_code = 400  # Bad Request
+        return response
+    except ValueError:
+        response = jsonify(
+            error='invalid-key',
+            message='failed to parse the key'
+        )
+        response.status_code = 400
+        return response
+    try:
+        key_store.register(identity, pkey)
+    except DuplicatePublicKeyError:
+        response = jsonify(
+            error='duplicate-key',
+            message='the given key is already used'
+        )
+        response.status_code = 400
+        return response
+    response = make_response(
+        public_key(token_id=token_id, fingerprint=pkey.get_fingerprint())
+    )
+    response.status_code = 201  # Created
+    response.location = url_for('public_key',
+                                token_id=token_id,
+                                fingerprint=pkey.get_fingerprint(),
+                                _external=True)
+    return response
 
 
 @typed
