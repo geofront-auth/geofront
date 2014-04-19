@@ -75,8 +75,8 @@ __all__ = ('AUTHORIZATION_TIMEOUT',
            'create_access_token', 'delete_public_key', 'get_identity',
            'get_key_store', 'get_master_key_store', 'get_public_key',
            'get_remote_set', 'get_team', 'get_token_store',
-           'list_public_keys', 'main', 'main_parser', 'public_key',
-           'remote_dict', 'server_version')
+           'list_public_keys', 'main', 'main_parser', 'master_key',
+           'public_key', 'remote_dict', 'server_version')
 
 
 #: (:class:`datetime.timedelta`) How long does each temporary authorization
@@ -395,6 +395,36 @@ def get_master_key_store() -> MasterKeyStore:
         'MASTER_KEY_STORE configuration must be an instance of {0.__module__}.'
         '{0.__qualname__}, not {1!r}'.format(MasterKeyStore, master_key_store)
     )
+
+
+@app.route('/tokens/<token_id:token_id>/masterkey/')
+def master_key(token_id: str):
+    """Public part of the master key in OpenSSH authorized_keys
+    (public key) format.
+
+    .. code-block:: http
+
+       GET /tokens/0123456789abcdef/masterkey/ HTTPS/1.1
+       Accept: text/plain
+
+    .. code-block:: http
+
+       HTTPS/1.1 200 OK
+       Content-Type: text/plain
+
+       ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDAEMUvjBcX.../MuLLzC/m8Q==
+
+    :param token_id: the token id that holds the identity
+    :type token_id: :class:`str`
+    :status 200: when the master key is available
+    :status 500: when the master key is unavailable
+
+    """
+    get_identity(token_id)
+    master_key_store = get_master_key_store()
+    return format_openssh_pubkey(master_key_store.load()), 200, {
+        'Content-Type': 'text/plain'
+    }
 
 
 def get_key_store() -> KeyStore:

@@ -348,6 +348,15 @@ def test_get_identity_412(fx_app, fx_token_store, fx_token_id):
                  repr(result))
 
 
+def test_master_key(fx_app, fx_master_key,
+                    fx_authorized_identity, fx_token_id):
+    with fx_app.test_client() as c:
+        response = c.get(get_url('master_key', token_id=fx_token_id))
+        assert response.status_code == 200
+        assert response.mimetype == 'text/plain'
+        assert parse_openssh_pubkey(response.data.decode()) == fx_master_key
+
+
 class DummyKeyStore(KeyStore):
 
     def __init__(self):
