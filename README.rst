@@ -81,5 +81,10 @@ Missing features
 
 - Google Apps backend
 - Bitbucket backend
+- Fabric_ integration
+- PuTTY_ integration
 
 (Contributions would be appreciated!)
+
+.. _Fabric: http://www.fabfile.org/
+.. _PuTTY: http://www.chiark.greenend.org.uk/~sgtatham/putty/
