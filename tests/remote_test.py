@@ -1,5 +1,4 @@
 import datetime
-import ipaddress
 import time
 
 from libcloud.compute.drivers.dummy import DummyNodeDriver
@@ -7,27 +6,22 @@ from paramiko.rsakey import RSAKey
 from pytest import mark, raises
 
 from geofront.keystore import format_openssh_pubkey, parse_openssh_pubkey
-from geofront.remote import (Address, AuthorizedKeyList, CloudRemoteSet,
+from geofront.remote import (AuthorizedKeyList, CloudRemoteSet,
                              Remote, authorize)
 
 
-def test_address():
-    assert isinstance(ipaddress.ip_address('192.168.0.1'), Address)
-    assert isinstance(ipaddress.ip_address('2001:db8::'), Address)
-
-
 @mark.parametrize(('b', 'equal'), [
-    (Remote('a', ipaddress.ip_address('192.168.0.1'), 22), True),
-    (Remote('a', ipaddress.ip_address('192.168.0.1'), 2222), False),
-    (Remote('b', ipaddress.ip_address('192.168.0.1'), 22), False),
-    (Remote('b', ipaddress.ip_address('192.168.0.1'), 2222), False),
-    (Remote('a', ipaddress.ip_address('192.168.0.2'), 22), False),
-    (Remote('b', ipaddress.ip_address('192.168.0.2'), 22), False),
-    (Remote('a', ipaddress.ip_address('192.168.0.2'), 2222), False),
-    (Remote('b', ipaddress.ip_address('192.168.0.2'), 2222), False)
+    (Remote('a', '192.168.0.1', 22), True),
+    (Remote('a', '192.168.0.1', 2222), False),
+    (Remote('b', '192.168.0.1', 22), False),
+    (Remote('b', '192.168.0.1', 2222), False),
+    (Remote('a', '192.168.0.2', 22), False),
+    (Remote('b', '192.168.0.2', 22), False),
+    (Remote('a', '192.168.0.2', 2222), False),
+    (Remote('b', '192.168.0.2', 2222), False)
 ])
 def test_remote(b, equal):
-    a = Remote('a', ipaddress.ip_address('192.168.0.1'))
+    a = Remote('a', '192.168.0.1')
     assert (a == b) is equal
     assert (a != b) is (not equal)
     assert (hash(a) == hash(b)) is equal
@@ -38,8 +32,8 @@ def test_cloud_remote_set():
     set_ = CloudRemoteSet(driver)
     assert len(set_) == 2
     assert dict(set_) == {
-        'dummy-1': Remote('ec2-user', ipaddress.ip_address('127.0.0.1')),
-        'dummy-2': Remote('ec2-user', ipaddress.ip_address('127.0.0.1'))
+        'dummy-1': Remote('ec2-user', '127.0.0.1'),
+        'dummy-2': Remote('ec2-user', '127.0.0.1')
     }
 
 
@@ -183,7 +177,7 @@ def test_authorize(fx_sftpd):
     expires_at = authorize(
         public_keys,
         master_key,
-        Remote('user', ipaddress.ip_address('127.0.0.1'), port),
+        Remote('user', '127.0.0.1', port),
         timeout=datetime.timedelta(seconds=5)
     )
     with authorized_keys_path.open() as f:

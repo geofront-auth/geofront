@@ -1,6 +1,5 @@
 import datetime
 import io
-import ipaddress
 import os.path
 import time
 
@@ -70,7 +69,7 @@ def authorized_key_set(path):
 
 def test_two_phase_renewal(fx_authorized_servers, fx_master_key):
     remote_set = {
-        Remote('user', ipaddress.ip_address('127.0.0.1'), port)
+        Remote('user', '127.0.0.1', port)
         for port in fx_authorized_servers
     }
     old_key = fx_master_key
@@ -86,7 +85,7 @@ def test_two_phase_renewal(fx_authorized_servers, fx_master_key):
 
 def test_two_phase_renewal_stop(fx_authorized_servers, fx_master_key):
     remote_set = {
-        Remote('user', ipaddress.ip_address('127.0.0.1'), port)
+        Remote('user', '127.0.0.1', port)
         for port in fx_authorized_servers
     }
     old_key = fx_master_key
@@ -105,7 +104,7 @@ def test_two_phase_renewal_stop(fx_authorized_servers, fx_master_key):
 
 def test_renew_master_key(fx_authorized_servers, fx_master_key, tmpdir):
     remote_set = {
-        Remote('user', ipaddress.ip_address('127.0.0.1'), port)
+        Remote('user', '127.0.0.1', port)
         for port in fx_authorized_servers
     }
     store = FileSystemMasterKeyStore(str(tmpdir.join('id_rsa')))
@@ -137,7 +136,7 @@ class RenewalFailure(Exception):
 
 def test_renew_master_key_fail(fx_authorized_servers, fx_master_key, tmpdir):
     remote_set = {
-        Remote('user', ipaddress.ip_address('127.0.0.1'), port)
+        Remote('user', '127.0.0.1', port)
         for port in fx_authorized_servers
     }
     store = FailureTestMasterKeyStore(str(tmpdir.join('id_rsa')))
@@ -160,7 +159,7 @@ def wait_for(seconds: int, condition):
 
 def test_periodical_renewal(fx_authorized_servers, fx_master_key, tmpdir):
     remote_set = {
-        Remote('user', ipaddress.ip_address('127.0.0.1'), port)
+        Remote('user', '127.0.0.1', port)
         for port in fx_authorized_servers
     }
     store = FileSystemMasterKeyStore(str(tmpdir.join('id_rsa')))

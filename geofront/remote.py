@@ -5,13 +5,13 @@ Every remote set is represented as a mapping (which is immutable, or mutable)
 of alias :class:`str` to :class:`Remote` object e.g.::
 
     {
-        'web-1': Remote('ubuntu', ipaddress.ip_address('192.168.0.5')),
-        'web-2': Remote('ubuntu', ipaddress.ip_address('192.168.0.6')),
-        'web-3': Remote('ubuntu', ipaddress.ip_address('192.168.0.7')),
-        'worker-1': Remote('ubuntu', ipaddress.ip_address('192.168.0.25')),
-        'worker-2': Remote('ubuntu', ipaddress.ip_address('192.168.0.26')),
-        'db-1': Remote('ubuntu', ipaddress.ip_address('192.168.0.50')),
-        'db-2': Remote('ubuntu', ipaddress.ip_address('192.168.0.51'))
+        'web-1': Remote('ubuntu', '192.168.0.5'),
+        'web-2': Remote('ubuntu', '192.168.0.6'),
+        'web-3': Remote('ubuntu', '192.168.0.7'),
+        'worker-1': Remote('ubuntu', '192.168.0.25'),
+        'worker-2': Remote('ubuntu', '192.168.0.26'),
+        'db-1': Remote('ubuntu', '192.168.0.50'),
+        'db-2': Remote('ubuntu', '192.168.0.51')
     }
 
 However, in the age of the cloud, you don't have to manage the remote set
@@ -26,7 +26,6 @@ cloud providers.
 import collections.abc
 import datetime
 import io
-import ipaddress
 import itertools
 import numbers
 import threading
@@ -40,19 +39,7 @@ from paramiko.transport import Transport
 from .keystore import format_openssh_pubkey, parse_openssh_pubkey
 from .util import typed
 
-__all__ = ('Address', 'AuthorizedKeyList', 'CloudRemoteSet', 'Remote',
-           'authorize')
-
-
-#: (:class:`type`) Alias of :class:`ipaddress._BaseAddress`.
-#:
-#: What is this alias for?  :class:`ipaddress._BaseAddress` is an undocumented
-#: API, so we can't guarantee it will not be gone.  When it's gone we can
-#: make this alias an actual ABC for two concrete classes:
-#:
-#: - :class:`ipaddress.IPv4Address`
-#: - :class:`ipaddress.IPv6Address`
-Address = ipaddress._BaseAddress
+__all__ = 'AuthorizedKeyList', 'CloudRemoteSet', 'Remote', 'authorize'
 
 
 class Remote:
@@ -60,8 +47,8 @@ class Remote:
 
     :param user: the username to :program:`ssh`
     :type user: :class:`str`
-    :param address: the adress, already resolved, to access
-    :type address: :class:`Address`
+    :param host: the host to access
+    :type host: :class:`str`
     :param port: the port number to :program:`ssh`.
                  the default is 22 which is the default :program:`ssh` port
     :type port: :class:`numbers.Integral`
@@ -71,36 +58,36 @@ class Remote:
     #: (:class:`str`) The username to SSH.
     user = None
 
-    #: (:class:`Address`) The address, already resolved, to access.
-    address = None
+    #: (:class:`Address`) The hostname to access.
+    host = None
 
     #: (:class:`numbers.Integral`) The port number to SSH.
     port = None
 
     @typed
-    def __init__(self, user: str, address: Address, port: numbers.Integral=22):
+    def __init__(self, user: str, host: str, port: numbers.Integral=22):
         self.user = user
-        self.address = address
+        self.host = host
         self.port = port
 
     def __eq__(self, other):
         return (isinstance(other, type(self)) and
                 self.user == other.user and
-                self.address == other.address and
+                self.host == other.host and
                 self.port == other.port)
 
     def __ne__(self, other):
         return not (self == other)
 
     def __hash__(self):
-        return hash((self.user, self.address, self.port))
+        return hash((self.user, self.host, self.port))
 
     def __str__(self):  # pragma: no cover
-        return '{}@{}:{}'.format(self.user, self.address, self.port)
+        return '{}@{}:{}'.format(self.user, self.host, self.port)
 
     def __repr__(self):
         return '{0.__module__}.{0.__qualname__}({1!r}, {2!r}, {3!r})'.format(
-            type(self), self.user, self.address, self.port
+            type(self), self.user, self.host, self.port
         )
 
 
@@ -273,8 +260,7 @@ class CloudRemoteSet(collections.abc.Mapping):
 
     def __getitem__(self, alias: str) -> Remote:
         node = self._get_nodes()[alias]
-        address = ipaddress.ip_address(node.public_ips[0])
-        return Remote(self.user, address, self.port)
+        return Remote(self.user, node.public_ips[0], self.port)
 
 
 @typed
@@ -298,7 +284,7 @@ def authorize(public_keys: collections.abc.Set,
     :rtype: :class:`datetime.datetime`
 
     """
-    transport = Transport((str(remote.address), remote.port))
+    transport = Transport((remote.host, remote.port))
     transport.connect(username=remote.user, pkey=master_key)
     try:
         sftp_client = SFTPClient.from_transport(transport)

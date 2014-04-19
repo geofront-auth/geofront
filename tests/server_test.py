@@ -1,6 +1,5 @@
 import collections.abc
 import datetime
-import ipaddress
 import os
 import random
 import time
@@ -603,8 +602,8 @@ def test_get_remote_set__invalid_type():
 @yield_fixture
 def fx_mock_remote_set():
     remote_set = {
-        'web-1': Remote('user', ipaddress.ip_address('192.168.0.5')),
-        'web-2': Remote('user', ipaddress.ip_address('192.168.0.6'))
+        'web-1': Remote('user', '192.168.0.5'),
+        'web-2': Remote('user', '192.168.0.6')
     }
     app.config['REMOTE_SET'] = remote_set
     yield remote_set
@@ -618,10 +617,10 @@ def test_get_remote_set(fx_mock_remote_set):
 
 
 def test_remote_dict():
-    remote = Remote('username', ipaddress.ip_address('127.0.0.1'), 2222)
+    remote = Remote('username', '127.0.0.1', 2222)
     assert remote_dict(remote) == {
         'user': 'username',
-        'address': '127.0.0.1',
+        'host': '127.0.0.1',
         'port': 2222
     }
 
@@ -641,11 +640,7 @@ def test_list_remotes(fx_app, fx_mock_remote_set,
 @yield_fixture
 def fx_authorized_remote_set(fx_authorized_servers):
     remote_set = {
-        'port-' + str(port): Remote(
-            'user',
-            ipaddress.ip_address('127.0.0.1'),
-            port
-        )
+        'port-' + str(port): Remote('user', '127.0.0.1', port)
         for port in fx_authorized_servers
     }
     app.config['REMOTE_SET'] = remote_set

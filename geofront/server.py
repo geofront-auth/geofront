@@ -696,11 +696,7 @@ def remote_dict(remote: Remote) -> collections.abc.Mapping:
     :rtype: :class:`collections.abc.Mapping`
 
     """
-    return {
-        'user': remote.user,
-        'address': str(remote.address),
-        'port': remote.port
-    }
+    return {'user': remote.user, 'host': remote.host, 'port': remote.port}
 
 
 @app.route('/tokens/<token_id:token_id>/remotes/')
@@ -718,13 +714,13 @@ def list_remotes(token_id: str):
        Content-Type: application/json
 
        {
-         "web-1": {"user": "ubuntu", "address": "192.168.0.5", "port": 22},
-         "web-2": {"user": "ubuntu", "address": "192.168.0.6", "port": 22},
-         "web-3": {"user": "ubuntu", "address": "192.168.0.7", "port": 22},
-         "worker-1": {"user": "ubuntu", "address": "192.168.0.25", "port": 22},
-         "worker-2": {"user": "ubuntu", "address": "192.168.0.26", "port": 22},
-         "db-1": {"user": "ubuntu", "address": "192.168.0.50", "port": 22},
-         "db-2": {"user": "ubuntu", "address": "192.168.0.51", "port": 22}
+         "web-1": {"user": "ubuntu", "host": "192.168.0.5", "port": 22},
+         "web-2": {"user": "ubuntu", "host": "192.168.0.6", "port": 22},
+         "web-3": {"user": "ubuntu", "host": "192.168.0.7", "port": 22},
+         "worker-1": {"user": "ubuntu", "host": "192.168.0.25", "port": 22},
+         "worker-2": {"user": "ubuntu", "host": "192.168.0.26", "port": 22},
+         "db-1": {"user": "ubuntu", "host": "192.168.0.50", "port": 22},
+         "db-2": {"user": "ubuntu", "host": "192.168.0.51", "port": 22}
        }
 
     :param token_id: the token id that holds the identity
@@ -758,9 +754,9 @@ def authorize_remote(token_id: str, alias: str):
        Content-Type: application/json
 
        {
-           "success": "authorized",
-           "remote": {"user": "ubuntu", "address": "192.168.0.5", "port": 22},
-           "expires_at": "2014-04-14T14:57:49.822844+00:00"
+         "success": "authorized",
+         "remote": {"user": "ubuntu", "host": "192.168.0.5", "port": 22},
+         "expires_at": "2014-04-14T14:57:49.822844+00:00"
        }
 
     :param token_id: the token id that holds the identity

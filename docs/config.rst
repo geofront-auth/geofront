@@ -41,23 +41,21 @@ be uppercase.
    structure::
 
        from geofront.remote import Remote
-       from ipaddress import ip_address
 
        REMOTE_SET = {
-           'web-1': Remote('ubuntu', ip_address('192.168.0.5')),
-           'web-2': Remote('ubuntu', ip_address('192.168.0.6')),
-           'web-3': Remote('ubuntu', ip_address('192.168.0.7')),
-           'worker-1': Remote('ubuntu', ip_address('192.168.0.25')),
-           'worker-2': Remote('ubuntu', ip_address('192.168.0.26')),
-           'db-1': Remote('ubuntu', ip_address('192.168.0.50')),
-           'db-2': Remote('ubuntu', ip_address('192.168.0.51'))
+           'web-1': Remote('ubuntu', '192.168.0.5'),
+           'web-2': Remote('ubuntu', '192.168.0.6'),
+           'web-3': Remote('ubuntu', '192.168.0.7'),
+           'worker-1': Remote('ubuntu', '192.168.0.25'),
+           'worker-2': Remote('ubuntu', '192.168.0.26'),
+           'db-1': Remote('ubuntu', '192.168.0.50'),
+           'db-2': Remote('ubuntu', '192.168.0.51')
        }
 
    Every key has to be a string, and every valye has to be an instance of
    :class:`~geofront.remote.Remote`.  :class:`~geofront.remote.Remote` consits
-   of an user, an address (which is already resolved), and the port to
-   SSH.  For example, if you've :program:`ssh`-ed to a remote server by
-   the following command:
+   of an user, a hostname, and the port to SSH.  For example,if you've
+   :program:`ssh`-ed to a remote server by the following command:
 
    .. code-block:: console
 
@@ -65,7 +63,7 @@ be uppercase.
 
    A :class:`~geofront.remote.Remote` object for it should be::
 
-       Remote('ubuntu', ip_address('192.168.0.50'), 2222)
+       Remote('ubuntu', '192.168.0.50', 2222)
 
    You can add more dynamism by providing custom :class:`dict`-like mapping
    object.  :class:`collections.abc.Mapping` could help to implement it.
