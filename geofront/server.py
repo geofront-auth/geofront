@@ -330,10 +330,14 @@ def get_identity(token_id: str) -> Identity:
     :return: the identity the token holds
     :rtype: :class:`~.identity.Identity`
     :raise werkzeug.exceptions.HTTPException:
-        :http:statuscode:`404` when the token does not exist.
-        :http:statuscode:`412` when the authentication process is not
-        finished yet.
-        :http:statuscode:`403` when the token is not unauthorized
+        :http:statuscode:`404` (``token-not-found``)
+        when the token does not exist.
+        :http:statuscode:`412` (``unfinished-authentication``)
+        when the authentication process is not finished yet.
+        :http:statuscode:`410` (``expired-token``)
+        when the token was expired.
+        :http:statuscode:`403` (``not-authorized``)
+        when the token is not unauthorized.
 
     """
     store = get_token_store()
@@ -480,10 +484,11 @@ def add_public_key(token_id: str):
     :param token_id: the token id that holds the identity
     :type token_id: :class:`str`
     :status 201: when key registration is successful
-    :status 400: when the key type is unsupported, or the key format is
-                 invalid, or the key is already used
-    :status 415: when the :mailheader:`Content-Type` is not
-                 :mimetype:`text/plain`
+    :status 400: (``unsupported-key-type``) when the key type is unsupported,
+                 or (``invalid-key``) the key format is invalid,
+                 or (``deuplicate-key``) the key is already used
+    :status 415: (``unsupported-content-type``) when the
+                 :mailheader:`Content-Type` is not :mimetype:`text/plain`
 
     """
     identity = get_identity(token_id)
@@ -543,7 +548,8 @@ def get_public_key(token_id: str, fingerprint: bytes) -> PKey:
     :type fingerprint: :class:`bytes`
     :return: the found public key
     :rtype: :class:`paramiko.pkey.PKey`
-    :raise werkzeug.exceptions.HTTPException: when there's no such public key
+    :raise werkzeug.exceptions.HTTPException: (``not-found``) when there's
+                                              no such public key
 
     """
     identity = get_identity(token_id)
@@ -584,7 +590,7 @@ def public_key(token_id: str, fingerprint: bytes):
     :param fingerprint: the fingerprint of a public key to find
     :type fingerprint: :class:`bytes`
     :status 200: when the public key is registered
-    :status 404: when there's no such public key
+    :status 404: (``not-found``) when there's no such public key
 
     """
     key = get_public_key(token_id, fingerprint)
@@ -621,7 +627,7 @@ def delete_public_key(token_id: str, fingerprint: bytes):
     :param fingerprint: the fingerprint of a public key to delete
     :type fingerprint: :class:`bytes`
     :status 200: when the public key is successfully deleted
-    :status 404: when there's no such public key
+    :status 404: (``not-found``) when there's no such public key
 
     """
     key = get_public_key(token_id, fingerprint)
@@ -732,7 +738,7 @@ def authorize_remote(token_id: str, alias: str):
     :param alias: the alias of the remote to access
     :type alias: :class:`str`
     :status 200: when successfully granted a temporary authorization
-    :status 404: when there's no such remote
+    :status 404: (``not-found``) when there's no such remote
 
     """
     identity = get_identity(token_id)
