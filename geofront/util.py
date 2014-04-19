@@ -43,7 +43,7 @@ def typed(function: types.FunctionType) -> types.FunctionType:
                        getattr(builtins, cls.__name__, None) is cls:
                         raise TypeError(
                             '{0} must be an instance of {1.__name__}, not '
-                            '{1!r}'.format(param, cls, arg)
+                            '{2!r}'.format(param, cls, arg)
                         )
                     raise TypeError(
                         '{0} must be an instance of {1.__module__}.'
