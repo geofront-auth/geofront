@@ -795,7 +795,7 @@ def authorize_remote(token_id: str, alias: str):
     )
 
 
-def main_parser() -> argparse.ArgumentParser:
+def main_parser() -> argparse.ArgumentParser:  # pragma: no cover
     """Create an :class:`~argparse.ArgumentParser` object for
     :program:`geofront-server` CLI program.
 
@@ -832,7 +832,7 @@ def main_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main():
+def main():  # pragma: no cover
     """The main function for :program:`geofront-server` CLI program."""
     parser = main_parser()
     args = parser.parse_args()
@@ -889,7 +889,7 @@ def main():
 # the configuration file.  It's useful for using custom WSGI server e.g.::
 #
 #     $ GEOFRONT_CONFIG="/etc/geofront.cfg.py" gunicorn geofront.server:app
-if 'GEOFRONT_CONFIG' in os.environ:
+if 'GEOFRONT_CONFIG' in os.environ:  # pragma: no cover
     app.config.from_pyfile(
         os.path.abspath(os.environ['GEOFRONT_CONFIG']),
         silent=False

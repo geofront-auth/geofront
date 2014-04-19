@@ -95,7 +95,7 @@ class Remote:
     def __hash__(self):
         return hash((self.user, self.address, self.port))
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return '{}@{}:{}'.format(self.user, self.address, self.port)
 
     def __repr__(self):

@@ -36,6 +36,7 @@ def test_remote(b, equal):
 def test_cloud_remote_set():
     driver = DummyNodeDriver('')
     set_ = CloudRemoteSet(driver)
+    assert len(set_) == 2
     assert dict(set_) == {
         'dummy-1': Remote('ec2-user', ipaddress.ip_address('127.0.0.1')),
         'dummy-2': Remote('ec2-user', ipaddress.ip_address('127.0.0.1'))

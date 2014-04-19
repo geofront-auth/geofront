@@ -1,0 +1,8 @@
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise NotImplementedError
+    if logger.isEnabledFor
+    if app.debug:
+    if __name__ == .__main__.:
