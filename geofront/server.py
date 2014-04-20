@@ -54,10 +54,12 @@ from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
 from paramiko.ssh_exception import SSHException
 from waitress import serve
+from waitress.adjustments import Adjustments
 from werkzeug.contrib.cache import BaseCache, SimpleCache
 from werkzeug.exceptions import BadRequest, Forbidden, HTTPException, NotFound
 from werkzeug.routing import BaseConverter, ValidationError
 from werkzeug.utils import html
+from werkzeug.contrib.fixers import ProxyFix
 
 from .identity import Identity
 from .keystore import (DuplicatePublicKeyError, KeyStore, KeyTypeError,
@@ -829,6 +831,12 @@ def main_parser() -> argparse.ArgumentParser:  # pragma: no cover
                         action='store_true',
                         help='renew the master key before the server starts. '
                              'implies --create-master-key option')
+    parser.add_argument('--trusted-proxy',
+                        action='store_true',
+                        help='IP address of a client allowed to override '
+                             'url_scheme via the X-Forwarded-Proto header. '
+                             'useful when it runs behind reverse proxy. '
+                             '-d/--debug option disables this option')
     parser.add_argument('-d', '--debug',
                         action='store_true',
                         help='debug mode.  note that this option may make '
@@ -882,11 +890,21 @@ def main():  # pragma: no cover
             master_key_store,
             master_key_renewal_interval
         )
+    waitress_options = {}
+    if args.trusted_proxy:
+        if hasattr(Adjustments, 'trusted_proxy'):
+            # > 0.8.8
+            # https://github.com/Pylons/waitress/pull/42
+            waitress_options['trusted_proxy'] = True
+        else:
+            # <= 0.8.8
+            app.wsgi_app = ProxyFix(app.wsgi_app)
     try:
         if args.debug:
             app.run(args.host, args.port, debug=True)
         else:
-            serve(app, host=args.host, port=args.port, asyncore_use_poll=True)
+            serve(app, host=args.host, port=args.port, asyncore_use_poll=True,
+                  **waitress_options)
     finally:
         if master_key_renewal_interval is not None:
             master_key_renewal.terminate()
