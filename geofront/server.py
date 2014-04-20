@@ -52,6 +52,7 @@ from flask import (Flask, Response, current_app, json, jsonify, make_response,
                    request, url_for)
 from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
+from paramiko.ssh_exception import SSHException
 from waitress import serve
 from werkzeug.contrib.cache import BaseCache, SimpleCache
 from werkzeug.exceptions import BadRequest, Forbidden, HTTPException, NotFound
@@ -782,11 +783,21 @@ def authorize_remote(token_id: str, alias: str):
         raise HTTPException(response=response)
     public_keys = key_store.list_keys(identity)
     master_key = master_key_store.load()
-    expires_at = authorize(public_keys, master_key, remote,
-                           AUTHORIZATION_TIMEOUT)
+    remote_mapping = remote_dict(remote)
+    try:
+        expires_at = authorize(public_keys, master_key, remote,
+                               AUTHORIZATION_TIMEOUT)
+    except SSHException as e:
+        response = jsonify(
+            error='connection-failure',
+            remote=remote_mapping,
+            message=str(e)
+        )
+        response.status_code = 500
+        return response
     return jsonify(
         success='authorized',
-        remote=remote_dict(remote),
+        remote=remote_mapping,
         expires_at=expires_at.isoformat()
     )
 
