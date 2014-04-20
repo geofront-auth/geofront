@@ -333,11 +333,14 @@ class CloudMasterKeyStore(MasterKeyStore):
             obj = self.driver.get_object(self.container.name, self.object_name)
         except ObjectDoesNotExistError:
             raise EmptyStoreError()
-        with io.StringIO() as buffer_:
+        with io.BytesIO() as buffer_:
             for chunk in self.driver.download_object_as_stream(obj):
+                if isinstance(chunk, str):  # DummyDriver yields str, not bytes
+                    chunk = chunk.encode()
                 buffer_.write(chunk)
             buffer_.seek(0)
-            return read_private_key_file(buffer_)
+            with io.TextIOWrapper(buffer_) as tio:
+                return read_private_key_file(tio)
 
     @typed
     def save(self, master_key: PKey):
@@ -345,8 +348,29 @@ class CloudMasterKeyStore(MasterKeyStore):
             master_key.write_private_key(buffer_)
             pem = buffer_.getvalue()
         self.driver.upload_object_via_stream(
-            [pem],
+            self._countable_iterator([pem]),
             self.container,
             self.object_name,
             {'content_type': 'application/x-pem-key'}
         )
+
+    class _countable_iterator:
+        """libcloud's storage driver takes an iterator as stream,
+        but some drivers e.g. dummy driver try calling :func:`len()`
+        to the iterator.  This adapter workarounds the situation.
+
+        """
+
+        @typed
+        def __init__(self, sequence: collections.abc.Sequence):
+            self.iterator = iter(sequence)
+            self.length = len(sequence)
+
+        def __len__(self):
+            return self.length
+
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            return next(self.iterator)
