@@ -38,7 +38,7 @@ from libcloud.storage.providers import get_driver
 driver_cls = get_driver(Provider.S3)
 driver = driver_cls('aws access key', 'aws secret key')
 container = driver.get_container(container_name='your_team_master_key')
-MASTER_KEY_STORE = CloudMasterKeyStore(container)
+MASTER_KEY_STORE = CloudMasterKeyStore(driver, container, 'id_rsa')
 
 # You have to let Geofront know what to manage remote servers.
 # Although the list can be hard-coded in the configuration file,
