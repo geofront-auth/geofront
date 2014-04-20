@@ -1,6 +1,10 @@
 Geofront
 ========
 
+.. image:: https://pypip.in/v/Geofront/badge.png
+   :target: https://pypi.python.org/pypi/Geofront
+   :alt: Latest PyPI version
+
 .. image:: https://travis-ci.org/spoqa/geofront.svg?branch=master
    :target: https://travis-ci.org/spoqa/geofront
 
