@@ -347,6 +347,32 @@ def test_get_identity_412(fx_app, fx_token_store, fx_token_id):
                  repr(result))
 
 
+def test_token(fx_app, fx_authorized_identity, fx_token_id):
+    with fx_app.test_client() as c:
+        response = c.get(get_url('token', token_id=fx_token_id))
+        assert response.status_code == 200
+        t = fx_authorized_identity.team_type
+        assert json.loads(response.data) == {
+            'team_type': t.__module__ + '.' + t.__qualname__,
+            'identifier': fx_authorized_identity.identifier
+        }
+
+
+def test_token_412(fx_app, fx_token_store, fx_token_id):
+    fx_token_store.set(fx_token_id, 'nonce')
+    with fx_app.test_client() as c:
+        response = c.get(get_url('token', token_id=fx_token_id))
+        assert response.status_code == 412
+        assert json.loads(response.data)['error'] == 'unfinished-authentication'
+
+
+def test_token_404(fx_app, fx_token_id):
+    with fx_app.test_client() as c:
+        response = c.get(get_url('token', token_id=fx_token_id))
+        assert response.status_code == 404
+        assert json.loads(response.data)['error'] == 'token-not-found'
+
+
 def test_master_key(fx_app, fx_master_key,
                     fx_authorized_identity, fx_token_id):
     with fx_app.test_client() as c:

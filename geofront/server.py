@@ -79,7 +79,7 @@ __all__ = ('AUTHORIZATION_TIMEOUT',
            'get_key_store', 'get_master_key_store', 'get_public_key',
            'get_remote_set', 'get_team', 'get_token_store',
            'list_public_keys', 'main', 'main_parser', 'master_key',
-           'public_key', 'remote_dict', 'server_version')
+           'public_key', 'remote_dict', 'server_version', 'token')
 
 
 #: (:class:`datetime.timedelta`) How long does each temporary authorization
@@ -376,6 +376,41 @@ def get_identity(token_id: str) -> Identity:
     )
     response.status_code = 403
     raise HTTPException(response=response)
+
+
+@app.route('/tokens/<token_id:token_id>/')
+@typed
+def token(token_id: str):
+    """The owner identity that the given token holds if the token is
+    authenticated.  Otherwise it responds :http:statuscode:`403`,
+    :http:statuscode:`404`, :http:statuscode:`410`, or
+    :http:statuscode:`412`.  See also :func:`get_identity()`.
+
+    .. code-block:: http
+
+       GET /tokens/0123456789abcdef/ HTTPS/1.1
+       Accept: application/json
+
+    .. code-block:: http
+
+       HTTPS/1.0 200 OK
+       Content-Type: application/json
+
+       {
+         "identifier": "dahlia",
+         "team_type": "geofront.backends.github.GitHubOrganization"
+       }
+
+    :param token_id: the token id that holds the identity
+    :type token_id: :class:`str`
+    :status 200: when the token is authenticated
+
+    """
+    identity = get_identity(token_id)
+    return jsonify(
+        team_type='{0.__module__}.{0.__qualname__}'.format(identity.team_type),
+        identifier=identity.identifier
+    )
 
 
 def get_master_key_store() -> MasterKeyStore:
