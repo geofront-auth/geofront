@@ -363,7 +363,8 @@ def test_token_412(fx_app, fx_token_store, fx_token_id):
     with fx_app.test_client() as c:
         response = c.get(get_url('token', token_id=fx_token_id))
         assert response.status_code == 412
-        assert json.loads(response.data)['error'] == 'unfinished-authentication'
+        assert (json.loads(response.data)['error'] ==
+                'unfinished-authentication')
 
 
 def test_token_404(fx_app, fx_token_id):

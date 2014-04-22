@@ -4,7 +4,7 @@ Geofront Changelog
 Version 0.1.1
 -------------
 
-To be released.
+Released on April 22, 2014.
 
 - Fixed :exc:`TypeError` that rises when :class:`CloudMasterKeyStore
   <geofront.masterkey.CloudMasterKeyStore>` is used with AWS S3 driver.
