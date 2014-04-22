@@ -8,6 +8,7 @@ User's guide
    :maxdepth: 2
 
    install
+   contribute
    changes
 
 

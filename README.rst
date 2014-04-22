@@ -73,11 +73,12 @@ Author and license
 ------------------
 
 Geofront is written by `Hong Minhee`__, maintained by Spoqa_, and licensed
-under AGPL3 or later.
+under AGPL3_ or later.
 
 
 __ http://dahlia.kr/
 .. _Spoqa: http://www.spoqa.com/
+.. _AGPL3: http://www.gnu.org/licenses/agpl-3.0.html
 
 
 Missing features
