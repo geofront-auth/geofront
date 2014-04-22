@@ -31,7 +31,7 @@ Situations
   - Everyone might need to add ``-i`` option to use team's own key.
 
 - The above ways are both hard to scale servers.  Imagine your team
-  have more than 10 servers.
+  has more than 10 servers.
 
 
 Idea
