@@ -1,7 +1,7 @@
 Geofront
 ========
 
-.. image:: https://pypip.in/v/Geofront/badge.png
+.. image:: https://badge.fury.io/py/Geofront.svg?
    :target: https://pypi.python.org/pypi/Geofront
    :alt: Latest PyPI version
 
