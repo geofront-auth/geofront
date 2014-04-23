@@ -319,7 +319,7 @@ def authenticate(token_id: str):
         ),
         html.body(
             html.h1(html.dfn('Geofront:'), ' Authentication success'),
-            html.p('Close the browser tab, and back to CLI.')
+            html.p('You may close the browser, and go back to the CLI.')
         )
     )
 
