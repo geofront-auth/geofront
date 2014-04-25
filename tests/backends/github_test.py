@@ -20,6 +20,17 @@ def fx_github_access_token(request):
     return token
 
 
+@fixture
+def fx_github_org_login(request):
+    try:
+        org_login = request.config.getoption('--github-org-login')
+    except ValueError:
+        org_login = None
+    if not org_login:
+        skip('--github-org-login is not provided; skipped')
+    return org_login
+
+
 _fx_github_identity_cache = None
 
 
@@ -52,6 +63,11 @@ def test_request(fx_github_access_token, fx_github_identity):
         'GET'
     )
     assert result == result2
+
+
+def test_authorize(fx_github_identity, fx_github_org_login):
+    org = GitHubOrganization('', '', fx_github_org_login)
+    assert org.authorize(fx_github_identity)
 
 
 def cleanup_ssh_keys(identity):
