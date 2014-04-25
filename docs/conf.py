@@ -39,6 +39,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
+    'sphinx.ext.extlinks',
     'sphinxcontrib.httpdomain',
     'sphinxcontrib.autohttp.flask',
     'sphinxcontrib.autoprogram'
@@ -281,6 +282,14 @@ intersphinx_mapping = {
     'libcloud': ('https://libcloud.readthedocs.org/en/latest/', None),
     'waitress': ('http://docs.pylonsproject.org/projects/waitress/en/latest/',
                  None),
+}
+
+
+extlinks = {
+    'issue': ('https://github.com/spoqa/geofront/issues/%s', '#'),
+    'pr': ('https://github.com/spoqa/geofront/pull/%s', '#'),
+    'branch': ('https://github.com/spoqa/geofront/compare/%s', ''),
+    'commit': ('https://github.com/spoqa/geofront/commit/%s', '')
 }
 
 

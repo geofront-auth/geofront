@@ -1,6 +1,17 @@
 Geofront Changelog
 ==================
 
+Branch :branch:`group`
+----------------------
+
+To be merged.
+
+- Added :meth:`~geofront.team.Team.list_groups()` method to
+  :class:`~geofront.team.Team` interface.
+- Added :meth:`~geofront.backends.github.GitHubOrganization.list_groups()`
+  method to :class:`~geofront.backends.github.GitHubOrganization` class.
+
+
 Version 0.1.1
 -------------
 

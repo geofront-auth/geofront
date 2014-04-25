@@ -5,7 +5,7 @@ python:
 #        https://github.com/travis-ci/travis-ci/issues/1989
 #- 3.4
 env:
-- secure: "PwuMRTltLgHTUKkLLGOepfAUvsTnn5/KuoPREok4DHIxImN/6MjvtwRucewS55CRkfMMlJ/L0yXeYvIYqW0iIlig6xSYpLV43JelIQHo3NC5CuKVPacFk7od8IHNGE4VRYdnYYTkYh8iGkye0YAOE5627chqYyl6nErrXG/ZzWc="
+- secure: "D2vuD2Zlkd6DD3Nf7EmcgYdaVXg185DqnA44lvXBg8STBe1VQ8koaAj95NrNjQJT2WzejiJEI1AcwNSe6NPjC+0sfq3zdJQlJtKCU/wJytWdi9biqhc4iXVf5lhoHQyd8ehuzX5nmykRi04OzEIFYtO93WQQccSaUSJb2iwWsUM="
 services:
 - redis-server
 install:

@@ -31,6 +31,17 @@ def fx_github_org_login(request):
     return org_login
 
 
+@fixture
+def fx_github_team_ids(request):
+    try:
+        org_login = request.config.getoption('--github-team-ids')
+    except ValueError:
+        org_login = None
+    if not org_login:
+        skip('--github-team-ids is not provided; skipped')
+    return {int(team_id.strip()) for team_id in org_login.split(',')}
+
+
 _fx_github_identity_cache = None
 
 
@@ -68,6 +79,13 @@ def test_request(fx_github_access_token, fx_github_identity):
 def test_authorize(fx_github_identity, fx_github_org_login):
     org = GitHubOrganization('', '', fx_github_org_login)
     assert org.authorize(fx_github_identity)
+
+
+def test_list_groups(fx_github_identity, fx_github_org_login,
+                     fx_github_team_ids):
+    org = GitHubOrganization('', '', fx_github_org_login)
+    groups = org.list_groups(fx_github_identity)
+    assert groups == fx_github_team_ids
 
 
 def cleanup_ssh_keys(identity):
