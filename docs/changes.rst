@@ -10,6 +10,9 @@ To be merged.
   :class:`~geofront.team.Team` interface.
 - Added :meth:`~geofront.backends.github.GitHubOrganization.list_groups()`
   method to :class:`~geofront.backends.github.GitHubOrganization` class.
+- Removed an unnecessary dependency to enum34_ on Python 3.3.
+
+.. _enum34: https://pypi.python.org/pypi/enum34
 
 
 Version 0.1.1
