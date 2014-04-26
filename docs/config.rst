@@ -67,14 +67,14 @@ be uppercase.
 
    You can add more dynamism by providing custom :class:`dict`-like mapping
    object.  :class:`collections.abc.Mapping` could help to implement it.
-   For example, :class:`~geofront.remote.CloudRemoteSet` is a subtype of
+   For example, :class:`~geofront.backends.cloud.CloudRemoteSet` is a subtype of
    :class:`~collections.abc.Mapping`, and it dynamically loads the list
    of available instance nodes in the cloud e.g. EC2_ of AWS_.  Due to
    Apache Libcloud_ it can work with more than 20 cloud providers like
    AWS_, Azure_, or Rackspace_.  ::
 
 
-       from geofront.remote import CloudRemoteSet
+       from geofront.backends.cloud import CloudRemoteSet
        from libcloud.compute.types import Provider
        from libcloud.compute.providers import get_driver
 
@@ -87,7 +87,7 @@ be uppercase.
       Class :class:`geofront.remote.Remote`
          Value type that represents a remote server to :program:`ssh`.
 
-      Class :class:`geofront.remote.CloudRemoteSet`
+      Class :class:`geofront.backends.cloud.CloudRemoteSet`
          The Libcloud_-backed dynamic remote set.
 
       Module :mod:`collections.abc` --- Abstract Base Classes for Containers
@@ -161,7 +161,7 @@ be uppercase.
       You can set the path to save the key.  Although it's not that secure,
       but it might help you to try out Geofront.
 
-   :class:`~geofront.masterkey.CloudMasterKeyStore`
+   :class:`~geofront.backends.cloud.CloudMasterKeyStore`
       It stores the master key into the cloud object storage like S3_ of AWS_.
       It supports more than 20 cloud providers through the efforts of Libcloud_.
 

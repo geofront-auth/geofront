@@ -31,7 +31,7 @@ KEY_STORE = GitHubKeyStore()
 # Unlike public keys, the master key ideally ought to be accessible by
 # only Geofront.  Assume you use Amazon Web Services.  So you'll store
 # the master key to the your private S3 bucket named your_team_master_key.
-from geofront.masterkey import CloudMasterKeyStore
+from geofront.backends.cloud import CloudMasterKeyStore
 from libcloud.storage.types import Provider
 from libcloud.storage.providers import get_driver
 
@@ -45,7 +45,7 @@ MASTER_KEY_STORE = CloudMasterKeyStore(driver, container, 'id_rsa')
 # but you'll get the list dynamically from EC2 API.  Assume our all
 # AMIs are Amazon Linux, so the usernames are always ec2-user.
 # If you're using Ubuntu AMIs it should be ubuntu instead.
-from geofront.remote import CloudRemoteSet
+from geofront.backends.cloud import CloudRemoteSet
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
 

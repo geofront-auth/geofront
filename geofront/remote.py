@@ -18,9 +18,14 @@ However, in the age of the cloud, you don't have to manage the remote set
 since the most of cloud providers offer their API to list provisioned
 remote nodes.
 
-This module provides :class:`CloudRemoteSet`, a subtype of
-:class:`collections.abc.Mapping`, that proxies to the list dynamically made by
-cloud providers.
+Geofront provides builtin :class:`~.backends.cloud.CloudRemoteSet`,
+a subtype of :class:`collections.abc.Mapping`, that proxies to the list
+dynamically made by cloud providers.
+
+.. versionchanged:: group
+   ``CloudRemoteSet`` is moved from this module to
+   :mod:`geofront.backends.cloud`.
+   See :class:`~.backends.cloud.CloudRemoteSet`.
 
 """
 import collections.abc
@@ -31,7 +36,6 @@ import numbers
 import threading
 import time
 
-from libcloud.compute.base import NodeDriver
 from paramiko.pkey import PKey
 from paramiko.sftp_client import SFTPClient
 from paramiko.transport import Transport
@@ -39,7 +43,7 @@ from paramiko.transport import Transport
 from .keystore import format_openssh_pubkey, parse_openssh_pubkey
 from .util import typed
 
-__all__ = 'AuthorizedKeyList', 'CloudRemoteSet', 'Remote', 'authorize'
+__all__ = 'AuthorizedKeyList', 'Remote', 'authorize'
 
 
 class Remote:
@@ -199,68 +203,6 @@ class AuthorizedKeyList(collections.abc.MutableSequence):
         lines = list(self._iterate_lines())
         del lines[index]
         self._save('\n'.join(lines))
-
-
-class CloudRemoteSet(collections.abc.Mapping):
-    """Libcloud_-backed remote set.  It supports more than 20 cloud providers
-    through the efforts of Libcloud_. ::
-
-        from geofront.remote import CloudRemoteSet
-        from libcloud.compute.types import Provider
-        from libcloud.compute.providers import get_driver
-
-        driver_cls = get_driver(Provider.EC2_US_WEST)
-        driver = driver_cls('access id', 'secret key')
-        REMOTE_SET = CloudRemoteSet(driver)
-
-    :param driver: libcloud compute driver
-    :type driver: :class:`libcloud.compute.base.NodeDriver`
-    :param user: the username to :program:`ssh`.
-                 the default is ``'ec2-user'`` which is the default user
-                 of amazon linux ami
-    :type user: :class:`str`
-    :param port: the port number to :program:`ssh`.
-                the default is 22 which is the default :program:`ssh` port
-    :type port: :class:`numbers.Integral`
-
-    .. seealso::
-
-       `Compute`__ --- Libcloud
-          The compute component of libcloud allows you to manage
-          cloud and virtual servers offered by different providers,
-          more than 20 in total.
-
-    .. _Libcloud: http://libcloud.apache.org/
-    __ https://libcloud.readthedocs.org/en/latest/compute/
-
-    """
-
-    @typed
-    def __init__(self,
-                 driver: NodeDriver,
-                 user: str='ec2-user',
-                 port: numbers.Integral=22):
-        self.driver = driver
-        self.user = user
-        self.port = port
-        self._nodes = None
-
-    def _get_nodes(self, refresh: bool=False) -> dict:
-        if refresh or self._nodes is None:
-            self._nodes = {node.name: node
-                           for node in self.driver.list_nodes()
-                           if node.public_ips}
-        return self._nodes
-
-    def __len__(self) -> int:
-        return len(self._get_nodes())
-
-    def __iter__(self) -> collections.abc.Iterator:
-        return iter(self._get_nodes(True))
-
-    def __getitem__(self, alias: str) -> Remote:
-        node = self._get_nodes()[alias]
-        return Remote(self.user, node.public_ips[0], self.port)
 
 
 @typed

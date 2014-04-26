@@ -1,13 +1,11 @@
 import datetime
 import time
 
-from libcloud.compute.drivers.dummy import DummyNodeDriver
 from paramiko.rsakey import RSAKey
 from pytest import mark, raises
 
 from geofront.keystore import format_openssh_pubkey, parse_openssh_pubkey
-from geofront.remote import (AuthorizedKeyList, CloudRemoteSet,
-                             Remote, authorize)
+from geofront.remote import AuthorizedKeyList,  Remote, authorize
 
 
 @mark.parametrize(('b', 'equal'), [
@@ -25,16 +23,6 @@ def test_remote(b, equal):
     assert (a == b) is equal
     assert (a != b) is (not equal)
     assert (hash(a) == hash(b)) is equal
-
-
-def test_cloud_remote_set():
-    driver = DummyNodeDriver('')
-    set_ = CloudRemoteSet(driver)
-    assert len(set_) == 2
-    assert dict(set_) == {
-        'dummy-1': Remote('ec2-user', '127.0.0.1'),
-        'dummy-2': Remote('ec2-user', '127.0.0.1')
-    }
 
 
 def test_authorized_keys_list_iter(fx_authorized_sftp):

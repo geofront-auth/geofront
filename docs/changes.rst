@@ -11,6 +11,12 @@ To be merged.
 - Added :meth:`~geofront.backends.github.GitHubOrganization.list_groups()`
   method to :class:`~geofront.backends.github.GitHubOrganization` class.
 - Removed an unnecessary dependency to enum34_ on Python 3.3.
+- Added :mod:`geofront.backends.cloud` module.
+
+  - ``geofront.masterkey.CloudMasterKeyStore`` is moved to
+    :class:`geofront.backends.cloud.CloudMasterKeyStore`.
+  - ``geofront.remote.CloudRemoteSet`` is moved to
+    :class:`geofront.backends.cloud.CloudRemoteSet`.
 
 .. _enum34: https://pypi.python.org/pypi/enum34
 
@@ -21,7 +27,7 @@ Version 0.1.1
 Released on April 22, 2014.
 
 - Fixed :exc:`TypeError` that rises when :class:`CloudMasterKeyStore
-  <geofront.masterkey.CloudMasterKeyStore>` is used with AWS S3 driver.
+  <geofront.backends.cloud.CloudMasterKeyStore>` is used with AWS S3 driver.
 - Added :option:`--trusted-proxy <geofront-server --trusted-proxy>` option
   to :program:`goefront-server` command.  It's useful when the server is
   run behind a reverse proxy.
