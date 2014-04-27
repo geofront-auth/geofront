@@ -63,7 +63,7 @@ class Remote:
                      be all strings.  empty by default
     :type metadata: :class:`collections.abc.Mapping`
 
-    .. versionchanged:: 0.2.0
+    .. versionadded:: 0.2.0
        Added optional ``metadata`` parameter.
 
     """

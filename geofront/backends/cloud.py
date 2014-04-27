@@ -5,6 +5,8 @@ This module provides built-in implementations of Geofront's some core
 interfaces through libcloud.  Libcloud_ is "a library for interacting
 with many of the popular cloud service providers using unified API."
 
+.. versionadded:: 0.2.0
+
 .. _Libcloud: http://libcloud.apache.org/
 
 """
