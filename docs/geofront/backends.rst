@@ -5,4 +5,5 @@
       :maxdepth: 2
 
       backends/cloud
+      backends/dbapi
       backends/github

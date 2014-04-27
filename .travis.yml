@@ -11,9 +11,13 @@ services:
 install:
 - pip install -f https://github.com/spoqa/sftpserver/releases sftpserver==0.2py3  # FIXME
 - pip install -e .[tests]
+- pip install --allow-external mysql-connector-python --allow-unverified mysql-connector-python psycopg2 PyMySQL mysql-connector-python
 - pip install pytest-cov coveralls
+before_script:
+- createdb -U postgres -E utf8 -T postgres geofront_test
+- mysql -e 'CREATE DATABASE geofront_test;'
 script:
 - python -mgeofront.version
-- REDIS_HOST=localhost py.test -v --cov geofront --durations=20
+- REDIS_HOST=localhost PGDATABASE=geofront_test PGUSER=postgres MYSQL_DATABASE=geofront_test MYSQL_HOST=localost MYSQL_USER=root py.test -v --cov geofront --durations=20
 after_success:
 - coveralls

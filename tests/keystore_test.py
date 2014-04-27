@@ -1,8 +1,11 @@
+import collections.abc
+
 from paramiko.dsskey import DSSKey
 from paramiko.rsakey import RSAKey
 from pytest import fixture, raises
 
-from geofront.keystore import (KeyTypeError, format_openssh_pubkey,
+from geofront.keystore import (DuplicatePublicKeyError, KeyTypeError,
+                               format_openssh_pubkey,
                                get_key_fingerprint, parse_openssh_pubkey)
 
 
@@ -74,3 +77,29 @@ def test_get_key_fingerprint(fx_id_rsa_pub):
     assert (get_key_fingerprint(pkey, '-') ==
             'f5-6e-03-1c-cd-2c-84-64-d7-94-18-8b-79-60-11-df')
     assert get_key_fingerprint(pkey, '') == 'f56e031ccd2c8464d794188b796011df'
+
+
+def assert_keystore_compliance(keystore, identity):
+    """Test basic behaviors of a KeyStore implementation."""
+    # "List registered public keys of the given ``identity``."
+    keys = keystore.list_keys(identity)
+    assert isinstance(keys, collections.abc.Set)
+    assert not keys
+    # "Register the given ``public_key`` to the ``identity``."
+    key = RSAKey.generate(1024)
+    keystore.register(identity, key)
+    keys = keystore.list_keys(identity)
+    assert isinstance(keys, collections.abc.Set)
+    assert keys == {key}
+    # ":raise geofront.keystore.DuplicatePublicKeyError:
+    # when the ``public_key`` is already in use"
+    with raises(DuplicatePublicKeyError):
+        keystore.register(identity, key)
+    # "Remove the given ``public_key`` of the ``identity``."
+    keystore.deregister(identity, key)
+    keys = keystore.list_keys(identity)
+    assert isinstance(keys, collections.abc.Set)
+    assert not keys
+    # "It silently does nothing if there isn't the given ``public_key``
+    # in the store."
+    keystore.deregister(identity, key)

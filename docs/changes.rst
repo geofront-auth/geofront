@@ -27,6 +27,7 @@ To be released.
 - Added :class:`~geofront.remote.PermissionPolicy` interface.
 - Added :class:`~geofront.remote.DefaultPermissionPolicy` class.
 - Added :class:`~geofront.remote.GroupMetadataPermissionPolicity` class.
+- Added :mod:`geofront.backends.dbapi` module.
 
 .. _enum34: https://pypi.python.org/pypi/enum34
 .. _singledispatch: https://pypi.python.org/pypi/singledispatch

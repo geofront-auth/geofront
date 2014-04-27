@@ -147,6 +147,18 @@ be uppercase.
 
        KEY_STORE = GitHubKeyStore()
 
+   You also can store public keys into the database like SQLite, PostgreSQL,
+   or MySQL through :class:`~geofront.backends.dbapi.DatabaseKeyStore`::
+
+       import sqlite3
+       from geofront.backends.dbapi import DatabaseKeyStore
+
+       KEY_STORE = DatabaseKeyStore(sqlite3,
+                                    '/var/lib/geofront/public_keys.db')
+
+   .. versionadded:: 0.2.0
+      Added :class:`~geofront.backends.dbapi.DatabaseKeyStore` class.
+
 .. data:: MASTER_KEY_STORE
 
    (:class:`geofront.masterkey.MasterKeyStore`)  The store to save

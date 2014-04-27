@@ -33,7 +33,7 @@ def pytest_addoption(parser):
                      default=12399,
                      help='the maximum unused port number [%default(s)]')
     parser.addoption('--redis-host',
-                     metavar='HOST',
+                     metavar='HOSTNAME',
                      help='redis host',
                      **env_default('REDIS_HOST'))
     parser.addoption('--redis-port',
@@ -50,6 +50,48 @@ def pytest_addoption(parser):
                      type=int,
                      default=1,
                      help='redis db number [%(default)s]')
+    parser.addoption('--postgresql-host',
+                     metavar='HOSTNAME',
+                     help='postgresql database server host [%(default)s]',
+                     **env_default('PGHOST'))
+    parser.addoption('--postgresql-port',
+                     metavar='PORT',
+                     type=int,
+                     help='postgresql database server port [%(default)s]',
+                     **env_default('PGPORT'))
+    parser.addoption('--postgresql-user',
+                     metavar='USER',
+                     help='postgresql user [%(default)s]',
+                     **env_default('PGUSER'))
+    parser.addoption('--postgresql-password',
+                     metavar='PASSWORD',
+                     help='postgresql user password [%(default)s]',
+                     **env_default('PGPASSWORD'))
+    parser.addoption('--postgresql-database',
+                     metavar='DBNAME',
+                     help='postgresql database name [%(default)s]',
+                     **env_default('PGDATABASE'))
+    parser.addoption('--mysql-host',
+                     metavar='HOSTNAME',
+                     help='mysql database server host [%(default)s]',
+                     **env_default('MYSQL_HOST'))
+    parser.addoption('--mysql-port',
+                     metavar='PORT',
+                     type=int,
+                     help='mysql database server port [%(default)s]',
+                     **env_default('MYSQL_PORT'))
+    parser.addoption('--mysql-user',
+                     metavar='USER',
+                     help='mysql user [%(default)s]',
+                     **env_default('MYSQL_USER'))
+    parser.addoption('--mysql-passwd',
+                     metavar='PASSWD',
+                     help='mysql user password [%(default)s]',
+                     **env_default('MYSQL_PASSWD'))
+    parser.addoption('--mysql-database',
+                     metavar='DATABASE',
+                     help='mysql database name [%(default)s]',
+                     **env_default('MYSQL_DATABASE'))
     parser.addoption('--github-access-token',
                      metavar='TOKEN',
                      help='github access token for key store test (caution: '
