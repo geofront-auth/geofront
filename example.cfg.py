@@ -53,6 +53,17 @@ driver_cls = get_driver(Provider.EC2_US_WEST)
 driver = driver_cls('aws access id', 'aws secret key')
 REMOTE_SET = CloudRemoteSet(driver, user='ec2-user')
 
+# Suppose your team is divided by several subgroups, and these subgroups are
+# represented in teams of the GitHub organization.  So you can control
+# who can access each remote by specifying allowed groups to its metadata.
+# CloudRemoteSet which is used for above REMOTE_SET exposes each EC2 instance's
+# metadata as it has.  We suppose every EC2 instance has Allowed-Groups
+# metadata key and its value is space-separated list of group slugs.
+# The following settings will allow only members who belong to corresponding
+# groups to access.
+from geofront.remote import GroupMetadataPermissionPolicity
+PERMISSION_POLICY = GroupMetadataPermissionPolicity('Allowed-Groups')
+
 # Geofront provisions access tokens (or you can think them as sessions)
 # for Geofront clients.  Assume you already have a Redis server running
 # on the same host.  We'd store tokens to the db 0 on that Redis server

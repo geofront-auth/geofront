@@ -183,6 +183,16 @@ be uppercase.
    and it allows everyone in the team to view and access through SSH to
    all available remotes.
 
+   If your remote set has metadata for ACL i.e. group identifiers
+   to allow you can utilize it through
+   :class:`~geofront.remote.GroupMetadataPermissionPolicity`.
+
+   If you need more subtle and complex rules for ACL you surely can implement
+   your own policy by subclassing :class:`~geofront.remote.PermissionPolicy`
+   interface.
+
+   .. versionadded:: group
+
 .. data:: MASTER_KEY_RENEWAL
 
    (:class:`datetime.timedelta`) The interval of master key renewal.

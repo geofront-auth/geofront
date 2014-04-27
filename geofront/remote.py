@@ -44,8 +44,9 @@ from geofront.identity import Identity
 from .keystore import format_openssh_pubkey, parse_openssh_pubkey
 from .util import typed
 
-__all__ = ('AuthorizedKeyList', 'DefaultPermissionPolicy', 'PermissionPolicy',
-           'Remote', 'authorize')
+__all__ = ('AuthorizedKeyList', 'DefaultPermissionPolicy',
+           'GroupMetadataPermissionPolicy', 'PermissionPolicy', 'Remote',
+           'authorize')
 
 
 class Remote:
@@ -359,3 +360,70 @@ class DefaultPermissionPolicy(PermissionPolicy):
                identity: Identity,
                groups: collections.abc.Set) -> bool:
         return True
+
+
+class GroupMetadataPermissionPolicy(PermissionPolicy):
+    """Allow/disallow remotes according their metadata.  It assumes every
+    remote has a metadata key that stores a set of groups to allow.
+    For example, suppose there's the following remote set::
+
+        {
+            'web-1': Remote('ubuntu', '192.168.0.5', metadata={'role': 'web'}),
+            'web-2': Remote('ubuntu', '192.168.0.6', metadata={'role': 'web'}),
+            'web-3': Remote('ubuntu', '192.168.0.7', metadata={'role': 'web'}),
+            'worker-1': Remote('ubuntu', '192.168.0.25',
+                               metadata={'role': 'worker'}),
+            'worker-2': Remote('ubuntu', '192.168.0.26',
+                               metadata={'role': 'worker'}),
+            'db-1': Remote('ubuntu', '192.168.0.50', metadata={'role': 'db'}),
+            'db-2': Remote('ubuntu', '192.168.0.51', metadata={'role': 'db'})
+        }
+
+    and there are groups identified as ``'web'``, ``'worker'``, and ``'db'``.
+    So the following policy would allow only members who belong to
+    the corresponding groups:
+
+        GroupMetadataPermissionPolicy('role')
+
+    :param metadata_key: the key to find corresponding groups in metadata
+                         of each remote
+    :type metadata_key: :class:`str`
+    :param separator: the character separates multiple group identifiers
+                      in the metadata value.  for example, if the groups
+                      are stored as like ``'sysadmin,owners'`` then
+                      it should be ``','``.  it splits group identifiers
+                      by all whitespace characters by default
+    :type separator: :class:`str`
+
+    .. versionadded:: group
+
+    """
+
+    @typed
+    def __init__(self, metadata_key: str, separator: str=None):
+        self.metadata_key = metadata_key
+        self.separator = separator
+
+    def _get_groups(self, remote):
+        groups = remote.metadata.get(self.metadata_key, '')
+        if self.separator is None:
+            groups = groups.split()
+        else:
+            groups = groups.split(self.separator)
+        return frozenset(groups)
+
+    @typed
+    def filter(self,
+               remotes: collections.abc.Mapping,
+               identity: Identity,
+               groups: collections.abc.Set) -> collections.abc.Mapping:
+        return {alias: remote
+                for alias, remote in remotes.items()
+                if self.permit(remote, identity, groups)}
+
+    @typed
+    def permit(self,
+               remote: Remote,
+               identity: Identity,
+               groups: collections.abc.Set) -> bool:
+        return not self._get_groups(remote).isdisjoint(groups)

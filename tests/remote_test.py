@@ -7,7 +7,7 @@ from pytest import mark, raises
 from geofront.identity import Identity
 from geofront.keystore import format_openssh_pubkey, parse_openssh_pubkey
 from geofront.remote import (AuthorizedKeyList, DefaultPermissionPolicy,
-                             Remote, authorize)
+                             GroupMetadataPermissionPolicy, Remote, authorize)
 from geofront.team import Team
 
 
@@ -205,3 +205,54 @@ def test_default_permission_policy():
     assert p.filter(remotes, identity, {'x'}) == remotes
     for remote in remotes.values():
         assert p.permit(remote, identity, {'x'})
+
+
+@mark.parametrize(('key', 'separator'), [
+    ('role', None),
+    ('role', ','),
+    ('role', '/'),
+    ('groups', None)
+])
+def test_group_metadata_permission_policy(key, separator):
+    sep = separator or ' '
+    remotes = {
+        'web-1': Remote(
+            'ubuntu', '192.168.0.5',
+            metadata={key: sep.join(['web', 'a']), 'other': 'ignore'}
+        ),
+        'web-2': Remote(
+            'ubuntu', '192.168.0.6',
+            metadata={key: sep.join(['web', 'b']), 'other': 'ignore'}
+        ),
+        'web-3': Remote(
+            'ubuntu', '192.168.0.7',
+            metadata={key: sep.join(['web', 'c']), 'other': 'ignore'}
+        ),
+        'worker-1': Remote(
+            'ubuntu', '192.168.0.25',
+            metadata={key: sep.join(['worker', 'a']), 'other': 'ignore'}
+        ),
+        'worker-2': Remote(
+            'ubuntu', '192.168.0.26',
+            metadata={key: sep.join(['worker', 'b']), 'other': 'ignore'}
+        ),
+        'db-1': Remote(
+            'ubuntu', '192.168.0.50',
+            metadata={key: sep.join(['db', 'a']), 'other': 'ignore'}
+        ),
+        'db-2': Remote(
+            'ubuntu', '192.168.0.51',
+            metadata={key: sep.join(['db', 'b']), 'other': 'ignore'}
+        )
+    }
+    subset = lambda *keys: {a: r for a, r in remotes.items() if a in keys}
+    p = GroupMetadataPermissionPolicy(key, separator)
+    identity = Identity(DummyTeam, 1)
+    assert (p.filter(remotes, identity, {'web', 'a'}) ==
+            subset('web-1', 'web-2', 'web-3', 'worker-1', 'db-1'))
+    assert (p.filter(remotes, identity, {'db', 'c'}) ==
+            subset('web-3', 'worker-3', 'db-1', 'db-2'))
+    assert p.permit(remotes['db-1'], identity, {'web', 'a'})
+    assert not p.permit(remotes['db-1'], identity, {'web', 'b'})
+    assert p.permit(remotes['db-1'], identity, {'db', 'a'})
+    assert p.permit(remotes['db-1'], identity, {'db', 'b'})
