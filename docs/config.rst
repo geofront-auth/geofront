@@ -173,6 +173,16 @@ be uppercase.
 
    .. _S3: http://aws.amazon.com/s3/
 
+.. data:: PERMISSION_POLICY
+
+   (:class:`~geofront.remote.PermissionPolicy`) The permission policy to
+   determine which remotes are visible for each team member, and allowed
+   them to SSH.
+
+   The default is :class:`~geofront.remote.DefaultPermissionPolicy`,
+   and it allows everyone in the team to view and access through SSH to
+   all available remotes.
+
 .. data:: MASTER_KEY_RENEWAL
 
    (:class:`datetime.timedelta`) The interval of master key renewal.

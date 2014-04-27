@@ -24,6 +24,7 @@ To be merged.
   :attr:`~geofront.remote.Remote.metadata` of the resulted
   :class:`~geofront.remote.Remote` objects if the given driver supports.
 - Now depends on singledispatch_ if Python is older than 3.4.
+- Added :class:`~geofront.remote.PermissionPolicy` interface.
 
 .. _enum34: https://pypi.python.org/pypi/enum34
 .. _singledispatch: https://pypi.python.org/pypi/singledispatch

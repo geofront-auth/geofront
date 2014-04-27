@@ -4,8 +4,11 @@ import time
 from paramiko.rsakey import RSAKey
 from pytest import mark, raises
 
+from geofront.identity import Identity
 from geofront.keystore import format_openssh_pubkey, parse_openssh_pubkey
-from geofront.remote import AuthorizedKeyList,  Remote, authorize
+from geofront.remote import (AuthorizedKeyList, DefaultPermissionPolicy,
+                             Remote, authorize)
+from geofront.team import Team
 
 
 @mark.parametrize(('b', 'equal'), [
@@ -185,3 +188,20 @@ def test_authorize(fx_sftpd):
     with authorized_keys_path.open() as f:
         saved_keys = map(parse_openssh_pubkey, f)
         assert frozenset(saved_keys) == {master_key}
+
+
+class DummyTeam(Team):
+
+    pass
+
+
+def test_default_permission_policy():
+    remotes = {
+        'a': Remote('a', 'localhost'),
+        'b': Remote('b', 'localhost')
+    }
+    identity = Identity(DummyTeam, 'a')
+    p = DefaultPermissionPolicy()
+    assert p.filter(remotes, identity, {'x'}) == remotes
+    for remote in remotes.values():
+        assert p.permit(remote, identity, {'x'})

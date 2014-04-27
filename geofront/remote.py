@@ -39,11 +39,13 @@ import time
 from paramiko.pkey import PKey
 from paramiko.sftp_client import SFTPClient
 from paramiko.transport import Transport
+from geofront.identity import Identity
 
 from .keystore import format_openssh_pubkey, parse_openssh_pubkey
 from .util import typed
 
-__all__ = 'AuthorizedKeyList', 'Remote', 'authorize'
+__all__ = ('AuthorizedKeyList', 'DefaultPermissionPolicy', 'PermissionPolicy',
+           'Remote', 'authorize')
 
 
 class Remote:
@@ -264,3 +266,96 @@ def authorize(public_keys: collections.abc.Set,
     expires_at = datetime.datetime.now(datetime.timezone.utc) + timeout
     timer.start()
     return expires_at
+
+
+class PermissionPolicy:
+    """Permission policy determines which remotes are visible by a team
+    member, and which remotes are allowed to SSH.  So each remote
+    can have one of three states for each team member:
+
+    Listed and allowed
+        A member can SSH to the remote.
+
+    Listed but disallowed
+        A member can be aware of the remote, but cannot SSH to it.
+
+    Unlisted and disallowed
+        A member can't be aware of the remote, and can't SSH to it either.
+
+    Unlisted but allowed
+        It is possible in theory, but mostly meaningless in practice.
+
+    The implementation of this interface has to implement two methods.
+    One is :meth:`filter()` which determines whether remotes are listed or
+    unlisted.  Other one is :meth:`permit()` which determines whether
+    remotes are allowed or disallowed to SSH.
+
+    .. versionadded:: group
+
+    """
+
+    @typed
+    def filter(self,
+               remotes: collections.abc.Mapping,
+               identity: Identity,
+               groups: collections.abc.Set) -> collections.abc.Mapping:
+        """Determine which ones in the given ``remotes`` are visible
+        to the ``identity`` (which belongs to ``groups``).  The resulted
+        mapping of filtered remotes has to be a subset of the input
+        ``remotes``.
+
+        :param remotes: the remotes set to filter.  keys are alias strings
+                        and values are :class:`Remote` objects
+        :type remotes: :class:`collections.abc.Mapping`
+        :param identity: the identity that the filtered remotes would
+                         be visible to
+        :type identity: :class:`~.identity.Identity`
+        :param groups: the groups that the given ``identity`` belongs to.
+                       every element is a group identifier and
+                       :class:`collections.abc.Hashable`
+        :type groups: :class:`collections.abc.Set`
+
+        """
+        raise NotImplementedError('filter() method has to be implemented')
+
+    @typed
+    def permit(self,
+               remote: Remote,
+               identity: Identity,
+               groups: collections.abc.Set) -> bool:
+        """Determine whether to allow the given ``identity`` (which belongs
+        to ``groups``) to SSH the given ``remote``.
+
+        :param remote: the remote to determine
+        :type remote: :class:`Remote`
+        :param identity: the identity to determine
+        :type identity: :class:`~.identity.Identity`
+        :param groups: the groups that the given ``identity`` belongs to.
+                       every element is a group identifier and
+                       :class:`collections.abc.Hashable`
+        :type groups: :class:`collections.abc.Set`
+
+        """
+        raise NotImplementedError('permit() method has to be implemented')
+
+
+class DefaultPermissionPolicy(PermissionPolicy):
+    """All remotes are listed and allowed for everyone in the team.
+
+    .. versionadded:: group
+
+    """
+
+    @typed
+    def filter(self,
+               remotes: collections.abc.Mapping,
+               identity: Identity,
+               groups: collections.abc.Set) -> collections.abc.Mapping:
+        return remotes
+
+    @typed
+    def permit(self,
+               remote: Remote,
+               identity: Identity,
+               groups: collections.abc.Set) -> bool:
+        return True
