@@ -90,6 +90,35 @@ class GitHubOrganization(Team):
     """Authenticate team membership through GitHub, and authorize to
     access GitHub key store.
 
+    Note that group identifiers :meth:`list_groups()` method returns
+    are GitHub team *slugs*.  You can find what team slugs are there in
+    the organization using GitHub API:
+
+    .. code-block:: console
+
+       $ curl -u YourUserLogin https://api.github.com/orgs/YourOrgLogin/teams
+       Enter host password for user 'YourUserLogin':
+       [
+         {
+           "name": "Owners",
+           "id": 111111,
+           "slug": "owners",
+           "permission": "admin",
+           "url": "https://api.github.com/teams/111111",
+           ...
+         },
+         {
+           "name": "Programmers",
+           "id": 222222,
+           "slug": "programmers",
+           "permission": "pull",
+           "url": "https://api.github.com/teams/222222",
+           ...
+         }
+       ]
+
+    In the above example, ``owners`` and ``programmers`` are team slugs.
+
     :param client_id: github api client id
     :type client_id: :class:`str`
     :param client_secret: github api client secret
@@ -199,7 +228,7 @@ class GitHubOrganization(Team):
         if isinstance(response, collections.abc.Mapping) and \
            'error' in response:
             return frozenset()
-        return frozenset(t['id']
+        return frozenset(t['slug']
                          for t in response
                          if t['organization']['login'] == self.org_login)
 

@@ -59,11 +59,11 @@ def pytest_addoption(parser):
                      metavar='LOGIN',
                      help='github org login for team test',
                      **env_default('GITHUB_ORG_LOGIN'))
-    parser.addoption('--github-team-ids',
-                     metavar='LOGIN',
-                     help='comma-separated github team ids for group listing '
-                          'test',
-                     **env_default('GITHUB_TEAM_IDS'))
+    parser.addoption('--github-team-slugs',
+                     metavar='SLUGS',
+                     help='space-separated github team slugs for group '
+                          'listing test',
+                     **env_default('GITHUB_TEAM_SLUGS'))
 
 
 used_port = 0
