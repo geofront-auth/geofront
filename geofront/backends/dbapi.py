@@ -69,7 +69,7 @@ class DatabaseKeyStore(KeyStore):
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS geofront_public_key (
                     key_type VARCHAR(64) NOT NULL,
-                    key_base64 VARCHAR(767) NOT NULL,
+                    key_base64 VARCHAR(700) NOT NULL,
                     team_type VARCHAR(128) NOT NULL,
                     identifier VARCHAR(128) NOT NULL,
                     PRIMARY KEY (key_type, key_base64)
