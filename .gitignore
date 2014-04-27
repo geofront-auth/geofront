@@ -5,6 +5,7 @@
 .*.swp
 .coverage
 .idea
+.swp
 .Sync*
 .tox
 build

@@ -113,6 +113,33 @@ class Team:
         """
         raise NotImplementedError('authorize() method has to be implemented')
 
+    @typed
+    def list_groups(self, identity: Identity) -> collections.abc.Set:
+        """List the all groups that the given ``identity`` belongs to.
+        Any hashable value can be an element to represent a group e.g.::
+
+            {1, 4, 9}
+
+        Or::
+
+            {'owners', 'programmers'}
+
+        Whatever value the set consists of these would be referred by
+        :class:`~.remote.Remote` objects.
+
+        Some team implementations might not have a concept like groups.
+        It's okay to return always an empty set then.
+
+        :param identity: the identity to list his/her groups
+        :type identity: :class:`~.identity.Identity`
+        :return: the set of groups associated with the ``identity``
+        :rtype: :class:`collections.abc.Set`
+
+        .. versionadded:: 0.2.0
+
+        """
+        raise NotImplementedError('list_groups() method has to be implemented')
+
 
 class AuthenticationError(Exception):
     """Authentication exception which rise when the authentication process

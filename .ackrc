@@ -1,0 +1,3 @@
+--ignore-dir=build
+--ignore-dir=dist
+--ignore-dir=docs/_build

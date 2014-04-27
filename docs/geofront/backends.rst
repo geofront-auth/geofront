@@ -4,4 +4,5 @@
    .. toctree::
       :maxdepth: 2
 
+      backends/cloud
       backends/github

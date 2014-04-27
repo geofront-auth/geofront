@@ -61,12 +61,14 @@ Prerequisites
   - Flask_ 0.10+
   - Apache Libcloud_ 0.14.0+
   - Waitress_ 0.8.8+
+  - singledispatch_ (only if Python is older than 3.4)
 
 .. _Paramiko: http://www.paramiko.org/
 .. _Werkzeug: http://werkzeug.pocoo.org/
 .. _Flask: http://flask.pocoo.org/
 .. _Libcloud: http://libcloud.apache.org/
 .. _Waitress: https://github.com/Pylons/waitress
+.. _singledispatch: https://pypi.python.org/pypi/singledispatch
 
 
 Author and license

@@ -20,6 +20,28 @@ def fx_github_access_token(request):
     return token
 
 
+@fixture
+def fx_github_org_login(request):
+    try:
+        org_login = request.config.getoption('--github-org-login')
+    except ValueError:
+        org_login = None
+    if not org_login:
+        skip('--github-org-login is not provided; skipped')
+    return org_login
+
+
+@fixture
+def fx_github_team_slugs(request):
+    try:
+        slugs = request.config.getoption('--github-team-slugs')
+    except ValueError:
+        slugs = None
+    if not slugs:
+        skip('--github-team-slugs is not provided; skipped')
+    return {slug.strip() for slug in slugs.split()}
+
+
 _fx_github_identity_cache = None
 
 
@@ -52,6 +74,18 @@ def test_request(fx_github_access_token, fx_github_identity):
         'GET'
     )
     assert result == result2
+
+
+def test_authorize(fx_github_identity, fx_github_org_login):
+    org = GitHubOrganization('', '', fx_github_org_login)
+    assert org.authorize(fx_github_identity)
+
+
+def test_list_groups(fx_github_identity, fx_github_org_login,
+                     fx_github_team_slugs):
+    org = GitHubOrganization('', '', fx_github_org_login)
+    groups = org.list_groups(fx_github_identity)
+    assert groups == fx_github_team_slugs
 
 
 def cleanup_ssh_keys(identity):

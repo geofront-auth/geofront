@@ -55,6 +55,15 @@ def pytest_addoption(parser):
                      help='github access token for key store test (caution: '
                           'it will remove all ssh keys of the account)',
                      **env_default('GITHUB_ACCESS_TOKEN'))
+    parser.addoption('--github-org-login',
+                     metavar='LOGIN',
+                     help='github org login for team test',
+                     **env_default('GITHUB_ORG_LOGIN'))
+    parser.addoption('--github-team-slugs',
+                     metavar='SLUGS',
+                     help='space-separated github team slugs for group '
+                          'listing test',
+                     **env_default('GITHUB_TEAM_SLUGS'))
 
 
 used_port = 0

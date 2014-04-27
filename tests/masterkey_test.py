@@ -1,18 +1,14 @@
 import datetime
-import io
 import os.path
 import time
 
-from libcloud.storage.drivers import dummy
-from libcloud.storage.drivers.dummy import DummyStorageDriver
 from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
 from pytest import raises
 
 from geofront.keystore import parse_openssh_pubkey
-from geofront.masterkey import (CloudMasterKeyStore, EmptyStoreError,
-                                FileSystemMasterKeyStore, PeriodicalRenewal,
-                                TwoPhaseRenewal,
+from geofront.masterkey import (EmptyStoreError, FileSystemMasterKeyStore,
+                                PeriodicalRenewal, TwoPhaseRenewal,
                                 read_private_key_file, renew_master_key)
 from geofront.remote import Remote
 
@@ -189,22 +185,3 @@ def test_periodical_renewal(fx_authorized_servers, fx_master_key, tmpdir):
     assert store.load() == last_key
     for t, path, ev in fx_authorized_servers.values():
         assert authorized_key_set(path) == {last_key}
-
-
-def test_cloud_master_key_store():
-    driver = DummyStorageDriver('', '')
-    container = driver.create_container('geofront-test')
-    s = CloudMasterKeyStore(driver, container, 'test_id_rsa')
-    with raises(EmptyStoreError):
-        s.load()
-    key = RSAKey.generate(1024)
-    s.save(key)
-    driver.get_object(container.name, 'test_id_rsa')  # assert object exists
-    # Mocking implementation
-    with io.StringIO() as mock:
-        key.write_private_key(mock)
-        mock.seek(0)
-        dummy.DummyFileObject = lambda *a, **k: mock
-        stored_key = s.load()
-        assert isinstance(stored_key, RSAKey)
-        assert stored_key.get_base64() == stored_key.get_base64()

@@ -18,9 +18,14 @@ However, in the age of the cloud, you don't have to manage the remote set
 since the most of cloud providers offer their API to list provisioned
 remote nodes.
 
-This module provides :class:`CloudRemoteSet`, a subtype of
-:class:`collections.abc.Mapping`, that proxies to the list dynamically made by
-cloud providers.
+Geofront provides builtin :class:`~.backends.cloud.CloudRemoteSet`,
+a subtype of :class:`collections.abc.Mapping`, that proxies to the list
+dynamically made by cloud providers.
+
+.. versionchanged:: 0.2.0
+   ``CloudRemoteSet`` is moved from this module to
+   :mod:`geofront.backends.cloud`.
+   See :class:`~.backends.cloud.CloudRemoteSet`.
 
 """
 import collections.abc
@@ -31,15 +36,17 @@ import numbers
 import threading
 import time
 
-from libcloud.compute.base import NodeDriver
 from paramiko.pkey import PKey
 from paramiko.sftp_client import SFTPClient
 from paramiko.transport import Transport
+from geofront.identity import Identity
 
 from .keystore import format_openssh_pubkey, parse_openssh_pubkey
 from .util import typed
 
-__all__ = 'AuthorizedKeyList', 'CloudRemoteSet', 'Remote', 'authorize'
+__all__ = ('AuthorizedKeyList', 'DefaultPermissionPolicy',
+           'GroupMetadataPermissionPolicy', 'PermissionPolicy', 'Remote',
+           'authorize')
 
 
 class Remote:
@@ -52,6 +59,12 @@ class Remote:
     :param port: the port number to :program:`ssh`.
                  the default is 22 which is the default :program:`ssh` port
     :type port: :class:`numbers.Integral`
+    :param metadata: optional metadata mapping.  keys and values have to
+                     be all strings.  empty by default
+    :type metadata: :class:`collections.abc.Mapping`
+
+    .. versionchanged:: 0.2.0
+       Added optional ``metadata`` parameter.
 
     """
 
@@ -64,11 +77,20 @@ class Remote:
     #: (:class:`numbers.Integral`) The port number to SSH.
     port = None
 
+    #: (:class:`collections.abc.Mapping`) The additional metadata.
+    #: Note that it won't affect to :func:`hash()` of the object,
+    #: nor :token:`==`/:token:`!=` comparison of the object.
+    #:
+    #: .. versionadded:: 0.2.0
+    metadata = None
+
     @typed
-    def __init__(self, user: str, host: str, port: numbers.Integral=22):
+    def __init__(self, user: str, host: str, port: numbers.Integral=22,
+                 metadata: collections.abc.Mapping={}):
         self.user = user
         self.host = host
         self.port = port
+        self.metadata = dict(metadata)
 
     def __eq__(self, other):
         return (isinstance(other, type(self)) and
@@ -86,8 +108,8 @@ class Remote:
         return '{}@{}:{}'.format(self.user, self.host, self.port)
 
     def __repr__(self):
-        return '{0.__module__}.{0.__qualname__}({1!r}, {2!r}, {3!r})'.format(
-            type(self), self.user, self.host, self.port
+        return '{0.__module__}.{0.__qualname__}{1!r}'.format(
+            type(self), (self.user, self.host, self.port, self.metadata)
         )
 
 
@@ -201,68 +223,6 @@ class AuthorizedKeyList(collections.abc.MutableSequence):
         self._save('\n'.join(lines))
 
 
-class CloudRemoteSet(collections.abc.Mapping):
-    """Libcloud_-backed remote set.  It supports more than 20 cloud providers
-    through the efforts of Libcloud_. ::
-
-        from geofront.remote import CloudRemoteSet
-        from libcloud.compute.types import Provider
-        from libcloud.compute.providers import get_driver
-
-        driver_cls = get_driver(Provider.EC2_US_WEST)
-        driver = driver_cls('access id', 'secret key')
-        REMOTE_SET = CloudRemoteSet(driver)
-
-    :param driver: libcloud compute driver
-    :type driver: :class:`libcloud.compute.base.NodeDriver`
-    :param user: the username to :program:`ssh`.
-                 the default is ``'ec2-user'`` which is the default user
-                 of amazon linux ami
-    :type user: :class:`str`
-    :param port: the port number to :program:`ssh`.
-                the default is 22 which is the default :program:`ssh` port
-    :type port: :class:`numbers.Integral`
-
-    .. seealso::
-
-       `Compute`__ --- Libcloud
-          The compute component of libcloud allows you to manage
-          cloud and virtual servers offered by different providers,
-          more than 20 in total.
-
-    .. _Libcloud: http://libcloud.apache.org/
-    __ https://libcloud.readthedocs.org/en/latest/compute/
-
-    """
-
-    @typed
-    def __init__(self,
-                 driver: NodeDriver,
-                 user: str='ec2-user',
-                 port: numbers.Integral=22):
-        self.driver = driver
-        self.user = user
-        self.port = port
-        self._nodes = None
-
-    def _get_nodes(self, refresh: bool=False) -> dict:
-        if refresh or self._nodes is None:
-            self._nodes = {node.name: node
-                           for node in self.driver.list_nodes()
-                           if node.public_ips}
-        return self._nodes
-
-    def __len__(self) -> int:
-        return len(self._get_nodes())
-
-    def __iter__(self) -> collections.abc.Iterator:
-        return iter(self._get_nodes(True))
-
-    def __getitem__(self, alias: str) -> Remote:
-        node = self._get_nodes()[alias]
-        return Remote(self.user, node.public_ips[0], self.port)
-
-
 @typed
 def authorize(public_keys: collections.abc.Set,
               master_key: PKey,
@@ -307,3 +267,163 @@ def authorize(public_keys: collections.abc.Set,
     expires_at = datetime.datetime.now(datetime.timezone.utc) + timeout
     timer.start()
     return expires_at
+
+
+class PermissionPolicy:
+    """Permission policy determines which remotes are visible by a team
+    member, and which remotes are allowed to SSH.  So each remote
+    can have one of three states for each team member:
+
+    Listed and allowed
+        A member can SSH to the remote.
+
+    Listed but disallowed
+        A member can be aware of the remote, but cannot SSH to it.
+
+    Unlisted and disallowed
+        A member can't be aware of the remote, and can't SSH to it either.
+
+    Unlisted but allowed
+        It is possible in theory, but mostly meaningless in practice.
+
+    The implementation of this interface has to implement two methods.
+    One is :meth:`filter()` which determines whether remotes are listed or
+    unlisted.  Other one is :meth:`permit()` which determines whether
+    remotes are allowed or disallowed to SSH.
+
+    .. versionadded:: 0.2.0
+
+    """
+
+    @typed
+    def filter(self,
+               remotes: collections.abc.Mapping,
+               identity: Identity,
+               groups: collections.abc.Set) -> collections.abc.Mapping:
+        """Determine which ones in the given ``remotes`` are visible
+        to the ``identity`` (which belongs to ``groups``).  The resulted
+        mapping of filtered remotes has to be a subset of the input
+        ``remotes``.
+
+        :param remotes: the remotes set to filter.  keys are alias strings
+                        and values are :class:`Remote` objects
+        :type remotes: :class:`collections.abc.Mapping`
+        :param identity: the identity that the filtered remotes would
+                         be visible to
+        :type identity: :class:`~.identity.Identity`
+        :param groups: the groups that the given ``identity`` belongs to.
+                       every element is a group identifier and
+                       :class:`collections.abc.Hashable`
+        :type groups: :class:`collections.abc.Set`
+
+        """
+        raise NotImplementedError('filter() method has to be implemented')
+
+    @typed
+    def permit(self,
+               remote: Remote,
+               identity: Identity,
+               groups: collections.abc.Set) -> bool:
+        """Determine whether to allow the given ``identity`` (which belongs
+        to ``groups``) to SSH the given ``remote``.
+
+        :param remote: the remote to determine
+        :type remote: :class:`Remote`
+        :param identity: the identity to determine
+        :type identity: :class:`~.identity.Identity`
+        :param groups: the groups that the given ``identity`` belongs to.
+                       every element is a group identifier and
+                       :class:`collections.abc.Hashable`
+        :type groups: :class:`collections.abc.Set`
+
+        """
+        raise NotImplementedError('permit() method has to be implemented')
+
+
+class DefaultPermissionPolicy(PermissionPolicy):
+    """All remotes are listed and allowed for everyone in the team.
+
+    .. versionadded:: 0.2.0
+
+    """
+
+    @typed
+    def filter(self,
+               remotes: collections.abc.Mapping,
+               identity: Identity,
+               groups: collections.abc.Set) -> collections.abc.Mapping:
+        return remotes
+
+    @typed
+    def permit(self,
+               remote: Remote,
+               identity: Identity,
+               groups: collections.abc.Set) -> bool:
+        return True
+
+
+class GroupMetadataPermissionPolicy(PermissionPolicy):
+    """Allow/disallow remotes according their metadata.  It assumes every
+    remote has a metadata key that stores a set of groups to allow.
+    For example, suppose there's the following remote set::
+
+        {
+            'web-1': Remote('ubuntu', '192.168.0.5', metadata={'role': 'web'}),
+            'web-2': Remote('ubuntu', '192.168.0.6', metadata={'role': 'web'}),
+            'web-3': Remote('ubuntu', '192.168.0.7', metadata={'role': 'web'}),
+            'worker-1': Remote('ubuntu', '192.168.0.25',
+                               metadata={'role': 'worker'}),
+            'worker-2': Remote('ubuntu', '192.168.0.26',
+                               metadata={'role': 'worker'}),
+            'db-1': Remote('ubuntu', '192.168.0.50', metadata={'role': 'db'}),
+            'db-2': Remote('ubuntu', '192.168.0.51', metadata={'role': 'db'})
+        }
+
+    and there are groups identified as ``'web'``, ``'worker'``, and ``'db'``.
+    So the following policy would allow only members who belong to
+    the corresponding groups:
+
+        GroupMetadataPermissionPolicy('role')
+
+    :param metadata_key: the key to find corresponding groups in metadata
+                         of each remote
+    :type metadata_key: :class:`str`
+    :param separator: the character separates multiple group identifiers
+                      in the metadata value.  for example, if the groups
+                      are stored as like ``'sysadmin,owners'`` then
+                      it should be ``','``.  it splits group identifiers
+                      by all whitespace characters by default
+    :type separator: :class:`str`
+
+    .. versionadded:: 0.2.0
+
+    """
+
+    @typed
+    def __init__(self, metadata_key: str, separator: str=None):
+        self.metadata_key = metadata_key
+        self.separator = separator
+
+    def _get_groups(self, remote):
+        groups = remote.metadata.get(self.metadata_key, '')
+        if self.separator is None:
+            groups = groups.split()
+        else:
+            groups = groups.split(self.separator)
+        return frozenset(groups)
+
+    @typed
+    def filter(self,
+               remotes: collections.abc.Mapping,
+               identity: Identity,
+               groups: collections.abc.Set) -> collections.abc.Mapping:
+        return {alias: remote
+                for alias, remote in remotes.items()
+                if self.permit(remote, identity, groups)}
+
+    @typed
+    def permit(self,
+               remote: Remote,
+               identity: Identity,
+               groups: collections.abc.Set) -> bool:
+        return not self._get_groups(remote).isdisjoint(groups)

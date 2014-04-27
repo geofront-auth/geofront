@@ -67,7 +67,8 @@ from .keystore import (DuplicatePublicKeyError, KeyStore, KeyTypeError,
                        parse_openssh_pubkey)
 from .masterkey import (EmptyStoreError, MasterKeyStore, PeriodicalRenewal,
                         renew_master_key)
-from .remote import Remote, authorize
+from .remote import (DefaultPermissionPolicy, PermissionPolicy, Remote,
+                     authorize)
 from .team import AuthenticationError, Team
 from .util import typed
 from .version import VERSION
@@ -76,8 +77,8 @@ __all__ = ('AUTHORIZATION_TIMEOUT',
            'FingerprintConverter', 'Token', 'TokenIdConverter',
            'add_public_key', 'app', 'authenticate', 'authorize_remote',
            'create_access_token', 'delete_public_key', 'get_identity',
-           'get_key_store', 'get_master_key_store', 'get_public_key',
-           'get_remote_set', 'get_team', 'get_token_store',
+           'get_key_store', 'get_master_key_store', 'get_permission_policy',
+           'get_public_key', 'get_remote_set', 'get_team', 'get_token_store',
            'list_public_keys', 'main', 'main_parser', 'master_key',
            'public_key', 'remote_dict', 'server_version', 'token')
 
@@ -137,6 +138,7 @@ app.url_map.converters.update(
     fingerprint=FingerprintConverter
 )
 app.config.update(  # Config defaults
+    PERMISSION_POLICY=DefaultPermissionPolicy(),
     MASTER_KEY_RENEWAL=datetime.timedelta(days=1),
     TOKEN_EXPIRE=datetime.timedelta(days=7)
 )
@@ -724,6 +726,30 @@ def get_remote_set() -> collections.abc.Mapping:
     )
 
 
+def get_permission_policy() -> PermissionPolicy:
+    """Get the configured permission policy.
+
+    :return: the configured permission policy
+    :rtype: :class:`~.remote.PermissionPolicy`
+    :raise RuntimeError: if ``'PERMISSION_POLICY'`` is not configured,
+                         or it's not an instance of
+                         :class:`~.remote.PermissionPolicy`
+
+    .. versionadded:: 0.2.0
+
+    """
+    try:
+        policy = app.config['PERMISSION_POLICY']
+    except KeyError:
+        raise RuntimeError('PERMISSION_POLICY configuration is not present')
+    if isinstance(policy, PermissionPolicy):
+        return policy
+    raise RuntimeError(
+        'PERMISSION_POLICY configuration must be an instance of {0.__module__}'
+        '.{0.__qualname__}, not {1!r}'.format(PermissionPolicy, policy)
+    )
+
+
 def remote_dict(remote: Remote) -> collections.abc.Mapping:
     """Convert a ``remote`` to a simple dictionary that can be serialized
     to JSON.
@@ -768,8 +794,11 @@ def list_remotes(token_id: str):
     .. todo:: Filter by query string.
 
     """
-    get_identity(token_id)  # 404/410 if not authenticated
-    remotes = get_remote_set()
+    team = get_team()
+    identity = get_identity(token_id)  # 404/410 if not authenticated
+    groups = team.list_groups(identity)
+    policy = get_permission_policy()
+    remotes = policy.filter(get_remote_set(), identity, groups)
     return jsonify(
         {alias: remote_dict(remote) for alias, remote in remotes.items()}
     )
@@ -805,10 +834,12 @@ def authorize_remote(token_id: str, alias: str):
     :status 404: (``not-found``) when there's no such remote
 
     """
+    team = get_team()
     identity = get_identity(token_id)
     key_store = get_key_store()
     master_key_store = get_master_key_store()
     remotes = get_remote_set()
+    policy = get_permission_policy()
     try:
         remote = remotes[alias]
     except KeyError:
@@ -817,7 +848,15 @@ def authorize_remote(token_id: str, alias: str):
             message='No such remote alias: {}.'.format(alias)
         )
         response.status_code = 404
-        raise HTTPException(response=response)
+        return response
+    if not policy.permit(remote, identity, team.list_groups(identity)):
+        response = jsonify(
+            error='forbidden',
+            message='Remote {0} is disallowed.  Contact the system '
+                    'administrator.'.format(alias)
+        )
+        response.status_code = 403
+        return response
     public_keys = key_store.list_keys(identity)
     master_key = master_key_store.load()
     remote_mapping = remote_dict(remote)

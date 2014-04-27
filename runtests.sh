@@ -19,5 +19,5 @@ if [[ ! $(which pip | grep $VIRTUAL_ENV) ]]; then
     popd
 fi
 pip install -f https://github.com/spoqa/sftpserver/releases -e .[tests] flake8
-py.test --cov geofront
+py.test --cov geofront tests
 flake8

@@ -20,7 +20,7 @@ from geofront.keystore import (DuplicatePublicKeyError, KeyStore,
                                format_openssh_pubkey, get_key_fingerprint,
                                parse_openssh_pubkey)
 from geofront.masterkey import MasterKeyStore
-from geofront.remote import Remote
+from geofront.remote import PermissionPolicy, Remote
 from geofront.server import (FingerprintConverter, Token, TokenIdConverter,
                              app, get_identity, get_key_store, get_public_key,
                              get_remote_set, get_team, get_token_store,
@@ -187,6 +187,9 @@ class DummyTeam(Team):
     def authorize(self, identity: Identity) -> bool:
         return (issubclass(identity.team_type, type(self)) and
                 identity.access_token is not False)
+
+    def list_groups(self, identity: Identity):
+        return {'odd' if identity.identifier % 2 else 'even'}
 
 
 def test_get_team__no_config():
@@ -652,6 +655,21 @@ def test_remote_dict():
     }
 
 
+class DisallowAllPolicy(PermissionPolicy):
+
+    def filter(self,
+               remotes: collections.abc.Mapping,
+               identity: Identity,
+               groups: collections.abc.Set) -> collections.abc.Mapping:
+        return {}
+
+    def permit(self,
+               remote: Remote,
+               identity: Identity,
+               groups: collections.abc.Set) -> bool:
+        return False
+
+
 def test_list_remotes(fx_app, fx_mock_remote_set,
                       fx_authorized_identity, fx_token_id):
     with fx_app.test_client() as client:
@@ -662,6 +680,22 @@ def test_list_remotes(fx_app, fx_mock_remote_set,
             alias: remote_dict(remote)
             for alias, remote in fx_mock_remote_set.items()
         }
+
+
+def test_list_remotes_filtered(fx_app, fx_mock_remote_set,
+                               fx_authorized_identity, fx_token_id):
+    default = fx_app.config['PERMISSION_POLICY']
+    try:
+        fx_app.config['PERMISSION_POLICY'] = DisallowAllPolicy()
+        with fx_app.test_client() as client:
+            response = client.get(
+                get_url('list_remotes', token_id=fx_token_id)
+            )
+            assert response.status_code == 200
+            assert response.mimetype == 'application/json'
+            assert json.loads(response.data) == {}
+    finally:
+        fx_app.config['PERMISSION_POLICY'] = default
 
 
 @yield_fixture
@@ -702,3 +736,34 @@ def test_authorize_remote(fx_app, fx_authorized_servers, fx_master_key,
     with authorized_keys_path.open() as f:
         saved_keys = map(parse_openssh_pubkey, f)
         assert frozenset(saved_keys) == {fx_master_key}
+
+
+def test_authorize_remote_404(fx_app, fx_mock_remote_set,
+                              fx_authorized_identity, fx_token_id):
+    with fx_app.test_client() as client:
+        response = client.post(
+            get_url('authorize_remote', token_id=fx_token_id, alias='notexist')
+        )
+        assert response.status_code == 404
+        assert response.mimetype == 'application/json'
+        result = json.loads(response.data)
+        assert result['error'] == 'not-found'
+
+
+def test_authorize_remote_403(fx_app, fx_mock_remote_set,
+                              fx_authorized_identity, fx_token_id):
+    default = fx_app.config['PERMISSION_POLICY']
+    try:
+        fx_app.config['PERMISSION_POLICY'] = DisallowAllPolicy()
+        with fx_app.test_client() as client:
+            response = client.post(
+                get_url('authorize_remote',
+                        token_id=fx_token_id,
+                        alias='web-1')
+            )
+            assert response.status_code == 403
+            assert response.mimetype == 'application/json'
+            result = json.loads(response.data)
+            assert result['error'] == 'forbidden'
+    finally:
+        fx_app.config['PERMISSION_POLICY'] = default

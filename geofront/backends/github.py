@@ -90,6 +90,35 @@ class GitHubOrganization(Team):
     """Authenticate team membership through GitHub, and authorize to
     access GitHub key store.
 
+    Note that group identifiers :meth:`list_groups()` method returns
+    are GitHub team *slugs*.  You can find what team slugs are there in
+    the organization using GitHub API:
+
+    .. code-block:: console
+
+       $ curl -u YourUserLogin https://api.github.com/orgs/YourOrgLogin/teams
+       Enter host password for user 'YourUserLogin':
+       [
+         {
+           "name": "Owners",
+           "id": 111111,
+           "slug": "owners",
+           "permission": "admin",
+           "url": "https://api.github.com/teams/111111",
+           ...
+         },
+         {
+           "name": "Programmers",
+           "id": 222222,
+           "slug": "programmers",
+           "permission": "pull",
+           "url": "https://api.github.com/teams/222222",
+           ...
+         }
+       ]
+
+    In the above example, ``owners`` and ``programmers`` are team slugs.
+
     :param client_id: github api client id
     :type client_id: :class:`str`
     :param client_secret: github api client secret
@@ -104,6 +133,7 @@ class GitHubOrganization(Team):
     ACCESS_TOKEN_URL = 'https://github.com/login/oauth/access_token'
     USER_URL = 'https://api.github.com/user'
     ORGS_LIST_URL = 'https://api.github.com/user/orgs'
+    TEAMS_LIST_URL = 'https://api.github.com/user/teams'
 
     @typed
     def __init__(self, client_id: str, client_secret: str, org_login: str):
@@ -183,9 +213,24 @@ class GitHubOrganization(Team):
             response = request(identity, self.ORGS_LIST_URL)
         except IOError:
             return False
-        if isinstance(response, collections.Mapping) and 'error' in response:
+        if isinstance(response, collections.abc.Mapping) and \
+           'error' in response:
             return False
         return any(o['login'] == self.org_login for o in response)
+
+    def list_groups(self, identity: Identity):
+        if not issubclass(identity.team_type, type(self)):
+            return frozenset()
+        try:
+            response = request(identity, self.TEAMS_LIST_URL)
+        except IOError:
+            return frozenset()
+        if isinstance(response, collections.abc.Mapping) and \
+           'error' in response:
+            return frozenset()
+        return frozenset(t['slug']
+                         for t in response
+                         if t['organization']['login'] == self.org_login)
 
 
 class GitHubKeyStore(KeyStore):
