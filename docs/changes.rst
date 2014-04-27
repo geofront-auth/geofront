@@ -18,7 +18,15 @@ To be merged.
   - ``geofront.remote.CloudRemoteSet`` is moved to
     :class:`geofront.backends.cloud.CloudRemoteSet`.
 
+- :class:`~geofront.remote.Remote` now has
+  :attr:`~geofront.remote.Remote.metadata` attribute.
+- :class:`~geofront.backends.cloud.CloudRemoteSet` fills
+  :attr:`~geofront.remote.Remote.metadata` of the resulted
+  :class:`~geofront.remote.Remote` objects if the given driver supports.
+- Now depends on singledispatch_ if Python is older than 3.4.
+
 .. _enum34: https://pypi.python.org/pypi/enum34
+.. _singledispatch: https://pypi.python.org/pypi/singledispatch
 
 
 Version 0.1.1

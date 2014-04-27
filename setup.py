@@ -42,6 +42,7 @@ docs_require = [
 ]
 
 if sys.version_info < (3, 4):
+    install_requires.append('singledispatch')
     tests_require.append('asyncio >= 0.4.1')
 
 # Install requirements for documentation if it's run by ReadTheDocs.org

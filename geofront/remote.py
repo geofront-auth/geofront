@@ -56,6 +56,12 @@ class Remote:
     :param port: the port number to :program:`ssh`.
                  the default is 22 which is the default :program:`ssh` port
     :type port: :class:`numbers.Integral`
+    :param metadata: optional metadata mapping.  keys and values have to
+                     be all strings.  empty by default
+    :type metadata: :class:`collections.abc.Mapping`
+
+    .. versionchanged:: group
+       Added optional ``metadata`` parameter.
 
     """
 
@@ -68,11 +74,20 @@ class Remote:
     #: (:class:`numbers.Integral`) The port number to SSH.
     port = None
 
+    #: (:class:`collections.abc.Mapping`) The additional metadata.
+    #: Note that it won't affect to :func:`hash()` of the object,
+    #: nor :token:`==`/:token:`!=` comparison of the object.
+    #:
+    #: .. versionadded:: group
+    metadata = None
+
     @typed
-    def __init__(self, user: str, host: str, port: numbers.Integral=22):
+    def __init__(self, user: str, host: str, port: numbers.Integral=22,
+                 metadata: collections.abc.Mapping={}):
         self.user = user
         self.host = host
         self.port = port
+        self.metadata = dict(metadata)
 
     def __eq__(self, other):
         return (isinstance(other, type(self)) and
@@ -90,8 +105,8 @@ class Remote:
         return '{}@{}:{}'.format(self.user, self.host, self.port)
 
     def __repr__(self):
-        return '{0.__module__}.{0.__qualname__}({1!r}, {2!r}, {3!r})'.format(
-            type(self), self.user, self.host, self.port
+        return '{0.__module__}.{0.__qualname__}{1!r}'.format(
+            type(self), (self.user, self.host, self.port, self.metadata)
         )
 
 

@@ -16,7 +16,15 @@ from geofront.remote import AuthorizedKeyList,  Remote, authorize
     (Remote('a', '192.168.0.2', 22), False),
     (Remote('b', '192.168.0.2', 22), False),
     (Remote('a', '192.168.0.2', 2222), False),
-    (Remote('b', '192.168.0.2', 2222), False)
+    (Remote('b', '192.168.0.2', 2222), False),
+    (Remote('a', '192.168.0.1', 22, {'a': 1}), True),
+    (Remote('a', '192.168.0.1', 2222, {'a': 1}), False),
+    (Remote('b', '192.168.0.1', 22, {'a': 1}), False),
+    (Remote('b', '192.168.0.1', 2222, {'a': 1}), False),
+    (Remote('a', '192.168.0.2', 22, {'a': 1}), False),
+    (Remote('b', '192.168.0.2', 22, {'a': 1}), False),
+    (Remote('a', '192.168.0.2', 2222, {'a': 1}), False),
+    (Remote('b', '192.168.0.2', 2222, {'a': 1}), False)
 ])
 def test_remote(b, equal):
     a = Remote('a', '192.168.0.1')
