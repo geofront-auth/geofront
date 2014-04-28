@@ -17,7 +17,7 @@ from paramiko.pkey import PKey
 
 from ..identity import Identity
 from ..keystore import (KEY_TYPES, DuplicatePublicKeyError, KeyStore,
-                        KeyTypeError)
+                        KeyTypeError, get_key_fingerprint)
 from ..util import typed
 
 __all__ = 'DatabaseKeyStore',
@@ -69,10 +69,11 @@ class DatabaseKeyStore(KeyStore):
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS geofront_public_key (
                     key_type VARCHAR(64) NOT NULL,
-                    key_base64 VARCHAR(700) NOT NULL,
+                    key_fingerprint VARCHAR(32) NOT NULL,
+                    key_base64 VARCHAR(2048) NOT NULL,
                     team_type VARCHAR(128) NOT NULL,
                     identifier VARCHAR(128) NOT NULL,
-                    PRIMARY KEY (key_type, key_base64)
+                    PRIMARY KEY (key_type, key_fingerprint)
                 )
             ''')
             connection.commit()
@@ -107,7 +108,7 @@ class DatabaseKeyStore(KeyStore):
         cursor.execute(sql, params)
 
     def _get_key_params(self, public_key: PKey) -> tuple:
-        return public_key.get_name(), public_key.get_base64()
+        return public_key.get_name(), get_key_fingerprint(public_key, '')
 
     def _get_identity_params(self, identity: Identity) -> tuple:
         return ('{0.__module__}.{0.__qualname__}'.format(identity.team_type),
@@ -125,11 +126,13 @@ class DatabaseKeyStore(KeyStore):
             cursor = connection.cursor()
             try:
                 params = (self._get_key_params(public_key) +
+                          (public_key.get_base64(),) +
                           self._get_identity_params(identity))
                 self._execute(cursor, '''
                     INSERT INTO geofront_public_key (
-                        key_type, key_base64, team_type, identifier
-                    ) VALUES (?, ?, ?, ?)
+                        key_type, key_fingerprint, key_base64,
+                         team_type, identifier
+                    ) VALUES (?, ?, ?, ?, ?)
                 ''', params)
                 connection.commit()
             except self.integrity_error as e:
@@ -163,7 +166,7 @@ class DatabaseKeyStore(KeyStore):
                           self._get_identity_params(identity))
                 self._execute(cursor, '''
                     DELETE FROM geofront_public_key
-                    WHERE key_type = ? AND key_base64 = ? AND
+                    WHERE key_type = ? AND key_fingerprint = ? AND
                           team_type = ? AND identifier = ?
                 ''', params)
                 connection.commit()
