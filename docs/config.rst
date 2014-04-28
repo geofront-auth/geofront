@@ -181,7 +181,7 @@ be uppercase.
 
        from geofront.masterkey import FileSystemMasterKeyStore
 
-       MASTER_KEY_STORE = FilesystemMasterKeyStore('/var/lib/geofront/id_rsa')
+       MASTER_KEY_STORE = FileSystemMasterKeyStore('/var/lib/geofront/id_rsa')
 
    .. _S3: http://aws.amazon.com/s3/
 
