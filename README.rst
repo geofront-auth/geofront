@@ -75,12 +75,17 @@ Author and license
 ------------------
 
 Geofront is written by `Hong Minhee`__, maintained by Spoqa_, and licensed
-under AGPL3_ or later.
+under AGPL3_ or later.  You can find the source code from GitHub__:
+
+.. code-block:: console
+
+   $ git clone git://github.com/spoqa/geofront.git
 
 
 __ http://dahlia.kr/
 .. _Spoqa: http://www.spoqa.com/
 .. _AGPL3: http://www.gnu.org/licenses/agpl-3.0.html
+__ https://github.com/spoqa/geofront
 
 
 Missing features
