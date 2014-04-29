@@ -30,6 +30,9 @@ To be released.
 - Added new ``PERMISSION_POLICY`` configuration.
 - Added :mod:`geofront.backends.dbapi` module.
 - Added :program:`geofront-key-regen` command.
+- HTTP APIs became more RESTful.  Now it has the root endpoint which provides
+  the link to create a new token, and the token API provides several
+  links to subresources as well.
 
 .. _enum34: https://pypi.python.org/pypi/enum34
 .. _singledispatch: https://pypi.python.org/pypi/singledispatch

@@ -12,6 +12,7 @@ from pytest import fail, fixture, mark, raises, skip, yield_fixture
 from werkzeug.contrib.cache import (BaseCache, FileSystemCache, RedisCache,
                                     SimpleCache)
 from werkzeug.exceptions import HTTPException, NotFound
+from werkzeug.http import parse_options_header
 from werkzeug.routing import Map, Rule
 from werkzeug.urls import url_decode, url_encode
 
@@ -97,6 +98,28 @@ def test_server_version():
         response = client.get('/')
         assert 'Geofront/' + VERSION in response.headers['Server']
         assert response.headers['X-Geofront-Version'] == VERSION
+
+
+def parse_link_header(link_header):
+    href, options = parse_options_header(link_header)
+    assert href.startswith('<')
+    assert href.endswith('>')
+    assert list(options.keys()) == ['rel']
+    return href[1:-1], options['rel']
+
+
+def test_server_endpoint():
+    with app.test_client() as client:
+        assert get_url('server_endpoint') == '/'
+        expected_url = get_url(
+            'token',
+            token_id='TOKEN_ID',
+            _external=True
+        ).replace('/TOKEN_ID/', '/')
+        response = client.get('/')
+        assert (parse_link_header(response.headers['Link']) ==
+                (expected_url, 'tokens'))
+        assert json.loads(response.data) == {'tokens_url': expected_url}
 
 
 def test_get_token_store__no_config():
@@ -354,10 +377,24 @@ def test_token(fx_app, fx_authorized_identity, fx_token_id):
     with fx_app.test_client() as c:
         response = c.get(get_url('token', token_id=fx_token_id))
         assert response.status_code == 200
+        links = dict(parse_link_header(link)[::-1]
+                     for link in response.headers.getlist('Link'))
+        assert links == {
+            'remotes': get_url('list_remotes',
+                               token_id=fx_token_id, _external=True),
+            'keys': get_url('list_public_keys',
+                            token_id=fx_token_id, _external=True),
+            'masterkey': get_url('master_key',
+                                 token_id=fx_token_id,
+                                 _external=True)
+        }
         t = fx_authorized_identity.team_type
         assert json.loads(response.data) == {
             'team_type': t.__module__ + '.' + t.__qualname__,
-            'identifier': fx_authorized_identity.identifier
+            'identifier': fx_authorized_identity.identifier,
+            'remotes_url': links['remotes'],
+            'keys_url': links['keys'],
+            'master_key_url': links['masterkey']
         }
 
 

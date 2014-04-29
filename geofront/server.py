@@ -79,7 +79,8 @@ __all__ = ('AUTHORIZATION_TIMEOUT',
            'get_key_store', 'get_master_key_store', 'get_permission_policy',
            'get_public_key', 'get_remote_set', 'get_team', 'get_token_store',
            'list_public_keys', 'main', 'main_parser', 'master_key',
-           'public_key', 'remote_dict', 'server_version', 'token')
+           'public_key', 'remote_dict', 'server_endpoint', 'server_version',
+           'token')
 
 
 #: (:class:`datetime.timedelta`) How long does each temporary authorization
@@ -152,6 +153,42 @@ def server_version(response: Response) -> Response:
     headers = response.headers
     headers['Server'] = 'Geofront/' + VERSION
     headers['X-Geofront-Version'] = VERSION
+    return response
+
+
+@app.route('/')
+def server_endpoint():
+    """The endpoint of HTTP API which provide the url to create a new token.
+
+    .. code-block:: http
+
+       GET / HTTPS/1.1
+       Accept: application/json
+
+    .. code-block:: http
+
+       HTTP/1.0 200 OK
+       Content-Type: application/json
+       Link: <https://example.com/tokens/>; rel=tokens
+
+       {
+         "tokens_url": "https://example.com/tokens/"
+       }
+
+    :resheader Link: the url to create a new token.  the equivalent to
+                     the response content
+    :status 200: when the server is available
+
+    .. versionadded:: 0.2.0
+
+    """
+    tokens_url = url_for(
+        'token',
+        token_id='TOKEN_ID',
+        _external=True
+    ).replace('/TOKEN_ID/', '/')  # FIXME
+    response = jsonify(tokens_url=tokens_url)
+    response.headers.add('Link', '<{}>'.format(tokens_url), rel='tokens')
     return response
 
 
@@ -263,7 +300,7 @@ def create_access_token(token_id: str):
     response = jsonify(next_url=next_url)
     assert isinstance(response, Response)
     response.status_code = 202
-    response.headers['Link'] = '<{0}>; rel=next'.format(next_url)
+    response.headers.add('Link', '<{}>'.format(next_url), rel='next')
     response.expires = (datetime.datetime.now(datetime.timezone.utc) +
                         datetime.timedelta(seconds=timeout))
     return response
@@ -396,22 +433,44 @@ def token(token_id: str):
 
        HTTPS/1.0 200 OK
        Content-Type: application/json
+       Link: <https://example.com/tokens/0123456789abcdef/remo...>; rel=remotes
+       Link: <https://example.com/tokens/0123456789abcdef/keys/>; rel=keys
+       Link: <https://example.com/tokens/0123456789abcdef/ma...>; rel=masterkey
 
        {
          "identifier": "dahlia",
-         "team_type": "geofront.backends.github.GitHubOrganization"
+         "team_type": "geofront.backends.github.GitHubOrganization",
+         "remotes_url": "https://example.com/tokens/0123456789abcdef/remotes/",
+         "keys_url": "https://example.com/tokens/0123456789abcdef/keys/",
+         "master_key_url": "https://example.com/tokens/0123456789abcdef/mas..."
        }
 
     :param token_id: the token id that holds the identity
     :type token_id: :class:`str`
+    :resheader Link: the url to list remotes (``rel=remotes``), public keys
+                     (``rel=keys``), and master key (``rel=masterkey``)
     :status 200: when the token is authenticated
+
+    .. versionchanged:: 0.2.0
+       The response contains ``"remotes_url"``, ``"keys_url"``, and
+       ``"master_key_url"``, and equivalent three :mailheader:`Link` headers.
 
     """
     identity = get_identity(token_id)
-    return jsonify(
+    links = {
+        'remotes': url_for('list_remotes', token_id=token_id, _external=True),
+        'keys': url_for('list_public_keys', token_id=token_id, _external=True),
+        'master_key': url_for('master_key', token_id=token_id, _external=True)
+    }
+    response = jsonify(
+        {rel + '_url': url for rel, url in links.items()},
         team_type='{0.__module__}.{0.__qualname__}'.format(identity.team_type),
-        identifier=identity.identifier
+        identifier=identity.identifier,
     )
+    for rel, href in links.items():
+        response.headers.add('Link', '<{}>'.format(href),
+                             rel=rel.replace('_', ''))
+    return response
 
 
 def get_master_key_store() -> MasterKeyStore:
