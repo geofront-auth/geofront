@@ -9,4 +9,4 @@ CLI
    :prog: geofront-server
 
 .. autoprogram:: geofront.regen:main_parser()
-   :prog: geofront-regen
+   :prog: geofront-key-regen
