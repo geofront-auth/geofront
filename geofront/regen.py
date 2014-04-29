@@ -1,6 +1,8 @@
 """:mod:`geofront.regen` --- Regen master key
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. versionadded:: 0.2.0
+
 """
 import argparse
 import collections.abc
