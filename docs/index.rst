@@ -19,7 +19,7 @@ References
    :maxdepth: 3
 
    api
-   geofront-server
+   cli
    config
    geofront
 

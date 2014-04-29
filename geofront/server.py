@@ -51,7 +51,6 @@ import warnings
 from flask import (Flask, Response, current_app, json, jsonify, make_response,
                    request, url_for)
 from paramiko.pkey import PKey
-from paramiko.rsakey import RSAKey
 from paramiko.ssh_exception import SSHException
 from waitress import serve
 from waitress.adjustments import Adjustments
@@ -65,8 +64,8 @@ from .identity import Identity
 from .keystore import (DuplicatePublicKeyError, KeyStore, KeyTypeError,
                        format_openssh_pubkey, get_key_fingerprint,
                        parse_openssh_pubkey)
-from .masterkey import (EmptyStoreError, MasterKeyStore, PeriodicalRenewal,
-                        renew_master_key)
+from .masterkey import MasterKeyStore, PeriodicalRenewal
+from .regen import RegenError, main_parser as regen_main_parser, regenerate
 from .remote import (DefaultPermissionPolicy, PermissionPolicy, Remote,
                      authorize)
 from .team import AuthenticationError, Team
@@ -880,27 +879,25 @@ def authorize_remote(token_id: str, alias: str):
 
 def main_parser() -> argparse.ArgumentParser:  # pragma: no cover
     """Create an :class:`~argparse.ArgumentParser` object for
-    :program:`geofront-server` CLI program.
+    :program:`geofront-server` CLI program.  It also is used for
+    documentation through `sphinxcontrib-autoprogram`__.
 
     :return: a properly configured :class:`~argparse.ArgumentParser`
     :rtype: :class:`argparse.ArgumentParser`
+
+    __ https://pythonhosted.org/sphinxcontrib-autoprogram/
 
     """
     parser = argparse.ArgumentParser(
         description='Simple SSH key management service'
     )
-    parser.add_argument('config',
-                        metavar='FILE',
-                        help='geofront configuration file (Python script)')
+    parser = regen_main_parser(parser)
     parser.add_argument('-H', '--host',
                         default='0.0.0.0',
                         help='host to bind [%(default)s]')
     parser.add_argument('-p', '--port',
                         default=5000,
                         help='port to bind [%(default)s]')
-    parser.add_argument('--create-master-key',
-                        action='store_true',
-                        help='create a new master key if no master key yet')
     parser.add_argument('--renew-master-key',
                         action='store_true',
                         help='renew the master key before the server starts. '
@@ -911,13 +908,6 @@ def main_parser() -> argparse.ArgumentParser:  # pragma: no cover
                              'url_scheme via the X-Forwarded-Proto header. '
                              'useful when it runs behind reverse proxy. '
                              '-d/--debug option disables this option')
-    parser.add_argument('-d', '--debug',
-                        action='store_true',
-                        help='debug mode.  note that this option may make '
-                             'slowdown')
-    parser.add_argument('-v', '--version',
-                        action='version',
-                        version='%(prog)s ' + VERSION)
     return parser
 
 
@@ -936,21 +926,18 @@ def main():  # pragma: no cover
     logger.addHandler(handler)
     logger.setLevel(level)
     master_key_store = get_master_key_store()
-    servers = frozenset(get_remote_set().values())
+    remote_set = get_remote_set()
+    servers = frozenset(remote_set.values())
     try:
-        key = master_key_store.load()
-    except EmptyStoreError:
-        if args.create_master_key or args.renew_master_key:
-            logger.warn('no master key;  create one...')
-            key = RSAKey.generate(1024)
-            master_key_store.save(key)
-            logger.info('created new master key: %s', get_key_fingerprint(key))
-        else:
-            parser.error('no master key;  try --create-master-key option '
-                         'if you want to create one')
-    else:
-        if args.renew_master_key and not os.environ.get('WERKZEUG_RUN_MAIN'):
-            renew_master_key(servers, master_key_store)
+        regenerate(
+            master_key_store,
+            remote_set,
+            create_if_empty=args.create_master_key or args.renew_master_key,
+            renew_unless_empty=(args.renew_master_key and
+                                not os.environ.get('WERKZEUG_RUN_MAIN'))
+        )
+    except RegenError as e:
+        parser.error(str(e))
     master_key_renewal_interval = app.config['MASTER_KEY_RENEWAL']
     if not (master_key_renewal_interval is None or
             isinstance(master_key_renewal_interval, datetime.timedelta)):

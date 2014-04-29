@@ -71,6 +71,7 @@ setup(
     entry_points='''
         [console_scripts]
         geofront-server = geofront.server:main
+        geofront-key-regen = geofront.regen:main
     ''',
     classifiers=[
         'Development Status :: 3 - Alpha',
