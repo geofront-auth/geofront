@@ -167,8 +167,10 @@ class TwoPhaseRenewal:
         self.sftp_clients = None
 
 
+@typed
 def renew_master_key(servers: collections.abc.Set,
-                     key_store: MasterKeyStore) -> PKey:
+                     key_store: MasterKeyStore,
+                     bits: int=2048) -> PKey:
     """Renew the master key.  It creates a new master key, makes ``servers``
     to authorize the new key, replaces the existing master key with the
     new key in the ``key_store``, and then makes ``servers`` to deauthorize
@@ -181,15 +183,22 @@ def renew_master_key(servers: collections.abc.Set,
     :type servers: :class:`collections.abc.Set`
     :param key_store: the master key store to update
     :type key_store: :class:`MasterKeyStore`
+    :param bits: the number of bits the generated key should be.
+                 it has to be 1024 at least, and a multiple of 256.
+                 2048 by default
+    :type bits: :class:`int`
     :returns: the created new master key
     :rtype: :class:`paramiko.pkey.PKey`
+
+    .. versionadded:: 0.2.0
+       The ``bits`` optional parameter.
 
     """
     logger = logging.getLogger(__name__ + '.renew_master_key')
     logger.info('renew the master key...')
     old_key = key_store.load()
     logger.info('the existing master key: %s', get_key_fingerprint(old_key))
-    new_key = RSAKey.generate(1024)
+    new_key = RSAKey.generate(bits)
     logger.info('created new master key: %s', get_key_fingerprint(new_key))
     logger.info('authorize the new master key...')
     with TwoPhaseRenewal(servers, old_key, new_key):
@@ -213,9 +222,16 @@ class PeriodicalRenewal(threading.Thread):
     :type key_store: :class:`MasterKeyStore`
     :param interval: the interval to renew
     :type interval: :class:`datetime.timedelta`
+    :param bits: the number of bits the generated key should be.
+                 it has to be 1024 at least, and a multiple of 256.
+                 2048 by default
+    :type bits: :class:`int`
     :param start: whether to start the background thread immediately.
                   :const:`True` by default
     :type start: :class:`bool`
+
+    .. versionadded:: 0.2.0
+       The ``bits`` optional parameter.
 
     """
 
@@ -224,11 +240,13 @@ class PeriodicalRenewal(threading.Thread):
                  servers: collections.abc.Set,
                  key_store: MasterKeyStore,
                  interval: datetime.timedelta,
+                 bits: int=2048,
                  start: bool=True):
         super().__init__()
         self.servers = servers
         self.key_store = key_store
         self.interval = interval
+        self.bits = bits
         self.terminated = threading.Event()
         if self.start:
             self.start()
@@ -240,7 +258,7 @@ class PeriodicalRenewal(threading.Thread):
             terminated.wait(seconds)
             if terminated.is_set():
                 break
-            renew_master_key(self.servers, self.key_store)
+            renew_master_key(self.servers, self.key_store, self.bits)
 
     def terminate(self):
         """Graceful termination."""

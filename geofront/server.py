@@ -139,6 +139,7 @@ app.url_map.converters.update(
 )
 app.config.update(  # Config defaults
     PERMISSION_POLICY=DefaultPermissionPolicy(),
+    MASTER_KEY_BITS=2048,
     MASTER_KEY_RENEWAL=datetime.timedelta(days=1),
     TOKEN_EXPIRE=datetime.timedelta(days=7)
 )
@@ -987,10 +988,19 @@ def main():  # pragma: no cover
     master_key_store = get_master_key_store()
     remote_set = get_remote_set()
     servers = frozenset(remote_set.values())
+    master_key_bits = app.config['MASTER_KEY_BITS']
+    if not isinstance(master_key_bits, int):
+        parser.error('MASTER_KEYS_BITS configuration must be an integer, not '
+                     + repr(master_key_bits))
+    elif master_key_bits < 1024:
+        parser.error('MASTER_KEY_BITS has to be 1024 at least.')
+    elif master_key_bits % 256:
+        parser.error('MASTER_KEY_BITS has to be a multiple of 256.')
     try:
         regenerate(
             master_key_store,
             remote_set,
+            master_key_bits,
             create_if_empty=args.create_master_key or args.renew_master_key,
             renew_unless_empty=(args.renew_master_key and
                                 not os.environ.get('WERKZEUG_RUN_MAIN'))
@@ -1008,7 +1018,8 @@ def main():  # pragma: no cover
         master_key_renewal = PeriodicalRenewal(
             servers,
             master_key_store,
-            master_key_renewal_interval
+            master_key_renewal_interval,
+            master_key_bits
         )
     waitress_options = {}
     if args.trusted_proxy:

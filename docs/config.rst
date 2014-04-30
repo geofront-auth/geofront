@@ -205,6 +205,13 @@ be uppercase.
 
    .. versionadded:: 0.2.0
 
+.. data:: MASTER_KEY_BITS
+
+   The number of bits the generated master key should be.
+   2048 by default.
+
+   .. versionadded:: 0.2.0
+
 .. data:: MASTER_KEY_RENEWAL
 
    (:class:`datetime.timedelta`) The interval of master key renewal.

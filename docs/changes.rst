@@ -33,6 +33,11 @@ To be released.
 - HTTP APIs became more RESTful.  Now it has the root endpoint which provides
   the link to create a new token, and the token API provides several
   links to subresources as well.
+- Added new ``MASTER_KEY_BITS`` configuration.
+- Added new ``bits`` optional parameters to :func:`renew_master_key()
+  <geofront.masterkey.renew_master_key>`, :class:`PeriodicalRenewal
+  <geofront.masterkey.PeriodicalRenewal>`, and :func:`regenerate()
+  <geofront.regen.regenerate>`.
 
 .. _enum34: https://pypi.python.org/pypi/enum34
 .. _singledispatch: https://pypi.python.org/pypi/singledispatch

@@ -54,6 +54,7 @@ def main_parser(
 @typed
 def regenerate(master_key_store: MasterKeyStore,
                remote_set: collections.abc.Mapping,
+               bits: int=2048,
                *,
                create_if_empty: bool,
                renew_unless_empty: bool):
@@ -64,7 +65,7 @@ def regenerate(master_key_store: MasterKeyStore,
     except EmptyStoreError:
         if create_if_empty:
             logger.warn('no master key;  create one...')
-            key = RSAKey.generate(1024)
+            key = RSAKey.generate(bits)
             master_key_store.save(key)
             logger.info('created new master key: %s', get_key_fingerprint(key))
         else:
@@ -73,7 +74,8 @@ def regenerate(master_key_store: MasterKeyStore,
     else:
         if renew_unless_empty:
             renew_master_key(frozenset(remote_set.values()),
-                             master_key_store)
+                             master_key_store,
+                             bits)
 
 
 class RegenError(Exception):
