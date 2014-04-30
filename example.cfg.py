@@ -61,8 +61,9 @@ REMOTE_SET = CloudRemoteSet(driver, user='ec2-user')
 # metadata key and its value is space-separated list of group slugs.
 # The following settings will allow only members who belong to corresponding
 # groups to access.
-from geofront.remote import GroupMetadataPermissionPolicity
-PERMISSION_POLICY = GroupMetadataPermissionPolicity('Allowed-Groups')
+from geofront.remote import GroupMetadataPermissionPolicy
+
+PERMISSION_POLICY = GroupMetadataPermissionPolicy('Allowed-Groups')
 
 # Geofront provisions access tokens (or you can think them as sessions)
 # for Geofront clients.  Assume you already have a Redis server running
