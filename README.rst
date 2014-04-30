@@ -91,8 +91,8 @@ __ https://github.com/spoqa/geofront
 Missing features
 ----------------
 
-- Google Apps backend
-- Bitbucket backend
+- Google Apps backend [`#3`_]
+- Bitbucket backend [`#4`_]
 - Fabric_ integration
 - PuTTY_ integration
 
@@ -100,3 +100,5 @@ Missing features
 
 .. _Fabric: http://www.fabfile.org/
 .. _PuTTY: http://www.chiark.greenend.org.uk/~sgtatham/putty/
+.. _#3: https://github.com/spoqa/geofront/issues/3
+.. _#4: https://github.com/spoqa/geofront/issues/4
