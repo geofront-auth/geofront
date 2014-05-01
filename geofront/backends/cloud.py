@@ -35,7 +35,7 @@ class CloudRemoteSet(collections.abc.Mapping):
     """Libcloud_-backed remote set.  It supports more than 20 cloud providers
     through the efforts of Libcloud_. ::
 
-        from geofront.remote import CloudRemoteSet
+        from geofront.backends.cloud import CloudRemoteSet
         from libcloud.compute.types import Provider
         from libcloud.compute.providers import get_driver
 
@@ -140,7 +140,7 @@ class CloudMasterKeyStore(MasterKeyStore):
     It supports more than 20 cloud providers through the efforts of Libcloud_.
     ::
 
-        from geofront.masterkey import CloudMasterKeyStore
+        from geofront.backends.cloud import CloudMasterKeyStore
         from libcloud.storage.types import Provider
         from libcloud.storage.providers import get_driver
 
