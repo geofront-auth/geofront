@@ -16,7 +16,7 @@ before_script:
 - mysql -e 'CREATE DATABASE geofront_test;'
 script:
 - python -mgeofront.version
-- REDIS_HOST=localhost PGDATABASE=geofront_test PGUSER=postgres MYSQL_DATABASE=geofront_test MYSQL_HOST=localhost MYSQL_USER=root py.test -v --cov geofront --durations=20
+- REDIS_HOST=localhost PGDATABASE=geofront_test PGUSER=postgres MYSQL_DATABASE=geofront_test MYSQL_HOST=localhost MYSQL_USER=root py.test -vv --cov geofront --durations=20
 - flake8
 after_success:
 - coveralls

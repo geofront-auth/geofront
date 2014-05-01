@@ -1,4 +1,6 @@
+import hashlib
 import io
+import os
 
 from libcloud.compute.base import Node, KeyPair
 from libcloud.compute.drivers.dummy import DummyNodeDriver
@@ -109,7 +111,9 @@ def test_cloud_key_store_get_key_name_pattern():
     keystore = CloudKeyStore(driver)
     identity = Identity(DummyTeam, 'abcd')
     pattern = keystore._get_key_name_pattern(identity)
-    random_fp = lambda: get_key_fingerprint(RSAKey.generate(1024))
+    random_fp = lambda: ':'.join(
+        map('{:02x}'.format, hashlib.md5(os.urandom(100)).digest())
+    )
     actual = {
         'tests.server_test.DummyTeam abcd ' + random_fp()
         for _ in range(5)
