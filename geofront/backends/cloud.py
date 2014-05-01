@@ -11,24 +11,32 @@ with many of the popular cloud service providers using unified API."
 
 """
 import collections.abc
+import re
 try:
     from functools import singledispatch
 except ImportError:
     from singledispatch import singledispatch
 import io
 import numbers
+import os.path
 
 from libcloud.compute.base import Node, NodeDriver
 from libcloud.compute.drivers.gce import GCENodeDriver
+from libcloud.compute.types import KeyPairDoesNotExistError
 from libcloud.storage.base import Container, StorageDriver
 from libcloud.storage.types import ObjectDoesNotExistError
 from paramiko.pkey import PKey
+from paramiko.rsakey import RSAKey
 
+from ..identity import Identity
+from ..keystore import (DuplicatePublicKeyError, KeyStore,
+                        format_openssh_pubkey, get_key_fingerprint,
+                        parse_openssh_pubkey)
 from ..masterkey import EmptyStoreError, MasterKeyStore, read_private_key_file
 from ..remote import Remote
 from ..util import typed
 
-__all__ = 'CloudMasterKeyStore', 'CloudRemoteSet'
+__all__ = 'CloudKeyStore', 'CloudMasterKeyStore', 'CloudRemoteSet'
 
 
 class CloudRemoteSet(collections.abc.Mapping):
@@ -225,3 +233,101 @@ class CloudMasterKeyStore(MasterKeyStore):
 
         def __next__(self):
             return next(self.iterator)
+
+
+class CloudKeyStore(KeyStore):
+    """Store public keys into the cloud provider's key pair service.
+    Note that not all providers support key pair service.  For example,
+    Amazon EC2, and Rackspace (Next Gen) support it.  ::
+
+        from geofront.backends.cloud import CloudKeyStore
+        from libcloud.storage.types import Provider
+        from libcloud.storage.providers import get_driver
+
+        driver_cls = get_driver(Provider.EC2)
+        driver = driver_cls('api key', 'api secret key')
+        KEY_STORE = CloudKeyStore(driver)
+
+    :param driver: libcloud compute driver
+    :type driver: :class:`libcloud.compute.base.NodeDriver`
+    :param key_name_format: the format which determines each key's name
+                            used for the key pair service.
+                            default is :const:`DEFAULT_KEY_NAME_FORMAT`
+    :type key_name_format: :class:`str`
+
+    """
+
+    #: (:class:`str`) The default ``key_name_format``.  The type name of
+    #: team followed by identifier, and then key fingerprint follows e.g.
+    #: ``'geofront.backends.github.GitHubOrganization dahlia 00:11:22:..:ff'``.
+    DEFAULT_KEY_NAME_FORMAT = ('{identity.team_type.__module__}.'
+                               '{identity.team_type.__qualname__} '
+                               '{identity.identifier} {fingerprint}')
+
+    @typed
+    def __init__(self, driver: NodeDriver, key_name_format: str=None):
+        self.driver = driver
+        self.key_name_format = key_name_format or self.DEFAULT_KEY_NAME_FORMAT
+
+    def _get_key_name(self, identity: Identity, public_key: PKey):
+        return self.key_name_format.format(
+            identity=identity,
+            public_key=public_key,
+            fingerprint=get_key_fingerprint(public_key)
+        )
+
+    def _get_key_name_pattern(self, identity: Identity):
+        """Make the regex pattern from the format string.  Put two different
+        random keys, compare two outputs, and then replace the difference
+        with wildcard.
+
+        """
+        cls = type(self)
+        try:
+            sample_keys = cls.sample_keys
+        except AttributeError:
+            sample_keys = RSAKey.generate(1024), RSAKey.generate(1024)
+            cls.sample_keys = sample_keys
+        sample_name_a = self._get_key_name(identity, sample_keys[0])
+        sample_name_b = self._get_key_name(identity, sample_keys[1])
+        if sample_name_a == sample_name_b:
+            return re.compile('^' + re.escape(sample_name_a) + '$')
+        prefix = os.path.commonprefix([sample_name_a, sample_name_b])
+        postfix = os.path.commonprefix([sample_name_a[::-1],
+                                        sample_name_b[::-1]])[::-1]
+        return re.compile(
+            '^{}.+?{}$'.format(re.escape(prefix), re.escape(postfix))
+        )
+
+    @typed
+    def register(self, identity: Identity, public_key: PKey):
+        name = self._get_key_name(identity, public_key)
+        driver = self.driver
+        try:
+            driver.get_key_pair(name)
+        except KeyPairDoesNotExistError:
+            driver.import_key_pair_from_string(
+                name,
+                format_openssh_pubkey(public_key)
+            )
+        else:
+            raise DuplicatePublicKeyError()
+
+    @typed
+    def list_keys(self, identity: Identity) -> collections.abc.Set:
+        pattern = self._get_key_name_pattern(identity)
+        return frozenset(
+            parse_openssh_pubkey(key_pair.public_key)
+            for key_pair in self.driver.list_key_pairs()
+            if pattern.match(key_pair.name)
+        )
+
+    @typed
+    def deregister(self, identity: Identity, public_key: PKey):
+        try:
+            key_pair = self.driver.get_key_pair(
+                self._get_key_name(identity, public_key)
+            )
+        except KeyPairDoesNotExistError:
+            return
+        self.driver.delete_key_pair(key_pair)

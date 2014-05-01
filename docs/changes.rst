@@ -38,6 +38,7 @@ To be released.
   <geofront.masterkey.renew_master_key>`, :class:`PeriodicalRenewal
   <geofront.masterkey.PeriodicalRenewal>`, and :func:`regenerate()
   <geofront.regen.regenerate>`.
+- Added :class:`~geofront.backends.cloud.CloudKeyStore`.  [:issue:`2`]
 
 .. _enum34: https://pypi.python.org/pypi/enum34
 .. _singledispatch: https://pypi.python.org/pypi/singledispatch
