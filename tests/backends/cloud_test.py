@@ -11,7 +11,7 @@ from paramiko.rsakey import RSAKey
 from pytest import raises
 
 from geofront.backends.cloud import (CloudKeyStore, CloudMasterKeyStore,
-                                     CloudRemoteSet,
+                                     CloudMasterPublicKeyStore, CloudRemoteSet,
                                      get_metadata, supports_metadata)
 from geofront.identity import Identity
 from geofront.keystore import (format_openssh_pubkey, get_key_fingerprint,
@@ -19,7 +19,7 @@ from geofront.keystore import (format_openssh_pubkey, get_key_fingerprint,
 from geofront.masterkey import EmptyStoreError
 from geofront.remote import Remote
 from ..keystore_test import assert_keystore_compliance
-from ..server_test import DummyTeam
+from ..server_test import DummyTeam, MemoryMasterKeyStore
 
 
 @supports_metadata.register(DummyNodeDriver)
@@ -125,3 +125,18 @@ def test_cloud_key_store_get_key_name_pattern():
         'junk'
     })
     assert frozenset(result) == actual
+
+
+def test_cloud_master_public_key_store():
+    driver = KeyPairSupportedDummyNodeDriver('')
+    actual_store = MemoryMasterKeyStore()
+    store = CloudMasterPublicKeyStore(driver,
+                                      'geofront-masterkey',
+                                      actual_store)
+    for _ in range(2):
+        master_key = RSAKey.generate(1024)
+        store.save(master_key)
+        assert actual_store.load() == store.load() == master_key
+        assert parse_openssh_pubkey(
+            driver.get_key_pair('geofront-masterkey').public_key
+        ) == master_key

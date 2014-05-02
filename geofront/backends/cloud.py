@@ -36,7 +36,8 @@ from ..masterkey import EmptyStoreError, MasterKeyStore, read_private_key_file
 from ..remote import Remote
 from ..util import typed
 
-__all__ = 'CloudKeyStore', 'CloudMasterKeyStore', 'CloudRemoteSet'
+__all__ = ('CloudKeyStore', 'CloudMasterKeyStore', 'CloudMasterPublicKeyStore',
+           'CloudRemoteSet')
 
 
 class CloudRemoteSet(collections.abc.Mapping):
@@ -331,3 +332,51 @@ class CloudKeyStore(KeyStore):
         except KeyPairDoesNotExistError:
             return
         self.driver.delete_key_pair(key_pair)
+
+
+class CloudMasterPublicKeyStore(MasterKeyStore):
+    """It doesn't store the whole master key, but stores only public part of
+    the master key into cloud provider's key pair registry.  So it requires
+    the actual ``master_key_store`` to store the whole master key which is
+    not only public part but also private part.
+
+    It helps to create compute instances (e.g. Amazon EC2) that are already
+    colonized.
+
+    :param driver: libcloud compute driver
+    :type driver: :class:`libcloud.compute.base.NodeDriver`
+    :param key_pair_name: the name for cloud provider's key pair registry
+    :type key_pair_name: :class:`str`
+    :param master_key_store: "actual" master key store to store the whole
+                             master key
+    :type master_key_store: :class:`~geofront.masterkey.MasterKeyStore`
+
+    .. versionadded:: 0.2.0
+
+    """
+
+    @typed
+    def __init__(self,
+                 driver: NodeDriver,
+                 key_pair_name: str,
+                 master_key_store: MasterKeyStore):
+        self.driver = driver
+        self.key_pair_name = key_pair_name
+        self.master_key_store = master_key_store
+
+    @typed
+    def load(self) -> PKey:
+        return self.master_key_store.load()
+
+    @typed
+    def save(self, master_key: PKey):
+        public_key = format_openssh_pubkey(master_key)
+        driver = self.driver
+        try:
+            key_pair = driver.get_key_pair(self.key_pair_name)
+        except KeyPairDoesNotExistError:
+            pass
+        else:
+            driver.delete_key_pair(key_pair)
+        driver.import_key_pair_from_string(self.key_pair_name, public_key)
+        self.master_key_store.save(master_key)

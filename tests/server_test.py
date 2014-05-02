@@ -242,8 +242,9 @@ def test_get_team(fx_team):
 class MemoryMasterKeyStore(MasterKeyStore):
 
     @typed
-    def __init__(self, master_key: PKey):
-        self.save(master_key)
+    def __init__(self, master_key: PKey=None):
+        if master_key is not None:
+            self.save(master_key)
 
     @typed
     def load(self) -> PKey:
