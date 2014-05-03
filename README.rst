@@ -12,7 +12,10 @@ Geofront
    :target: https://coveralls.io/r/spoqa/geofront
 
 Geofront is a simple SSH key management server.  It helps to maintain servers
-to SSH, and ``authorized_keys`` list for them.
+to SSH, and ``authorized_keys`` list for them.  `Read the docs`__ for more
+details.
+
+__ https://geofront.readthedocs.org/
 
 
 Situations
