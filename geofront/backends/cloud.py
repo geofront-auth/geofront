@@ -242,8 +242,8 @@ class CloudKeyStore(KeyStore):
     Amazon EC2, and Rackspace (Next Gen) support it.  ::
 
         from geofront.backends.cloud import CloudKeyStore
-        from libcloud.storage.types import Provider
-        from libcloud.storage.providers import get_driver
+        from libcloud.compute.types import Provider
+        from libcloud.compute.providers import get_driver
 
         driver_cls = get_driver(Provider.EC2)
         driver = driver_cls('api key', 'api secret key')
