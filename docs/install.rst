@@ -88,6 +88,9 @@ Here's an example configuration for Geofront server behind Nginx reverse proxy:
      ssl_certificate /path/to/ssl_cert_chain.pem;
      ssl_certificate_key /path/to/ssl_cert.pem;
 
+     # HSTS: https://developer.mozilla.org/en-US/docs/Web/Security/HTTP_strict_transport_security
+     add_header Strict-Transport-Security "max-age=31536000";
+
      location / {
          proxy_pass http://127.0.0.1:8080;
          proxy_set_header Host $host;
