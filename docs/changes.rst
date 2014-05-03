@@ -4,7 +4,7 @@ Geofront Changelog
 Version 0.2.0
 -------------
 
-To be released.
+Released on May 3, 2014.
 
 - Added :meth:`~geofront.team.Team.list_groups()` method to
   :class:`~geofront.team.Team` interface.
