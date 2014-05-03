@@ -2,6 +2,7 @@
 *.egg
 *.egg-info
 *.cfg.py
+.*.swo
 .*.swp
 .coverage
 .idea

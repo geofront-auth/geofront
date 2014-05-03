@@ -54,7 +54,7 @@ Released on April 22, 2014.
 - Fixed :exc:`TypeError` that rises when :class:`CloudMasterKeyStore
   <geofront.backends.cloud.CloudMasterKeyStore>` is used with AWS S3 driver.
 - Added :option:`--trusted-proxy <geofront-server --trusted-proxy>` option
-  to :program:`goefront-server` command.  It's useful when the server is
+  to :program:`geofront-server` command.  It's useful when the server is
   run behind a reverse proxy.
 - Added token no-op API: :http:get:`/tokens/(token_id:token_id)/`.
 

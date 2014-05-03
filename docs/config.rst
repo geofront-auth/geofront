@@ -1,3 +1,5 @@
+.. module:: config
+
 Configuration
 =============
 
@@ -210,7 +212,7 @@ be uppercase.
 
    If your remote set has metadata for ACL i.e. group identifiers
    to allow you can utilize it through
-   :class:`~geofront.remote.GroupMetadataPermissionPolicity`.
+   :class:`~geofront.remote.GroupMetadataPermissionPolicy`.
 
    If you need more subtle and complex rules for ACL you surely can implement
    your own policy by subclassing :class:`~geofront.remote.PermissionPolicy`
