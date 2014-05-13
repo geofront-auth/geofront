@@ -8,7 +8,7 @@ Geofront
 .. image:: https://travis-ci.org/spoqa/geofront.svg?branch=master
    :target: https://travis-ci.org/spoqa/geofront
 
-.. image:: https://coveralls.io/repos/spoqa/geofront/badge.png?branch=master
+.. image:: https://img.shields.io/coveralls/spoqa/geofront.svg
    :target: https://coveralls.io/r/spoqa/geofront
 
 Geofront is a simple SSH key management server.  It helps to maintain servers
