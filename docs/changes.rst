@@ -6,6 +6,9 @@ Version 0.2.1
 
 To be released.
 
+- More detailed message logging of exceptions that rise during master key
+  renewal.
+
 
 Version 0.2.0
 -------------

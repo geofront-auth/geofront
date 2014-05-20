@@ -146,9 +146,17 @@ class TwoPhaseRenewal:
             try:
                 transport = Transport((server.host, server.port))
                 transport.connect(pkey=self.old_key)
-            except SSHException:
+            except SSHException as e:
                 for t, _, __ in sftp_clients.values():
                     t.close()
+                l = logging.getLogger(__name__ + '.TwoPhaseRenewal.__enter__')
+                l.exception(
+                    'An exception rise during master key renewal '
+                    '(%s -> %s, server: %s@%s:%d): %s',
+                    get_key_fingerprint(self.old_key),
+                    get_key_fingerprint(self.new_key),
+                    server.user, server.host, server.port, str(e)
+                )
                 raise
             sftp_client = SFTPClient.from_transport(transport)
             authorized_keys = AuthorizedKeyList(sftp_client)
