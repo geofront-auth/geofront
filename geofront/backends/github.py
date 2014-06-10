@@ -270,9 +270,17 @@ class GitHubKeyStore(KeyStore):
 
     @typed
     def list_keys(self, identity: Identity) -> collections.abc.Set:
+        logger = logging.getLogger(__name__ + '.GitHubKeyStore.list_keys')
         keys = request(identity, self.LIST_URL)
-        return {RSAKey(data=base64.b64decode(key['key'].split()[1]))
-                for key in keys}
+        result = set()
+        for key in keys:
+            try:
+                pubkey = RSAKey(data=base64.b64decode(key['key'].split()[1]))
+            except Exception as e:
+                logger.exception(e)
+                continue
+            result.add(pubkey)
+        return result
 
     @typed
     def deregister(self, identity: Identity, public_key: PKey):
