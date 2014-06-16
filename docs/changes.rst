@@ -4,7 +4,7 @@ Geofront Changelog
 Version 0.2.1
 -------------
 
-To be released.
+Released on June 16, 2014.
 
 - Fixed an authentication bug of :class:`~geofront.masterkey.TwoPhaseRenewal`
   raised due to not specify login username.
