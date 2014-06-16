@@ -154,7 +154,7 @@ def fx_authorized_sftp(fx_sftpd, fx_authorized_keys):
         for authorized_key in fx_authorized_keys:
             print(format_openssh_pubkey(authorized_key), file=f)
     transport = Transport(('127.0.0.1', port))
-    transport.connect(pkey=key)
+    transport.connect(username='user', pkey=key)
     sftp_client = SFTPClient.from_transport(transport)
     yield sftp_client, path, [key] + fx_authorized_keys
     sftp_client.close()

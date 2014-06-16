@@ -145,7 +145,7 @@ class TwoPhaseRenewal:
         for server in self.servers:
             try:
                 transport = Transport((server.host, server.port))
-                transport.connect(pkey=self.old_key)
+                transport.connect(username=server.user, pkey=self.old_key)
             except SSHException as e:
                 for t, _, __ in sftp_clients.values():
                     t.close()

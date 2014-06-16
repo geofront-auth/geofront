@@ -6,6 +6,8 @@ Version 0.2.1
 
 To be released.
 
+- Fixed an authentication bug of :class:`~geofront.masterkey.TwoPhaseRenewal`
+  raised due to not specify login username.
 - More detailed message logging of exceptions that rise during master key
   renewal.
 

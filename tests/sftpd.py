@@ -19,8 +19,9 @@ from geofront.keystore import parse_openssh_pubkey
 
 class StubServer(ServerInterface):
 
-    def __init__(self, path):
+    def __init__(self, path, users={'user'}):
         self.path = path
+        self.users = frozenset(users)
 
     @property
     def authorized_keys(self):
@@ -36,9 +37,10 @@ class StubServer(ServerInterface):
         return AUTH_FAILED
 
     def check_auth_publickey(self, username, key):
-        for authorized_key in self.authorized_keys:
-            if authorized_key == key:
-                return AUTH_SUCCESSFUL
+        if username in self.users:
+            for authorized_key in self.authorized_keys:
+                if authorized_key == key:
+                    return AUTH_SUCCESSFUL
         return AUTH_FAILED
 
     def check_channel_request(self, kind, chanid):
