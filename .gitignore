@@ -5,6 +5,7 @@
 .*.swo
 .*.swp
 .coverage
+.env
 .idea
 .swp
 .Sync*
