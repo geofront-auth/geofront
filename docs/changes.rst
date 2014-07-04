@@ -1,6 +1,13 @@
 Geofront Changelog
 ==================
 
+Version 0.2.2
+-------------
+
+To be released.
+
+- Became to depend on apache-libcloud 0.15.0 or later.
+
 Version 0.2.1
 -------------
 
