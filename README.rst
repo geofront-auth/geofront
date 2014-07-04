@@ -62,7 +62,7 @@ Prerequisites
   - Paramiko_ 1.13.0+
   - Werkzeug_ 0.9+
   - Flask_ 0.10+
-  - Apache Libcloud_ 0.14.0+
+  - Apache Libcloud_ 0.15.0+
   - Waitress_ 0.8.8+
   - singledispatch_ (only if Python is older than 3.4)
 
