@@ -7,6 +7,11 @@ Version 0.2.2
 To be released.
 
 - Became to depend on apache-libcloud 0.15.0 or later.
+- Fixed a bug of :meth:`KeyPairDoesNotExistError.save()
+  <geofront.backends.cloud.KeyPairDoesNotExistError.save>` method that
+  leaks :exc:`~libcloud.common.types.MalformedResponseError` raised by
+  :class:`~libcloud.compute.drivers.ec2.EC2NodeDriver` which ought to
+  raise proper :exc:`libcloud.compute.types.KeyPairDoesNotExistError`.
 
 Version 0.2.1
 -------------

@@ -11,7 +11,6 @@ with many of the popular cloud service providers using unified API."
 
 """
 import collections.abc
-import re
 try:
     from functools import singledispatch
 except ImportError:
@@ -19,8 +18,12 @@ except ImportError:
 import io
 import numbers
 import os.path
+import re
+import xml.etree.ElementTree
 
+from libcloud.common.types import MalformedResponseError
 from libcloud.compute.base import Node, NodeDriver
+from libcloud.compute.drivers.ec2 import EC2NodeDriver
 from libcloud.compute.drivers.gce import GCENodeDriver
 from libcloud.compute.types import KeyPairDoesNotExistError
 from libcloud.storage.base import Container, StorageDriver
@@ -376,6 +379,16 @@ class CloudMasterPublicKeyStore(MasterKeyStore):
             key_pair = driver.get_key_pair(self.key_pair_name)
         except KeyPairDoesNotExistError:
             pass
+        except MalformedResponseError as e:
+            # FIXME: EC2 driver seems to raise MalformedResponseError
+            # instead of KeyPairDoesNotExistError.
+            if not issubclass(e.driver, EC2NodeDriver):
+                raise
+            tree = xml.etree.ElementTree.fromstring(e.body)
+            if not (tree.tag == 'Response' and
+                    tree.find('Errors/Error/Code').text ==
+                    'InvalidKeyPair.NotFound'):
+                raise
         else:
             driver.delete_key_pair(key_pair)
         driver.import_key_pair_from_string(self.key_pair_name, public_key)
