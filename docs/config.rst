@@ -158,17 +158,17 @@ be uppercase.
        KEY_STORE = DatabaseKeyStore(sqlite3,
                                     '/var/lib/geofront/public_keys.db')
 
-    Some cloud providers like Amazon EC2 and Rackspace (Next Gen) support
-    *key pair service*.  :class:`~geofront.backends.cloud.CloudKeyStore`
-    helps to use the service as a public key store::
+   Some cloud providers like Amazon EC2 and Rackspace (Next Gen) support
+   *key pair service*.  :class:`~geofront.backends.cloud.CloudKeyStore`
+   helps to use the service as a public key store::
 
-        from geofront.backends.cloud import CloudKeyStore
-        from libcloud.storage.types import Provider
-        from libcloud.storage.providers import get_driver
+       from geofront.backends.cloud import CloudKeyStore
+       from libcloud.storage.types import Provider
+       from libcloud.storage.providers import get_driver
 
-        driver_cls = get_driver(Provider.EC2)
-        driver = driver_cls('api key', 'api secret key')
-        KEY_STORE = CloudKeyStore(driver)
+       driver_cls = get_driver(Provider.EC2)
+       driver = driver_cls('api key', 'api secret key')
+       KEY_STORE = CloudKeyStore(driver)
 
    .. versionadded:: 0.2.0
       Added :class:`~geofront.backends.dbapi.DatabaseKeyStore` class.
