@@ -48,8 +48,8 @@ import os.path
 import re
 import warnings
 
-from flask import (Flask, Response, current_app, json, jsonify, make_response,
-                   request, url_for)
+from flask import (Flask, Response, current_app, helpers, json, jsonify,
+                   make_response, request)
 from paramiko.pkey import PKey
 from paramiko.ssh_exception import SSHException
 from waitress import serve
@@ -80,7 +80,7 @@ __all__ = ('AUTHORIZATION_TIMEOUT',
            'get_public_key', 'get_remote_set', 'get_team', 'get_token_store',
            'list_public_keys', 'main', 'main_parser', 'master_key',
            'public_key', 'remote_dict', 'server_endpoint', 'server_version',
-           'token')
+           'token', 'url_for')
 
 
 #: (:class:`datetime.timedelta`) How long does each temporary authorization
@@ -141,7 +141,8 @@ app.config.update(  # Config defaults
     PERMISSION_POLICY=DefaultPermissionPolicy(),
     MASTER_KEY_BITS=2048,
     MASTER_KEY_RENEWAL=datetime.timedelta(days=1),
-    TOKEN_EXPIRE=datetime.timedelta(days=7)
+    TOKEN_EXPIRE=datetime.timedelta(days=7),
+    ENABLE_HSTS=False,
 )
 
 
@@ -155,6 +156,37 @@ def server_version(response: Response) -> Response:
     headers['Server'] = 'Geofront/' + VERSION
     headers['X-Geofront-Version'] = VERSION
     return response
+
+
+@app.after_request
+def http_strict_transport_security(response: Response) -> Response:
+    """Enable HSTS (HTTP strict transport security).
+
+    .. seealso::
+
+       `HTTP Strict Transport Security`__ --- Mozilla Developer Network
+
+    .. versionadded:: 0.2.2
+
+    __ https://developer.mozilla.org\
+/en-US/docs/Web/Security/HTTP_strict_transport_security
+
+    """
+    if current_app.config.get('ENABLE_HSTS'):
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000'
+    return response
+
+
+def url_for(endpoint, **kwargs):
+    """The almost same to :func:`flask.url_for()` except it's sensitive
+    to ``PREFERRED_URL_SCHEME`` configuration.
+
+    """
+    try:
+        scheme = current_app.config['PREFERRED_URL_SCHEME']
+    except KeyError:
+        return helpers.url_for(endpoint, **kwargs)
+    return helpers.url_for(endpoint, _scheme=scheme, **kwargs)
 
 
 @app.route('/')
@@ -968,6 +1000,10 @@ def main_parser() -> argparse.ArgumentParser:  # pragma: no cover
                              'url_scheme via the X-Forwarded-Proto header. '
                              'useful when it runs behind reverse proxy. '
                              '-d/--debug option disables this option')
+    parser.add_argument('--force-https',
+                        action='store_true',
+                        help='enable HSTS (HTTP strict transport security) '
+                             'and set PREFERRED_URL_SCHEME to "https"')
     return parser
 
 
@@ -1030,6 +1066,11 @@ def main():  # pragma: no cover
         else:
             # <= 0.8.8
             app.wsgi_app = ProxyFix(app.wsgi_app)
+    if args.force_https:
+        app.config.update(
+            PREFERRED_URL_SCHEME='https',
+            ENABLE_HSTS=True
+        )
     try:
         if args.debug:
             app.run(args.host, args.port, debug=True)

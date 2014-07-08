@@ -7,11 +7,19 @@ Version 0.2.2
 To be released.
 
 - Became to depend on apache-libcloud 0.15.0 or later.
+- Added HSTS_ support:
+
+  - Added :data:`~config.ENABLE_HSTS` configuration.
+  - Added :option:`--force-https <geofront-server --force-https>` option
+    to :program:`geofront-server` command.
+
 - Fixed a bug of :meth:`KeyPairDoesNotExistError.save()
   <geofront.backends.cloud.KeyPairDoesNotExistError.save>` method that
   leaks :exc:`~libcloud.common.types.MalformedResponseError` raised by
   :class:`~libcloud.compute.drivers.ec2.EC2NodeDriver` which ought to
   raise proper :exc:`libcloud.compute.types.KeyPairDoesNotExistError`.
+
+.. _HSTS: https://developer.mozilla.org/en-US/docs/Web/Security/HTTP_strict_transport_security
 
 Version 0.2.1
 -------------

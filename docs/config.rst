@@ -247,6 +247,14 @@ be uppercase.
 
    A week by default.
 
+.. data:: ENABLE_HSTS
+
+   (:class:`bool`) Enable HSTS_ (HTTP strict transport security).
+
+   :const:`False` by default.
+
+   .. _HSTS: https://developer.mozilla.org/en-US/docs/Web/Security/HTTP_strict_transport_security
+
 
 Example
 -------
