@@ -4,7 +4,7 @@ Geofront Changelog
 Version 0.2.2
 -------------
 
-To be released.
+Released on July 8, 2014.
 
 - Became to depend on apache-libcloud 0.15.0 or later.
 - Added HSTS_ support:
@@ -20,6 +20,7 @@ To be released.
   raise proper :exc:`libcloud.compute.types.KeyPairDoesNotExistError`.
 
 .. _HSTS: https://developer.mozilla.org/en-US/docs/Web/Security/HTTP_strict_transport_security
+
 
 Version 0.2.1
 -------------
