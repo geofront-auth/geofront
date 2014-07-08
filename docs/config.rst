@@ -253,6 +253,8 @@ be uppercase.
 
    :const:`False` by default.
 
+   .. versionadded:: 0.2.2
+
    .. _HSTS: https://developer.mozilla.org/en-US/docs/Web/Security/HTTP_strict_transport_security
 
 
