@@ -2,6 +2,7 @@ language: python
 python:
 - 3.3
 - 3.4
+- pypy3
 env:
 - secure: "jZVzNDRii4P1ay6FIlzMbuIVE2u4o4trSwWD09G0MVLv1PLbv05a4ToDjwYv7b8hcOeTIUAUHtTNaaIwuPf256OUhpmRoROy/XkdShZGh5pw4RrTH2Pgo3hxjRN011AzcUmVoiw68hYHSN9yzVZHhtVrKKwXP2H96Aae6BTmCPA="
 services:

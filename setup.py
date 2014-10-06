@@ -1,5 +1,6 @@
 from __future__ import with_statement
 
+import operator
 import os
 import sys
 
@@ -27,6 +28,12 @@ install_requires = [
     'waitress >= 0.8.8'
 ]
 
+supported_pyversions = [(3, 3), (3, 4)]
+
+pyversion_requires = {
+    ('<', (3, 4)): ['singledispatch'],
+}
+
 tests_require = [
     'pytest >= 2.5.0',
     'sftpserver == 0.2py3',  # https://github.com/spoqa/sftpserver/releases
@@ -42,8 +49,35 @@ docs_require = [
 ]
 
 if sys.version_info < (3, 4):
-    install_requires.append('singledispatch')
     tests_require.append('asyncio >= 0.4.1')
+
+extras_require = {
+    'tests': tests_require,
+    'docs': docs_require,
+}
+
+# The current wheel version (0.24.0) doesn't seem to cover all comparison
+# operators of PEP 426 except for ==, so we need to expand all other operators
+# to multiple equals e.g. <=2.7 to ==2.6, ==2.7.
+operators = {
+    '==': operator.eq, '!=': operator.ne, '<': operator.lt, '<=': operator.le,
+    '>': operator.gt, '>=': operator.ge
+}
+for (op, ver), packages in pyversion_requires.items():
+    for pyversion in supported_pyversions:
+        if operators[op](pyversion, ver):
+            extras_require.setdefault(
+                ':python_version==' + repr('.'.join(map(str, pyversion))),
+                []
+            ).extend(packages)
+            # FIXME: Shitty hack... The current version of setuptools and pip
+            # doesn't support PEP 426, so we need to manually inject
+            # conditional requirements into install_requires.
+            # Note that injection must not be done for bdist_wheel since
+            # wheel statically captures all install_requires and then
+            # freezes them into JSON.
+            if 'bdist_wheel' not in sys.argv:
+                install_requires.extend(packages)
 
 # Install requirements for documentation if it's run by ReadTheDocs.org
 if os.environ.get('READTHEDOCS'):
@@ -64,10 +98,7 @@ setup(
     packages=find_packages(exclude=['tests']),
     install_requires=install_requires,
     tests_require=tests_require,
-    extras_require={
-        'tests': tests_require,
-        'docs': docs_require
-    },
+    extras_require=extras_require,
     entry_points='''
         [console_scripts]
         geofront-server = geofront.server:main
