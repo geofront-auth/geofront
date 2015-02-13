@@ -36,6 +36,16 @@ def test_remote(b, equal):
     assert (hash(a) == hash(b)) is equal
 
 
+def get_next_line(fo):
+    line = ''
+    while not line:
+        line = fo.readline()
+        if not line:
+            return line
+        line = line.strip()
+    return line
+
+
 def test_authorized_keys_list_iter(fx_authorized_sftp):
     sftp_client, path, keys = fx_authorized_sftp
     key_list = AuthorizedKeyList(sftp_client)
@@ -98,22 +108,22 @@ def test_authorized_keys_list_setitem(fx_authorized_sftp):
     key_list[3:] = []
     with path.join('.ssh', 'authorized_keys').open() as f:
         for i in range(3):
-            assert parse_openssh_pubkey(f.readline().strip()) == keys[i]
-        assert not f.readline().strip()
+            assert parse_openssh_pubkey(get_next_line(f)) == keys[i]
+        assert not get_next_line(f)
     # Positive index
     key_list[2] = keys[3]
     with path.join('.ssh', 'authorized_keys').open() as f:
-        assert parse_openssh_pubkey(f.readline().strip()) == keys[0]
-        assert parse_openssh_pubkey(f.readline().strip()) == keys[1]
-        assert parse_openssh_pubkey(f.readline().strip()) == keys[3]
-        assert not f.readline().strip()
+        assert parse_openssh_pubkey(get_next_line(f)) == keys[0]
+        assert parse_openssh_pubkey(get_next_line(f)) == keys[1]
+        assert parse_openssh_pubkey(get_next_line(f)) == keys[3]
+        assert not get_next_line(f)
     # Negative index
     key_list[-1] = keys[4]
     with path.join('.ssh', 'authorized_keys').open() as f:
-        assert parse_openssh_pubkey(f.readline().strip()) == keys[0]
-        assert parse_openssh_pubkey(f.readline().strip()) == keys[1]
-        assert parse_openssh_pubkey(f.readline().strip()) == keys[4]
-        assert not f.readline().strip()
+        assert parse_openssh_pubkey(get_next_line(f)) == keys[0]
+        assert parse_openssh_pubkey(get_next_line(f)) == keys[1]
+        assert parse_openssh_pubkey(get_next_line(f)) == keys[4]
+        assert not get_next_line(f)
 
 
 def test_authorized_keys_list_insert(fx_authorized_sftp):
@@ -122,12 +132,12 @@ def test_authorized_keys_list_insert(fx_authorized_sftp):
     new_key = RSAKey.generate(1024)
     key_list.insert(2, new_key)
     with path.join('.ssh', 'authorized_keys').open() as f:
-        assert parse_openssh_pubkey(f.readline().strip()) == keys[0]
-        assert parse_openssh_pubkey(f.readline().strip()) == keys[1]
-        assert parse_openssh_pubkey(f.readline().strip()) == new_key
+        assert parse_openssh_pubkey(get_next_line(f)) == keys[0]
+        assert parse_openssh_pubkey(get_next_line(f)) == keys[1]
+        assert parse_openssh_pubkey(get_next_line(f)) == new_key
         for i in range(2, 6):
-            assert parse_openssh_pubkey(f.readline().strip()) == keys[i]
-        assert not f.readline().strip()
+            assert parse_openssh_pubkey(get_next_line(f)) == keys[i]
+        assert not get_next_line(f)
 
 
 def test_authorized_keys_list_extend(fx_authorized_sftp):
@@ -137,10 +147,10 @@ def test_authorized_keys_list_extend(fx_authorized_sftp):
     key_list.extend(new_keys)
     with path.join('.ssh', 'authorized_keys').open() as f:
         for i in range(6):
-            assert parse_openssh_pubkey(f.readline().strip()) == keys[i]
+            assert parse_openssh_pubkey(get_next_line(f)) == keys[i]
         for i in range(3):
-            assert parse_openssh_pubkey(f.readline().strip()) == new_keys[i]
-        assert not f.readline().strip()
+            assert parse_openssh_pubkey(get_next_line(f)) == new_keys[i]
+        assert not get_next_line(f)
 
 
 def test_authorized_keys_list_delitem(fx_authorized_sftp):
@@ -150,19 +160,19 @@ def test_authorized_keys_list_delitem(fx_authorized_sftp):
     del key_list[3:]
     with path.join('.ssh', 'authorized_keys').open() as f:
         for i in range(3):
-            assert parse_openssh_pubkey(f.readline().strip()) == keys[i]
-        assert not f.readline().strip()
+            assert parse_openssh_pubkey(get_next_line(f)) == keys[i]
+        assert not get_next_line(f)
     # Positive index
     del key_list[2]
     with path.join('.ssh', 'authorized_keys').open() as f:
-        assert parse_openssh_pubkey(f.readline().strip()) == keys[0]
-        assert parse_openssh_pubkey(f.readline().strip()) == keys[1]
-        assert not f.readline().strip()
+        assert parse_openssh_pubkey(get_next_line(f)) == keys[0]
+        assert parse_openssh_pubkey(get_next_line(f)) == keys[1]
+        assert not get_next_line(f)
     # Negative index
     del key_list[-1]
     with path.join('.ssh', 'authorized_keys').open() as f:
-        assert parse_openssh_pubkey(f.readline().strip()) == keys[0]
-        assert not f.readline().strip()
+        assert parse_openssh_pubkey(get_next_line(f)) == keys[0]
+        assert not get_next_line(f)
 
 
 def test_authorize(fx_sftpd):
@@ -180,8 +190,9 @@ def test_authorize(fx_sftpd):
         timeout=datetime.timedelta(seconds=5)
     )
     with authorized_keys_path.open() as f:
-        saved_keys = map(parse_openssh_pubkey, f)
-        assert frozenset(saved_keys) == (public_keys | {master_key})
+        saved_keys = frozenset(parse_openssh_pubkey(l)
+                               for l in f if l.strip())
+        assert saved_keys == (public_keys | {master_key})
     while datetime.datetime.now(datetime.timezone.utc) <= expires_at:
         time.sleep(1)
     time.sleep(1)

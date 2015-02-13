@@ -32,6 +32,7 @@ import collections.abc
 import datetime
 import io
 import itertools
+import logging
 import numbers
 import threading
 import time
@@ -147,9 +148,25 @@ class AuthorizedKeyList(collections.abc.MutableSequence):
                 if line:
                     yield line
 
-    def _save(self, authorized_keys: str):
-        with io.BytesIO(authorized_keys.encode()) as fo:
-            self.sftp_client.putfo(fo, self.FILE_PATH)
+    def _save(self, lines: list, existing_lines=None):
+        check = frozenset(line.strip() for line in lines)
+        if existing_lines is None:
+            mode = 'w'
+        else:
+            assert lines[:len(existing_lines)] == existing_lines
+            lines = lines[len(existing_lines):]
+            mode = 'a'
+        with self.sftp_client.open(self.FILE_PATH, mode) as fo:
+            if mode == 'a':
+                fo.write('\n')
+            for line in lines:
+                fo.write(line + '\n')
+        actual = frozenset(self._iterate_lines())
+        if actual != check:
+            logger = logging.getLogger(__name__ + '.AuthorizedKeyList._save')
+            logger.debug('file check error: expected = %r, actual = %r',
+                         check, actual)
+            raise IOError('failed to write to ' + self.FILE_PATH)
 
     def __iter__(self):
         for line in self._iterate_lines():
@@ -193,7 +210,7 @@ class AuthorizedKeyList(collections.abc.MutableSequence):
                 'authorized_keys indices must be integers, not '
                 '{0.__module__}.{0.__qualname__}'.format(type(index))
             )
-        self._save('\n'.join(lines))
+        self._save(lines)
 
     def insert(self, index, value):
         if not isinstance(index, numbers.Integral):
@@ -203,14 +220,13 @@ class AuthorizedKeyList(collections.abc.MutableSequence):
             )
         lines = list(self._iterate_lines())
         lines.insert(index, format_openssh_pubkey(value))
-        self._save('\n'.join(lines))
+        self._save(lines)
 
     def extend(self, values):
-        lines = itertools.chain(
-            self._iterate_lines(),
-            map(format_openssh_pubkey, values)
-        )
-        self._save('\n'.join(lines))
+        existing_lines = list(self._iterate_lines())
+        appended_lines = map(format_openssh_pubkey, values)
+        lines = itertools.chain(existing_lines, appended_lines)
+        self._save(list(lines), existing_lines=existing_lines)
 
     def __delitem__(self, index):
         if not isinstance(index, (numbers.Integral, slice)):
@@ -220,7 +236,7 @@ class AuthorizedKeyList(collections.abc.MutableSequence):
             )
         lines = list(self._iterate_lines())
         del lines[index]
-        self._save('\n'.join(lines))
+        self._save(lines)
 
 
 @typed
