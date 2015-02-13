@@ -2,6 +2,7 @@ import datetime
 import os
 import threading
 
+from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
 from paramiko.sftp_client import SFTPClient
 from paramiko.transport import Transport
@@ -106,6 +107,16 @@ def pytest_addoption(parser):
                      help='space-separated github team slugs for group '
                           'listing test',
                      **env_default('GITHUB_TEAM_SLUGS'))
+
+
+def pytest_assertrepr_compare(op, left, right):
+    if op == '==' and isinstance(left, PKey) and isinstance(right, PKey):
+        left_key = format_openssh_pubkey(left)
+        right_key = format_openssh_pubkey(right)
+        return [
+            '{!r} == {!r}'.format(left, right),
+            '   {} != {}'.format(left_key, right_key)
+        ]
 
 
 used_port = 0
