@@ -91,7 +91,7 @@ setup(
     long_description=readme(),
     url='https://github.com/spoqa/geofront',
     author='Hong Minhee',
-    author_email='minhee' '@' 'dahlia.kr',
+    author_email='minhee' '@' 'member.fsf.org',
     maintainer='Spoqa',
     maintainer_email='dev' '@' 'spoqa.com',
     license='AGPLv3 or later',
