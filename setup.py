@@ -21,7 +21,7 @@ def readme():
 
 install_requires = [
     'setuptools',
-    'paramiko >= 1.13.0, == dev',
+    'paramiko >= 1.15.0',
     'Werkzeug >= 0.9',
     'Flask >= 0.10',
     'apache-libcloud >= 0.15.0',
