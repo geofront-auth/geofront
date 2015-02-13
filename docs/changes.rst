@@ -1,6 +1,14 @@
 Geofront Changelog
 ==================
 
+Version 0.3.0
+-------------
+
+To be released.
+
+- Geofront becomes to require Paramiko 1.15.0 or higher.
+
+
 Version 0.2.2
 -------------
 
