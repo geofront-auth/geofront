@@ -245,7 +245,9 @@ def test_group_metadata_permission_policy(key, separator):
             metadata={key: sep.join(['db', 'b']), 'other': 'ignore'}
         )
     }
-    subset = lambda *keys: {a: r for a, r in remotes.items() if a in keys}
+
+    def subset(*keys):
+        return {a: r for a, r in remotes.items() if a in keys}
     p = GroupMetadataPermissionPolicy(key, separator)
     identity = Identity(DummyTeam, 1)
     assert (p.filter(remotes, identity, {'web', 'a'}) ==
