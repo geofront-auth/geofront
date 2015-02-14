@@ -39,6 +39,7 @@ tests_require = [
     'sftpserver == 0.2py3',  # https://github.com/spoqa/sftpserver/releases
     'iso8601 >= 0.1.10',
     'redis',
+    'Flask-OAuthlib >= 0.9.0',
     'pytest-cov'
 ]
 

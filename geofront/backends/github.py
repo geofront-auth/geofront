@@ -2,91 +2,28 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 """
-import base64
-import collections
-import collections.abc
-import contextlib
-import io
 import json
 import logging
 import urllib.request
 
+import base64
+import collections.abc
+
 from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
 from werkzeug.http import parse_options_header
-from werkzeug.urls import url_encode, url_decode_stream
-from werkzeug.wrappers import Request
 
 from ..identity import Identity
 from ..keystore import (DuplicatePublicKeyError, KeyStore,
                         format_openssh_pubkey, get_key_fingerprint,
                         parse_openssh_pubkey)
-from ..team import AuthenticationError, Team
 from ..util import typed
+from .oauth2 import OAuth2Team, request_resource
+
+__all__ = 'GitHubKeyStore', 'GitHubOrganization'
 
 
-__all__ = 'GitHubKeyStore', 'GitHubOrganization', 'request'
-
-
-def request(access_token, url: str, method: str='GET', data: bytes=None):
-    """Make a request to GitHub API, and then return the parsed JSON result.
-
-    :param access_token: api access token string,
-                         or :class:`~geofront.identity.Identity` instance
-    :type access_token: :class:`str`, :class:`~geofront.identity.Identity`
-    :param url: the api url to request
-    :type url: :class:`str`
-    :param method: an optional http method.  ``'GET'`` by default
-    :type method: :class:`str`
-    :param data: an optional content body
-    :type data: :class:`bytes`
-
-    """
-    if isinstance(access_token, Identity):
-        access_token = access_token.access_token
-    req = urllib.request.Request(
-        url,
-        headers={
-            'Authorization': 'token ' + access_token,
-            'Accept': 'application/json'
-        },
-        method=method,
-        data=data
-    )
-    with contextlib.closing(urllib.request.urlopen(req)) as response:
-        content_type = response.headers.get('Content-Type')
-        mimetype, options = parse_options_header(content_type)
-        assert mimetype == 'application/json' or method == 'DELETE', \
-            'Content-Type of {} is not application/json but {}'.format(
-                url,
-                content_type
-            )
-        charset = options.get('charset', 'utf-8')
-        io_wrapper = io.TextIOWrapper(response, encoding=charset)
-        logger = logging.getLogger(__name__ + '.request')
-        if logger.isEnabledFor(logging.DEBUG):
-            read = io_wrapper.read()
-            logger.debug(
-                'HTTP/%d.%d %d %s\n%s\n\n%s',
-                response.version // 10,
-                response.version % 10,
-                response.status,
-                response.reason,
-                '\n'.join('{}: {}'.format(k, v)
-                          for k, v in response.headers.items()),
-                read
-            )
-            if method == 'DELETE':
-                return
-            return json.loads(read)
-        else:
-            if method == 'DELETE':
-                io_wrapper.read()
-                return
-            return json.load(io_wrapper)
-
-
-class GitHubOrganization(Team):
+class GitHubOrganization(OAuth2Team):
     """Authenticate team membership through GitHub, and authorize to
     access GitHub key store.
 
@@ -137,80 +74,19 @@ class GitHubOrganization(Team):
 
     @typed
     def __init__(self, client_id: str, client_secret: str, org_login: str):
-        self.client_id = client_id
-        self.client_secret = client_secret
+        super().__init__(client_id, client_secret)
         self.org_login = org_login
 
-    @typed
-    def request_authentication(self,
-                               auth_nonce: str,
-                               redirect_url: str) -> str:
-        query = url_encode({
-            'client_id': self.client_id,
-            'redirect_uri': redirect_url,
-            'scope': 'read:org,admin:public_key',
-            'state': auth_nonce
-        })
-        authorize_url = '{}?{}'.format(self.AUTHORIZE_URL, query)
-        return authorize_url
+    @property
+    def required_scopes(self) -> collections.abc.Set:
+        return {'read:org', 'admin:public_key'}
 
     @typed
-    def authenticate(self,
-                     auth_nonce: str,
-                     requested_redirect_url: str,
-                     wsgi_environ: collections.abc.Mapping) -> Identity:
-        req = Request(wsgi_environ, populate_request=False, shallow=True)
-        try:
-            code = req.args['code']
-            if req.args['state'] != auth_nonce:
-                raise AuthenticationError()
-        except KeyError:
-            raise AuthenticationError()
-        data = url_encode({
-            'client_id': self.client_id,
-            'client_secret': self.client_secret,
-            'code': code,
-            'redirect_uri': requested_redirect_url
-        }).encode()
-        response = urllib.request.urlopen(self.ACCESS_TOKEN_URL, data)
-        content_type = response.headers['Content-Type']
-        mimetype, options = parse_options_header(content_type)
-        if mimetype == 'application/x-www-form-urlencoded':
-            token_data = url_decode_stream(response)
-        elif mimetype == 'application/json':
-            charset = options.get('charset')
-            token_data = json.load(
-                io.TextIOWrapper(response, encoding=charset)
-            )
-        else:
-            response.close()
-            raise AuthenticationError(
-                '{} sent unsupported content type: {}'.format(
-                    self.ACCESS_TOKEN_URL,
-                    content_type
-                )
-            )
-        response.close()
-        user_data = request(token_data['access_token'], self.USER_URL)
-        identity = Identity(
-            type(self),
-            user_data['login'],
-            token_data['access_token']
-        )
-        if self.authorize(identity):
-            return identity
-        raise AuthenticationError(
-            '@{} user is not a member of @{} organization'.format(
-                user_data['login'],
-                self.org_login
-            )
-        )
-
     def authorize(self, identity: Identity) -> bool:
         if not issubclass(identity.team_type, type(self)):
             return False
         try:
-            response = request(identity, self.ORGS_LIST_URL)
+            response = request_resource(identity, self.ORGS_LIST_URL)
         except IOError:
             return False
         if isinstance(response, collections.abc.Mapping) and \
@@ -218,11 +94,12 @@ class GitHubOrganization(Team):
             return False
         return any(o['login'] == self.org_login for o in response)
 
+    @typed
     def list_groups(self, identity: Identity):
         if not issubclass(identity.team_type, type(self)):
             return frozenset()
         try:
-            response = request(identity, self.TEAMS_LIST_URL)
+            response = request_resource(identity, self.TEAMS_LIST_URL)
         except IOError:
             return frozenset()
         if isinstance(response, collections.abc.Mapping) and \
@@ -231,6 +108,14 @@ class GitHubOrganization(Team):
         return frozenset(t['slug']
                          for t in response
                          if t['organization']['login'] == self.org_login)
+
+    def determine_identity(self, token_data):
+        user_data = request_resource(token_data['access_token'], self.USER_URL)
+        return Identity(
+            type(self),
+            user_data['login'],
+            token_data['access_token']
+        )
 
 
 class GitHubKeyStore(KeyStore):
@@ -247,7 +132,8 @@ class GitHubKeyStore(KeyStore):
             'key': format_openssh_pubkey(public_key)
         })
         try:
-            request(identity, self.LIST_URL, 'POST', data=data.encode())
+            request_resource(identity, self.LIST_URL, 'POST',
+                             data=data.encode())
         except urllib.request.HTTPError as e:
             if e.code != 422:
                 raise
@@ -271,7 +157,7 @@ class GitHubKeyStore(KeyStore):
     @typed
     def list_keys(self, identity: Identity) -> collections.abc.Set:
         logger = logging.getLogger(__name__ + '.GitHubKeyStore.list_keys')
-        keys = request(identity, self.LIST_URL)
+        keys = request_resource(identity, self.LIST_URL)
         result = set()
         for key in keys:
             try:
@@ -284,8 +170,10 @@ class GitHubKeyStore(KeyStore):
 
     @typed
     def deregister(self, identity: Identity, public_key: PKey):
-        keys = request(identity, self.LIST_URL)
+        keys = request_resource(identity, self.LIST_URL)
         for key in keys:
             if parse_openssh_pubkey(key['key']) == public_key:
-                request(identity, self.DEREGISTER_URL.format(**key), 'DELETE')
+                request_resource(identity,
+                                 self.DEREGISTER_URL.format(**key),
+                                 'DELETE')
                 break

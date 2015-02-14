@@ -1,7 +1,7 @@
 from pytest import fixture, skip, yield_fixture
 
-from geofront.backends.github import (GitHubKeyStore, GitHubOrganization,
-                                      request)
+from geofront.backends.github import (GitHubKeyStore, GitHubOrganization)
+from geofront.backends.oauth2 import request_resource
 from geofront.identity import Identity
 from ..keystore_test import assert_keystore_compliance
 
@@ -46,7 +46,7 @@ _fx_github_identity_cache = None
 def fx_github_identity(fx_github_access_token):
     global _fx_github_identity_cache
     if not _fx_github_identity_cache:
-        _fx_github_identity_cache = request(
+        _fx_github_identity_cache = request_resource(
             fx_github_access_token,
             'https://api.github.com/user',
             'GET'
@@ -59,13 +59,13 @@ def fx_github_identity(fx_github_access_token):
 
 
 def test_request(fx_github_access_token, fx_github_identity):
-    result = request(
+    result = request_resource(
         fx_github_access_token,
         'https://api.github.com/user',
         'GET'
     )
     assert result['type'] == 'User'
-    result2 = request(
+    result2 = request_resource(
         fx_github_identity,
         'https://api.github.com/user',
         'GET'
@@ -86,10 +86,10 @@ def test_list_groups(fx_github_identity, fx_github_org_login,
 
 
 def cleanup_ssh_keys(identity):
-    keys = request(identity, GitHubKeyStore.LIST_URL, 'GET')
+    keys = request_resource(identity, GitHubKeyStore.LIST_URL, 'GET')
     for key in keys:
         url = GitHubKeyStore.DEREGISTER_URL.format(**key)
-        request(identity, url, 'DELETE')
+        request_resource(identity, url, 'DELETE')
 
 
 @yield_fixture

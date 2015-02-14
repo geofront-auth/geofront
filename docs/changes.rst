@@ -9,6 +9,8 @@ To be released.
 - Geofront becomes to require Paramiko 1.15.0 or higher.
 - Added save check for :class:`~geofront.remote.AuthorizedKeyList`.
   [:issue:`5`]
+- Added :mod:`geofront.backends.oauth2` module which provides a common
+  facilities for implementing :class:`~geofront.team.Team` based on OAuth 2.
 
 
 Version 0.2.2
