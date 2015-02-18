@@ -591,8 +591,8 @@ def test_get_public_key_404(fx_app, fx_key_store,
             error = json.loads(response.data.decode('utf-8'))
             assert error['error'] == 'not-found'
         else:
-            fail('get_public_key() does not raise HTTPException, but returns '
-                 + repr(result))
+            fail('get_public_key() does not raise HTTPException, '
+                 'but returns ' + repr(result))
 
 
 def test_public_key(fx_app, fx_key_store,

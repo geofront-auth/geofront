@@ -1026,8 +1026,8 @@ def main():  # pragma: no cover
     servers = frozenset(remote_set.values())
     master_key_bits = app.config['MASTER_KEY_BITS']
     if not isinstance(master_key_bits, int):
-        parser.error('MASTER_KEYS_BITS configuration must be an integer, not '
-                     + repr(master_key_bits))
+        parser.error('MASTER_KEYS_BITS configuration must be an integer, '
+                     'not ' + repr(master_key_bits))
     elif master_key_bits < 1024:
         parser.error('MASTER_KEY_BITS has to be 1024 at least.')
     elif master_key_bits % 256:
