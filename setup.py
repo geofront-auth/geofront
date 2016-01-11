@@ -4,12 +4,7 @@ import operator
 import os
 import sys
 
-try:
-    from setuptools import setup, find_packages
-except ImportError:
-    from ez_setup import use_setuptools
-    use_setuptools()
-    from setuptools import setup, find_packages
+from setuptools import setup, find_packages
 
 from geofront.version import VERSION
 
