@@ -28,7 +28,7 @@ install_requires = [
     'waitress >= 0.8.8'
 ]
 
-supported_pyversions = [(3, 3), (3, 4)]
+supported_pyversions = [(3, 3), (3, 4), (3, 5)]
 
 pyversion_requires = {
     ('<', (3, 4)): ['singledispatch'],
@@ -115,6 +115,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: Implementation :: CPython',
         'Topic :: Internet :: WWW/HTTP :: WSGI :: Application',
         'Topic :: System :: Systems Administration :: Authentication/Directory'
