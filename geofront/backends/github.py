@@ -9,6 +9,7 @@ import contextlib
 import io
 import json
 import logging
+import os
 import urllib.request
 
 from paramiko.pkey import PKey
@@ -21,7 +22,7 @@ from ..identity import Identity
 from ..keystore import (DuplicatePublicKeyError, KeyStore,
                         format_openssh_pubkey, get_key_fingerprint,
                         parse_openssh_pubkey)
-from ..team import AuthenticationError, Team
+from ..team import AuthenticationContinuation, AuthenticationError, Team
 from ..util import typed
 
 
@@ -143,8 +144,8 @@ class GitHubOrganization(Team):
 
     @typed
     def request_authentication(self,
-                               auth_nonce: str,
                                redirect_url: str) -> str:
+        auth_nonce = ''.join(map('{:02x}'.format, os.urandom(16)))
         query = url_encode({
             'client_id': self.client_id,
             'redirect_uri': redirect_url,
@@ -152,17 +153,17 @@ class GitHubOrganization(Team):
             'state': auth_nonce
         })
         authorize_url = '{}?{}'.format(self.AUTHORIZE_URL, query)
-        return authorize_url
+        return AuthenticationContinuation(authorize_url, auth_nonce)
 
     @typed
     def authenticate(self,
-                     auth_nonce: str,
+                     state,
                      requested_redirect_url: str,
                      wsgi_environ: collections.abc.Mapping) -> Identity:
         req = Request(wsgi_environ, populate_request=False, shallow=True)
         try:
             code = req.args['code']
-            if req.args['state'] != auth_nonce:
+            if req.args['state'] != state:
                 raise AuthenticationError()
         except KeyError:
             raise AuthenticationError()

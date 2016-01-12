@@ -4,6 +4,7 @@
 *.cfg.py
 .*.swo
 .*.swp
+.cache
 .coverage
 .env
 .idea

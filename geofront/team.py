@@ -21,7 +21,42 @@ import collections.abc
 from .identity import Identity
 from .util import typed
 
-__all__ = 'AuthenticationError', 'Team'
+__all__ = 'AuthenticationContinuation', 'AuthenticationError', 'Team'
+
+
+class AuthenticationContinuation:
+    """The contunuation value for the process between
+    :meth:`Team.request_authentication()` and :meth:`Team.authenticate()`.
+
+    It is created by :meth:`Team.request_authentication()` method,
+    and holds following two attributes:
+
+    .. attribute:: next_url
+
+       (:class:`str`) The url to direct the authenticator to.
+
+    .. attribute:: state
+
+       The arbitrary value to be passed to :meth:`Team.authenticate()`
+       method's ``state`` parameter.
+
+       It can be used for passing arbitrary nonce, or request token, etc.
+
+       It has to be possible to pickle.
+
+    .. versionadded:: 0.3.0
+
+    """
+
+    @typed
+    def __init__(self, next_url: str, state):
+        self.next_url = next_url
+        self.state = state
+
+    def __repr__(self):
+        return '{0.__module__}.{0.__qualname__}({1!r}, {2!r})'.format(
+            type(self), self.next_url, self.state
+        )
 
 
 class Team:
@@ -46,23 +81,27 @@ class Team:
     """
 
     @typed
-    def request_authentication(self,
-                               auth_nonce: str,
-                               redirect_url: str) -> str:
+    def request_authentication(
+        self, redirect_url: str
+    ) -> AuthenticationContinuation:
         """First step of authentication process, to prepare the "sign in"
         interaction with the owner.  It typically returns a url to
         the login web page.
 
-        :param auth_nonce: a random string to guarantee it's a part of
-                           the same process to following :meth:`authenticate()`
-                           call which is the second step
-        :type auth_nonce: :class:`str`
         :param redirect_url: a url that owner's browser has to redirect to
                              after the "sign in" interaction finishes
         :type redirect_url: :class:`str`
         :return: a url to the web page to interact with the owner
                  in their browser
-        :rtype: :class:`str`
+        :rtype: :class:`AuthenticationContinuation`
+
+        .. versionchanged:: 0.3.0
+           The ``auth_nonce`` parameter was removed.  Instead, it became to
+           return :class:`AuthenticationContinuation` value so that share
+           state more general than simple ``auth_nonce`` between
+           :meth:`request_authentication()` and :meth:`authenticate()`.
+           If arbitrary nonce is needed, :meth:`request_authentication()`
+           method has to generate one by itself.
 
         """
         raise NotImplementedError('request_authentication() method has to '
@@ -70,17 +109,15 @@ class Team:
 
     @typed
     def authenticate(self,
-                     auth_nonce: str,
+                     state: str,
                      requested_redirect_url: str,
                      wsgi_environ: collections.abc.Mapping) -> Identity:
         """Second step of authentication process, to create a verification
         token for the identity.  The token is used by :meth:`authorize()`
         method, and the key store as well (if available).
 
-        :param auth_nonce: a random string to guarantee it's a part of
-                           the same process to :meth:`request_authentication()`
-                           call followed by this which is the first step
-        :type auth_nonce: :class:`str`
+        :param state: :attr:`AuthenticationContinuation.state` vaule
+                      returned by :meth:`request_authentication()` method
         :param requested_redirect_url: a url that was passed to
                                        :meth:`request_authentication()`'s
                                        ``redirect_url`` parameter
@@ -92,6 +129,11 @@ class Team:
         :raise geofront.team.AuthenticationError:
             when something goes wrong e.g. network errors,
             the user failed to verify their ownership
+
+        .. versionchanged:: 0.3.0
+           The ``auth_nonce`` parameter was replaced by more general ``state``
+           parameter.  The new parameter has no longer type constraints
+           so that it can be any value even if it's not a :class:`str`.
 
         """
         raise NotImplementedError('authenticate() method has to '

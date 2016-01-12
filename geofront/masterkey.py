@@ -276,7 +276,7 @@ class PeriodicalRenewal(threading.Thread):
 
 class FileSystemMasterKeyStore(MasterKeyStore):
     """Store the master key into the file system.  Although not that secure,
-    but it might help you to try out Geofront.
+    but it might help you to evaluate Geofront.
 
     :param path: the path to save file.  it has to end with the filename
     :type path: :class:`str`

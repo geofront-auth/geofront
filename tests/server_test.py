@@ -26,7 +26,7 @@ from geofront.server import (FingerprintConverter, Token, TokenIdConverter,
                              app, get_identity, get_key_store, get_public_key,
                              get_remote_set, get_team, get_token_store,
                              remote_dict)
-from geofront.team import AuthenticationError, Team
+from geofront.team import AuthenticationContinuation, AuthenticationError, Team
 from geofront.util import typed
 from geofront.version import VERSION
 
@@ -188,22 +188,24 @@ class DummyTeam(Team):
     def __init__(self):
         self.states = []
 
-    def request_authentication(self,
-                               auth_nonce: str,
-                               redirect_url: str) -> str:
+    def request_authentication(
+        self, redirect_url: str
+    ) -> AuthenticationContinuation:
+        auth_nonce = ''.join(map('{:02x}'.format, os.urandom(16)))
         self.states.append((auth_nonce, redirect_url))
-        return 'http://example.com/auth/?' + url_encode({
+        url = 'http://example.com/auth/?' + url_encode({
             'auth_nonce': auth_nonce,
             'redirect_url': redirect_url
         })
+        return AuthenticationContinuation(url, auth_nonce)
 
-    def authenticate(self, auth_nonce: str, requested_redirect_url: str,
+    def authenticate(self, state, requested_redirect_url: str,
                      wsgi_environ: dict) -> Identity:
         try:
             pair = self.states.pop()
         except IndexError:
             raise AuthenticationError()
-        if pair[0] != auth_nonce or pair[1] != requested_redirect_url:
+        if pair[0] != state or pair[1] != requested_redirect_url:
             raise AuthenticationError()
         return Identity(type(self), len(self.states))
 
@@ -306,8 +308,11 @@ def test_authenticate(fx_app, fx_token_store, fx_token_id):
         response = c.get(auth_url)
         assert response.status_code == 200
         token = fx_token_store.get(fx_token_id)
-        assert isinstance(token, Token)
-        assert token.identity == Identity(DummyTeam, 0)
+        assert isinstance(token, tuple)
+        assert len(token) == 2
+        assert token[0] == 'token'
+        assert isinstance(token[1], Token)
+        assert token[1].identity == Identity(DummyTeam, 0)
 
 
 @fixture

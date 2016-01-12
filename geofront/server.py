@@ -322,18 +322,15 @@ def create_access_token(token_id: str):
     """
     token_store = get_token_store()
     team = get_team()
-    auth_nonce = ''.join(map('{:02x}'.format, os.urandom(16)))
-    current_app.logger.debug('created auth_nonce: %r', auth_nonce)
     timeout = 60 * 30  # wait for 30 minutes
-    token_store.set(token_id, auth_nonce, timeout)
-    next_url = team.request_authentication(
-        auth_nonce,
+    cont = team.request_authentication(
         url_for('authenticate', token_id=token_id, _external=True)
     )
-    response = jsonify(next_url=next_url)
+    token_store.set(token_id, ('auth-state', cont.state), timeout)
+    response = jsonify(next_url=cont.next_url)
     assert isinstance(response, Response)
     response.status_code = 202
-    response.headers.add('Link', '<{}>'.format(next_url), rel='next')
+    response.headers.add('Link', '<{}>'.format(cont.next_url), rel='next')
     response.expires = (datetime.datetime.now(datetime.timezone.utc) +
                         datetime.timedelta(seconds=timeout))
     return response
@@ -361,11 +358,14 @@ def authenticate(token_id: str):
             'datetime.timedelta, not {!r}'.format(token_expire)
         )
     try:
-        auth_nonce = token_store.get(token_id)
-        current_app.logger.debug('stored auth_nonce: %r', auth_nonce)
+        state = token_store.get(token_id)
+        current_app.logger.debug(
+            'stored AuthenticationContinuation.state: %r',
+            state
+        )
     except TypeError:
         raise NotFound()
-    if not isinstance(auth_nonce, str):
+    if not isinstance(state, tuple) or state[0] != 'auth-state':
         raise Forbidden()
     requested_redirect_url = url_for(
         'authenticate',
@@ -374,14 +374,14 @@ def authenticate(token_id: str):
     )
     try:
         identity = team.authenticate(
-            auth_nonce,
+            state[1],
             requested_redirect_url,
             request.environ
         )
     except AuthenticationError:
         raise BadRequest()
     expires_at = datetime.datetime.now(datetime.timezone.utc) + token_expire
-    token_store.set(token_id, Token(identity, expires_at),
+    token_store.set(token_id, ('token', Token(identity, expires_at)),
                     timeout=int(token_expire.total_seconds()))
     return '<!DOCTYPE html>\n' + html.html(
         html.head(
@@ -424,14 +424,19 @@ def get_identity(token_id: str) -> Identity:
         )
         response.status_code = 404
         raise HTTPException(response=response)
-    elif not isinstance(token, Token):
+    elif not (isinstance(token, Token) or  # backward compat w/ <0.3.0
+              isinstance(token, tuple) and
+              token[0] == 'token' and
+              isinstance(token[1], Token)):
         response = jsonify(
             error='unfinished-authentication',
             message='Authentication process is not finished yet.'
         )
         response.status_code = 412  # Precondition Failed
         raise HTTPException(response=response)
-    elif token.expires_at < datetime.datetime.now(datetime.timezone.utc):
+    if not isinstance(token, Token):  # backward compat w/ <0.3.0
+        _, token = token
+    if token.expires_at < datetime.datetime.now(datetime.timezone.utc):
         response = jsonify(
             error='expired-token',
             message='Access token {0} was expired. '

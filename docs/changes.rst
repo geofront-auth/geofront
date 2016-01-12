@@ -9,6 +9,15 @@ To be released.
 - Geofront becomes to require Paramiko 1.15.0 or higher.
 - Added save check for :class:`~geofront.remote.AuthorizedKeyList`.
   [:issue:`5`]
+- :meth:`Team.request_authentication()
+  <geofront.team.Team.request_authentication>` method becomes to no more take
+  ``auth_nonce`` and return :class:`~geofront.team.AuthenticationContinuation`
+  value instead of simple url :class:`str`, so that arbitrary value more
+  general than simple nonce :class:`str` can be shared between
+  :meth:`~geofront.team.Team.request_authentication()` and
+  :meth:`Team.authenticate() <geofront.team.Team.authenticate>`.  If arbitrary
+  nonce is needed, :meth:`~geofront.team.Team.request_authentication()`
+  method has to generate one by itself.
 
 
 Version 0.2.2
