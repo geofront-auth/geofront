@@ -18,6 +18,7 @@ install_requires = [
     'setuptools',
     'paramiko >= 1.15.0',
     'Werkzeug >= 0.9',
+    'oauthlib[rsa, signedtoken] >= 1.0.3, < 2.0.0',
     'Flask >= 0.10',
     'apache-libcloud >= 0.15.0',
     'waitress >= 0.8.8'
