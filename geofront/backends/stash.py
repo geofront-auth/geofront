@@ -17,16 +17,24 @@ __ https://twitter.com/Atlassian/status/646357289939664896
 
 """
 import collections.abc
+import io
+import json
 import logging
+import urllib.error
 import urllib.request
 
 from oauthlib.oauth1 import SIGNATURE_RSA, Client
+from paramiko.pkey import PKey
 from werkzeug.urls import url_decode_stream, url_encode
 from werkzeug.wrappers import Request
 
 from ..identity import Identity
+from ..keystore import (DuplicatePublicKeyError, KeyStore,
+                        format_openssh_pubkey, parse_openssh_pubkey)
 from ..team import AuthenticationContinuation, AuthenticationError, Team
 from ..util import typed
+
+__all__ = 'StashKeyStore', 'StashTeam'
 
 
 class StashTeam(Team):
@@ -61,16 +69,18 @@ class StashTeam(Team):
         )
 
     @typed
+    def request(self, method: str, url: str, body=None, headers=None,
+                **client_options):
+        client = self.create_client(**client_options)
+        url, headers, body = client.sign(url, method, body, headers)
+        request = urllib.request.Request(url, body, headers, method=method)
+        return urllib.request.urlopen(request)
+
+    @typed
     def request_authentication(
         self, redirect_url: str
     ) -> AuthenticationContinuation:
-        client = self.create_client()
-        uri, headers, body = client.sign(
-            self.REQUEST_TOKEN_URL.format(self),
-            'POST'
-        )
-        request = urllib.request.Request(uri, body, headers, method='POST')
-        response = urllib.request.urlopen(request)
+        response = self.request('POST', self.REQUEST_TOKEN_URL.format(self))
         request_token = url_decode_stream(response)
         response.close()
         return AuthenticationContinuation(
@@ -96,26 +106,19 @@ class StashTeam(Team):
         logger.debug('req.args = %r', req.args)
         if req.args.get('oauth_token') != oauth_token:
             raise AuthenticationError()
-        client = self.create_client(
+        response = self.request(
+            'POST', self.ACCESS_TOKEN_URL.format(self),
             resource_owner_key=oauth_token,
             resource_owner_secret=oauth_token_secret
         )
-        uri, headers, body = client.sign(
-            self.ACCESS_TOKEN_URL.format(self),
-            'POST'
-        )
-        request = urllib.request.Request(uri, body, headers, method='POST')
-        response = urllib.request.urlopen(request)
         access_token = url_decode_stream(response)
         logger.debug('access_token = %r', access_token)
         response.close()
-        client = self.create_client(
+        response = self.request(
+            'GET', self.USER_URL.format(self),
             resource_owner_key=access_token['oauth_token'],
             resource_owner_secret=access_token['oauth_token_secret']
         )
-        uri, headers, body = client.sign(self.USER_URL.format(self))
-        request = urllib.request.Request(uri, body, headers)
-        response = urllib.request.urlopen(request)
         whoami = response.read().decode('utf-8')
         return Identity(
             type(self),
@@ -130,3 +133,90 @@ class StashTeam(Team):
 
     def list_groups(self, identity: Identity):
         return frozenset()
+
+
+class StashKeyStore(KeyStore):
+    """Use Bitbucket Server (Stash) account's public keys as key store."""
+
+    REGISTER_URL = '{0.server_url}/rest/ssh/1.0/keys'
+    LIST_URL = '{0.server_url}/rest/ssh/1.0/keys?start={1}'
+    DEREGISTER_URL = '{0.server_url}/rest/ssh/1.0/keys/{1}'
+
+    @typed
+    def __init__(self, team: StashTeam):
+        self.team = team
+
+    def request(self, identity, *args, **kwargs):
+        token, token_secret = identity.access_token
+        return self.team.request(
+            *args,
+            resource_owner_key=token,
+            resource_owner_secret=token_secret,
+            **kwargs
+        )
+
+    @typed
+    def request_list(self, identity: Identity) -> collections.abc.Iterator:
+        if not (isinstance(self.team, identity.team_type) and
+                identity.identifier.startswith(self.team.server_url)):
+            return
+        start = 0
+        while True:
+            response = self.request(
+                identity,
+                'GET',
+                self.LIST_URL.format(self.team, start)
+            )
+            assert response.code == 200
+            payload = json.load(io.TextIOWrapper(response, encoding='utf-8'))
+            response.close()
+            yield from payload['values']
+            if payload['isLastPage']:
+                break
+            start = payload['nextPageStart']
+
+    @typed
+    def register(self, identity: Identity, public_key: PKey):
+        if not (isinstance(self.team, identity.team_type) and
+                identity.identifier.startswith(self.team.server_url)):
+            return
+        data = json.dumps({
+            'text': format_openssh_pubkey(public_key)
+        })
+        try:
+            self.request(
+                identity, 'POST', self.REGISTER_URL.format(self), data,
+                headers={'Content-Type': 'application/json'}
+            )
+        except urllib.error.HTTPError as e:
+            if e.code == 409:
+                errors = json.loads(e.read().decode('utf-8'))['errors']
+                raise DuplicatePublicKeyError(errors[0]['message'])
+            raise
+
+    @typed
+    def list_keys(self, identity: Identity) -> collections.abc.Set:
+        logger = logging.getLogger(__name__ + '.StashKeyStore.list_keys')
+        keys = self.request_list(identity)
+        result = set()
+        for key in keys:
+            try:
+                pubkey = parse_openssh_pubkey(key['text'])
+            except Exception as e:
+                logger.exception(e)
+                continue
+            result.add(pubkey)
+        return result
+
+    @typed
+    def deregister(self, identity: Identity, public_key: PKey):
+        keys = self.request_list(identity)
+        for key in keys:
+            if parse_openssh_pubkey(key['text']) == public_key:
+                response = self.request(
+                    identity,
+                    'DELETE',
+                    self.DEREGISTER_URL(self, key['id'])
+                )
+                assert response.code == 204
+                break

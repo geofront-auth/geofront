@@ -18,6 +18,8 @@ To be released.
   :meth:`Team.authenticate() <geofront.team.Team.authenticate>`.  If arbitrary
   nonce is needed, :meth:`~geofront.team.Team.request_authentication()`
   method has to generate one by itself.
+- Geofront now supports Atlassian Bitbucket Server (which was Stash).
+  See also :mod:`geofront.backends.stash` module.
 
 
 Version 0.2.2
