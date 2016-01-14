@@ -7,3 +7,4 @@
       backends/cloud
       backends/dbapi
       backends/github
+      backends/stash
