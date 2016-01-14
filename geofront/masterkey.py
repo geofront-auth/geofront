@@ -24,6 +24,7 @@ import datetime
 import io
 import logging
 import os.path
+import socket
 import threading
 
 from paramiko.pkey import PKey
@@ -158,6 +159,10 @@ class TwoPhaseRenewal:
                     server.user, server.host, server.port, str(e)
                 )
                 raise
+            except socket.gaierror as e:
+                raise ConnectionError(
+                    'failed to connect: {0!s}\n{1!s}'.format(server, e)
+                ) from e
             sftp_client = SFTPClient.from_transport(transport)
             authorized_keys = AuthorizedKeyList(sftp_client)
             sftp_clients[server] = transport, sftp_client, authorized_keys
