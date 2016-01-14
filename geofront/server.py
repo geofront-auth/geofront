@@ -1078,7 +1078,7 @@ def main():  # pragma: no cover
         )
     try:
         if args.debug:
-            app.run(args.host, args.port, debug=True)
+            app.run(args.host, int(args.port), debug=True)
         else:
             serve(app, host=args.host, port=args.port, asyncore_use_poll=True,
                   **waitress_options)
