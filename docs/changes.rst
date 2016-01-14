@@ -23,6 +23,9 @@ To be released.
 - :class:`~geofront.masterkey.TwoPhaseRenewal` became to raise
   :exc:`ConnectionError` with attempted remote address instead of
   :exc:`socket.gaierror` which is hard to troubleshoot.
+- Fixed signature mismatch errors of
+  :class:`~geofront.backends.cloud.CloudMasterKeyStore` when it's used with
+  AWS S3.
 
 
 Version 0.2.2

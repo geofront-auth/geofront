@@ -19,6 +19,7 @@ import io
 import numbers
 import os.path
 import re
+import tempfile
 import xml.etree.ElementTree
 
 from libcloud.common.types import MalformedResponseError
@@ -27,6 +28,7 @@ from libcloud.compute.drivers.ec2 import EC2NodeDriver
 from libcloud.compute.drivers.gce import GCENodeDriver
 from libcloud.compute.types import KeyPairDoesNotExistError
 from libcloud.storage.base import Container, StorageDriver
+from libcloud.storage.drivers.s3 import S3StorageDriver
 from libcloud.storage.types import ObjectDoesNotExistError
 from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
@@ -207,6 +209,18 @@ class CloudMasterKeyStore(MasterKeyStore):
 
     @typed
     def save(self, master_key: PKey):
+        extra = {'content_type': 'application/x-pem-key'}
+        if isinstance(self.driver, S3StorageDriver):
+            # On some cases (altough unknown condition), S3 driver failed to
+            # match signature when it uploads object through stream.
+            # This is workaround to upload the master key without stream.
+            with tempfile.NamedTemporaryFile('w+', encoding='utf-8') as f:
+                master_key.write_private_key(f)
+                f.file.flush()
+                self.driver.upload_object(
+                    f.name, self.container, self.object_name, extra
+                )
+            return
         with io.StringIO() as buffer_:
             master_key.write_private_key(buffer_)
             pem = buffer_.getvalue()
@@ -214,7 +228,7 @@ class CloudMasterKeyStore(MasterKeyStore):
             self._countable_iterator([pem]),
             self.container,
             self.object_name,
-            {'content_type': 'application/x-pem-key'}
+            extra
         )
 
     class _countable_iterator:
