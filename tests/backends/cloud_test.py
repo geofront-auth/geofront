@@ -7,8 +7,10 @@ from libcloud.compute.drivers.dummy import DummyNodeDriver
 from libcloud.compute.types import KeyPairDoesNotExistError
 from libcloud.storage.drivers import dummy
 from libcloud.storage.drivers.dummy import DummyStorageDriver
+from libcloud.storage.providers import get_driver
+from libcloud.storage.types import ObjectDoesNotExistError, Provider
 from paramiko.rsakey import RSAKey
-from pytest import raises
+from pytest import raises, skip
 
 from geofront.backends.cloud import (CloudKeyStore, CloudMasterKeyStore,
                                      CloudMasterPublicKeyStore, CloudRemoteSet,
@@ -16,7 +18,7 @@ from geofront.backends.cloud import (CloudKeyStore, CloudMasterKeyStore,
 from geofront.identity import Identity
 from geofront.keystore import (format_openssh_pubkey, get_key_fingerprint,
                                parse_openssh_pubkey)
-from geofront.masterkey import EmptyStoreError
+from geofront.masterkey import EmptyStoreError, read_private_key_file
 from geofront.remote import Remote
 from ..keystore_test import assert_keystore_compliance
 from ..server_test import DummyTeam, MemoryMasterKeyStore
@@ -59,6 +61,49 @@ def test_cloud_master_key_store():
         stored_key = s.load()
         assert isinstance(stored_key, RSAKey)
         assert stored_key.get_base64() == stored_key.get_base64()
+
+
+def test_cloud_master_key_store_s3(request, tmpdir):
+    try:
+        access_key = request.config.getoption('--aws-access-key')
+        secret_key = request.config.getoption('--aws-secret-key')
+        bucket_name = request.config.getoption('--aws-s3-bucket')
+    except ValueError:
+        access_key = secret_key = bucket_name = None
+    if access_key is None or secret_key is None or bucket_name is None:
+        skip(
+            '--aws-access-key/--aws-secret-key/--aws-s3-bucket are not '
+            'provided; skipped'
+        )
+    driver_cls = get_driver(Provider.S3)
+    driver = driver_cls(access_key, secret_key)
+    container = driver.get_container(container_name=bucket_name)
+    tmpname = ''.join(map('{:02x}'.format, os.urandom(16)))
+    s = CloudMasterKeyStore(driver, container, tmpname)
+    key = RSAKey.generate(1024)
+    # load() -- when not exists
+    with raises(EmptyStoreError):
+        s.load()
+    try:
+        # save()
+        s.save(key)
+        obj = driver.get_object(container.name, tmpname)
+        dest = tmpdir / tmpname
+        obj.download(str(dest))
+        saved = read_private_key_file(dest.open())
+        assert isinstance(saved, RSAKey)
+        assert saved.get_base64() == key.get_base64()
+        # load() -- when exists
+        loaded = s.load()
+        assert isinstance(loaded, RSAKey)
+        assert loaded.get_base64() == key.get_base64()
+    finally:
+        try:
+            o = driver.get_object(container.name, tmpname)
+        except ObjectDoesNotExistError:
+            pass
+        else:
+            o.delete()
 
 
 class KeyPairSupportedDummyNodeDriver(DummyNodeDriver):

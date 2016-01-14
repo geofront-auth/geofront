@@ -107,6 +107,18 @@ def pytest_addoption(parser):
                      help='space-separated github team slugs for group '
                           'listing test',
                      **env_default('GITHUB_TEAM_SLUGS'))
+    parser.addoption('--aws-access-key',
+                     metavar='KEY',
+                     help='aws access key for master key store test',
+                     **env_default('AWS_ACCESS_KEY'))
+    parser.addoption('--aws-secret-key',
+                     metavar='SECRET',
+                     help='aws secret key for master key store test',
+                     **env_default('AWS_SECRET_KEY'))
+    parser.addoption('--aws-s3-bucket',
+                     metavar='BUCKET',
+                     help='aws s3 bucket to be used for master key store test',
+                     **env_default('AWS_S3_BUCKET'))
 
 
 def pytest_assertrepr_compare(op, left, right):

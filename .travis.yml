@@ -9,7 +9,12 @@ matrix:
  allow_failures:
  - python: pypy3
 env:
-- secure: "jZVzNDRii4P1ay6FIlzMbuIVE2u4o4trSwWD09G0MVLv1PLbv05a4ToDjwYv7b8hcOeTIUAUHtTNaaIwuPf256OUhpmRoROy/XkdShZGh5pw4RrTH2Pgo3hxjRN011AzcUmVoiw68hYHSN9yzVZHhtVrKKwXP2H96Aae6BTmCPA="
+  global:
+  # GitHub
+  - secure: "jZVzNDRii4P1ay6FIlzMbuIVE2u4o4trSwWD09G0MVLv1PLbv05a4ToDjwYv7b8hcOeTIUAUHtTNaaIwuPf256OUhpmRoROy/XkdShZGh5pw4RrTH2Pgo3hxjRN011AzcUmVoiw68hYHSN9yzVZHhtVrKKwXP2H96Aae6BTmCPA="
+  # S3
+  - secure: "F8AKUR2WrOt2POoFL4I1h2KEvffYGc+RgjzYnmLUNsFCfsL+tZSa3enxCPJQs7UZLr23PIhKDiPgASGscQJbH7yiqQ5EHnrdiPQVAphj7qtrKHJkqGy3UeSsrOI/PhWTO0fmE0bs+9BWl86Lg+M5R0oLHdapOOFhu+pwXyoC8rc="
+  - secure: "GTRvF2s/RcnmUINh6LlHGBZedDP8KyaD15u/Cy4fgq+9pqqbhGNCcBlrlvpw/Vlf1iDLqG9nm5LRFLcbv6SmdEeucU2vQlC9g2c4MZJGEq+yMMbG/LKnpGGSXH08zMIAzk4hjNWGXRdT3N5HswLAnc2YlHj6tk2Y5dlufgQGEJw="
 services:
 - redis-server
 install:
