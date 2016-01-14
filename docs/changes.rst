@@ -4,7 +4,7 @@ Geofront Changelog
 Version 0.3.0
 -------------
 
-To be released.
+Released on January 15, 2016.
 
 - Geofront becomes to require Paramiko 1.15.0 or higher.
 - Added save check for :class:`~geofront.remote.AuthorizedKeyList`.
