@@ -20,6 +20,9 @@ To be released.
   method has to generate one by itself.
 - Geofront now supports Atlassian Bitbucket Server (which was Stash).
   See also :mod:`geofront.backends.stash` module.
+- :class:`~geofront.masterkey.TwoPhaseRenewal` became to raise
+  :exc:`ConnectionError` with attempted remote address instead of
+  :exc:`socket.gaierror` which is hard to troubleshoot.
 
 
 Version 0.2.2
