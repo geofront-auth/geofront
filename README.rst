@@ -5,6 +5,10 @@ Geofront
    :target: https://pypi.python.org/pypi/Geofront
    :alt: Latest PyPI version
 
+.. image:: https://readthedocs.org/projects/geofront/badge/
+   :target: https://geofront.readthedocs.org/
+   :alt: Read the Docs
+
 .. image:: https://travis-ci.org/spoqa/geofront.svg?branch=master
    :target: https://travis-ci.org/spoqa/geofront
 
@@ -62,6 +66,7 @@ Prerequisites
   - Paramiko_ 1.13.0+
   - Werkzeug_ 0.9+
   - Flask_ 0.10+
+  - OAuthLib_ 1.0.3+
   - Apache Libcloud_ 0.15.0+
   - Waitress_ 0.8.8+
   - singledispatch_ (only if Python is older than 3.4)
@@ -69,6 +74,7 @@ Prerequisites
 .. _Paramiko: http://www.paramiko.org/
 .. _Werkzeug: http://werkzeug.pocoo.org/
 .. _Flask: http://flask.pocoo.org/
+.. _OAuthLib: https://github.com/idan/oauthlib
 .. _Libcloud: http://libcloud.apache.org/
 .. _Waitress: https://github.com/Pylons/waitress
 .. _singledispatch: https://pypi.python.org/pypi/singledispatch
