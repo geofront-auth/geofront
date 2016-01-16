@@ -1,3 +1,4 @@
+import collections.abc
 import datetime
 import time
 
@@ -7,7 +8,8 @@ from pytest import mark, raises
 from geofront.identity import Identity
 from geofront.keystore import format_openssh_pubkey, parse_openssh_pubkey
 from geofront.remote import (AuthorizedKeyList, DefaultPermissionPolicy,
-                             GroupMetadataPermissionPolicy, Remote, authorize)
+                             GroupMetadataPermissionPolicy, Remote,
+                             RemoteSetFilter, authorize)
 from geofront.team import Team
 
 
@@ -269,3 +271,58 @@ def test_group_metadata_permission_policy(key, separator):
     assert not p.permit(remotes['db-1'], identity, {'web', 'b'})
     assert p.permit(remotes['db-1'], identity, {'db', 'a'})
     assert p.permit(remotes['db-1'], identity, {'db', 'b'})
+
+
+def test_remote_set_filter():
+    dict_ = {
+        'inc-a': Remote('a', 'example.com'),
+        'inc-b': Remote('b', 'example.com'),
+        'exc-c': Remote('c', 'example.com'),
+        'exc-d': Remote('d', 'example.com'),
+        'inc-e': Remote('e', 'example.com', 10022),
+        'exc-f': Remote('f', 'example.com', 10022),
+    }
+    filtered = RemoteSetFilter(
+        lambda a, r: a.startswith('inc-') and r.port == 22,
+        dict_
+    )
+    assert set(filtered) == set(filtered.keys()) == {'inc-a', 'inc-b'}
+    assert len(filtered) == 2
+    assert filtered['inc-a'] == filtered.get('inc-a') == dict_['inc-a']
+    assert filtered['inc-b'] == filtered.get('inc-b') == dict_['inc-b']
+    with raises(KeyError):
+        filtered['exc-c']
+    assert filtered.get('exc-c') is None
+    with raises(KeyError):
+        filtered['exc-d']
+    assert filtered.get('exc-d') is None
+    with raises(KeyError):
+        filtered['inc-e']
+    assert filtered.get('inc-e') is None
+    with raises(KeyError):
+        filtered['exc-f']
+    assert filtered.get('exc-f') is None
+    assert set(filtered.items()) == {
+        ('inc-a', dict_['inc-a']),
+        ('inc-b', dict_['inc-b']),
+    }
+    assert set(filtered.values()) == {dict_['inc-a'], dict_['inc-b']}
+    del dict_['inc-b']
+    dict_['inc-g'] = g = Remote('g', 'sample.com')
+    assert set(filtered) == set(filtered.keys()) == {'inc-a', 'inc-g'}
+    assert len(filtered) == 2
+    assert filtered['inc-a'] == filtered.get('inc-a') == dict_['inc-a']
+    with raises(KeyError):
+        filtered['exc-c']
+    assert filtered.get('exc-c') is None
+    with raises(KeyError):
+        filtered['exc-d']
+    assert filtered.get('exc-d') is None
+    with raises(KeyError):
+        filtered['inc-e']
+    assert filtered.get('inc-e') is None
+    with raises(KeyError):
+        filtered['exc-f']
+    assert filtered.get('exc-f') is None
+    assert filtered['inc-g'] == filtered.get('inc-g') == g
+    assert set(filtered.items()) == {('inc-a', dict_['inc-a']), ('inc-g', g)}

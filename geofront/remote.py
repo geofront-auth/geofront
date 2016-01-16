@@ -46,7 +46,8 @@ from .keystore import format_openssh_pubkey, parse_openssh_pubkey
 from .util import typed
 
 __all__ = ('AuthorizedKeyList', 'DefaultPermissionPolicy',
-           'GroupMetadataPermissionPolicy', 'PermissionPolicy', 'Remote',
+           'GroupMetadataPermissionPolicy', 'PermissionPolicy',
+           'Remote', 'RemoteSetFilter',
            'authorize')
 
 
@@ -443,3 +444,67 @@ class GroupMetadataPermissionPolicy(PermissionPolicy):
                identity: Identity,
                groups: collections.abc.Set) -> bool:
         return not self._get_groups(remote).isdisjoint(groups)
+
+
+class RemoteSetFilter(collections.abc.Mapping):
+    """It takes a ``filter`` function and a ``remote_set``, and then
+    return a filtered set of remotes.
+
+    The key difference of this and conditional dict comprehension is
+    evaluation time.  (TL;DR: the contents of :class:`RemoteSetFilter`
+    is evaluated everytime its filtered result is needed.)
+
+    If ``remote_set`` is an ordinary :class:`dict` object,
+    :class:`RemoteSetFilter` is not needed.  But if ``remote_set`` is,
+    for example, :class:`~geofront.backends.cloud.CloudRemoteSet`,
+    the filtered result of dict comprehension on it is fixed at Geofront's
+    configuration loading time.  That means ``geofront-cli remotes`` doesn't
+    change even if the list of remotes in the cloud is changed.
+
+    On the other hand, the filtered result of :class:`RemoteSetFilter` is
+    never fixed, because the filter on ``remote_set`` is always evaluated
+    again when its :meth:`__iter__()`/:meth:`__getitem__`/etc are called.
+
+    :param filter: a filter function which takes key (alias name) and
+                   :class:`Remote`, and :const:`False` if exclude it,
+                   or :const:`True` if include it
+    :type filter: :class:`collections.abc.Callable`
+    :param remote_set: a set of remotes.  it has to be a mapping of
+                       alias name to :class:`Remote`
+    :type remote_set: :class:`collections.abc.Mapping`
+
+    .. versionadded:: 0.3.1
+
+    """
+
+    @typed
+    def __init__(self,
+                 filter: collections.abc.Callable,
+                 remote_set: collections.abc.Mapping):
+        self.filter = filter
+        self.remote_set = remote_set
+
+    def __iter__(self):
+        for alias, _ in self.items():
+            yield alias
+
+    def __getitem__(self, alias) -> Remote:
+        remote = self.remote_set[alias]
+        if self.filter(alias, remote):
+            return remote
+        raise KeyError(alias)
+
+    def __len__(self):
+        i = 0
+        for _ in self.items():
+            i += 1
+        return i
+
+    def items(self):
+        for alias, remote in self.remote_set.items():
+            if self.filter(alias, remote):
+                yield alias, remote
+
+    def values(self):
+        for _, remote in self.items():
+            yield remote

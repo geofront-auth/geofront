@@ -6,6 +6,9 @@ Version 0.3.1
 
 To be released.
 
+- Added :class:`~geofront.remote.RemoteSetFilter` to dynamically filter
+  set of remotes.
+
 
 Version 0.3.0
 -------------
