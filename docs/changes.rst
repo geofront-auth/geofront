@@ -8,6 +8,10 @@ To be released.
 
 - Added :class:`~geofront.remote.RemoteSetFilter` to dynamically filter
   set of remotes.
+- Fixed a regression bug introduced since 0.3.0
+  (:commit:`9db44659c423ed33a89de712fb645186b7c722cc`) that
+  :class:`~geofront.backends.github.GitHubOrganization` fails to authenticate.
+  [:issue:`12`]
 
 
 Version 0.3.0

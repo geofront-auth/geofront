@@ -163,9 +163,9 @@ class GitHubOrganization(Team):
         req = Request(wsgi_environ, populate_request=False, shallow=True)
         try:
             code = req.args['code']
+            if req.args['state'] != state:
+                raise AuthenticationError()
         except KeyError:
-            raise AuthenticationError()
-        if code != state:
             raise AuthenticationError()
         data = url_encode({
             'client_id': self.client_id,
