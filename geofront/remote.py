@@ -73,7 +73,7 @@ class Remote:
     #: (:class:`str`) The username to SSH.
     user = None
 
-    #: (:class:`Address`) The hostname to access.
+    #: (:class:`str`) The hostname to access.
     host = None
 
     #: (:class:`numbers.Integral`) The port number to SSH.
