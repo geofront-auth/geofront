@@ -4,7 +4,7 @@ Geofront Changelog
 Version 0.3.1
 -------------
 
-To be released.
+Released on January 19, 2016.
 
 - Added :class:`~geofront.remote.RemoteSetFilter` to dynamically filter
   set of remotes.
