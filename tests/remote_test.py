@@ -285,6 +285,7 @@ def test_remote_set_filter():
         lambda a, r: a.startswith('inc-') and r.port == 22,
         dict_
     )
+    assert isinstance(filtered, collections.abc.Mapping)
     assert set(filtered) == set(filtered.keys()) == {'inc-a', 'inc-b'}
     assert len(filtered) == 2
     assert filtered['inc-a'] == filtered.get('inc-a') == dict_['inc-a']
@@ -306,6 +307,8 @@ def test_remote_set_filter():
         ('inc-b', dict_['inc-b']),
     }
     assert set(filtered.values()) == {dict_['inc-a'], dict_['inc-b']}
+    #
+    # test lazy evaluation
     del dict_['inc-b']
     dict_['inc-g'] = g = Remote('g', 'sample.com')
     assert set(filtered) == set(filtered.keys()) == {'inc-a', 'inc-g'}

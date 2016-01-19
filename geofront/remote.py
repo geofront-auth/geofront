@@ -11,7 +11,7 @@ of alias :class:`str` to :class:`Remote` object e.g.::
         'worker-1': Remote('ubuntu', '192.168.0.25'),
         'worker-2': Remote('ubuntu', '192.168.0.26'),
         'db-1': Remote('ubuntu', '192.168.0.50'),
-        'db-2': Remote('ubuntu', '192.168.0.51')
+        'db-2': Remote('ubuntu', '192.168.0.51'),
     }
 
 However, in the age of the cloud, you don't have to manage the remote set
@@ -450,6 +450,27 @@ class RemoteSetFilter(collections.abc.Mapping):
     """It takes a ``filter`` function and a ``remote_set``, and then
     return a filtered set of remotes.
 
+    >>> remotes = {
+    ...     'web-1': Remote('ubuntu', '192.168.0.5'),
+    ...     'web-2': Remote('ubuntu', '192.168.0.6'),
+    ...     'web-3': Remote('ubuntu', '192.168.0.7'),
+    ...     'worker-1': Remote('ubuntu', '192.168.0.25'),
+    ...     'worker-2': Remote('ubuntu', '192.168.0.26'),
+    ...     'db-1': Remote('ubuntu', '192.168.0.50'),
+    ...     'db-2': Remote('ubuntu', '192.168.0.51'),
+    ... }
+    >>> filtered = RemoteSetFilter(
+    ...     lambda a, r: a == 'web' or r.host.endswith('5'),
+    ...     remotes
+    ... )
+    >>> dict(filtered)
+    {
+        'web-1': Remote('ubuntu', '192.168.0.5'),
+        'web-2': Remote('ubuntu', '192.168.0.6'),
+        'web-3': Remote('ubuntu', '192.168.0.7'),
+        'worker-1': Remote('ubuntu', '192.168.0.25')
+    }
+
     The key difference of this and conditional dict comprehension is
     evaluation time.  (TL;DR: the contents of :class:`RemoteSetFilter`
     is evaluated everytime its filtered result is needed.)
@@ -464,6 +485,16 @@ class RemoteSetFilter(collections.abc.Mapping):
     On the other hand, the filtered result of :class:`RemoteSetFilter` is
     never fixed, because the filter on ``remote_set`` is always evaluated
     again when its :meth:`__iter__()`/:meth:`__getitem__`/etc are called.
+
+    >>> remotes['web-4'] = Remote('ubuntu', '192.168.0.8')
+    >>> del remotes['worker-1']
+    >>> dict(filtered)
+    {
+        'web-1': Remote('ubuntu', '192.168.0.5'),
+        'web-2': Remote('ubuntu', '192.168.0.6'),
+        'web-3': Remote('ubuntu', '192.168.0.7'),
+        'web-4': Remote('ubuntu', '192.168.0.25'),  # this replaced worker-1!
+    }
 
     :param filter: a filter function which takes key (alias name) and
                    :class:`Remote`, and :const:`False` if exclude it,
