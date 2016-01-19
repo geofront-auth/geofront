@@ -1,6 +1,12 @@
 Geofront Changelog
 ==================
 
+Version 0.3.2
+-------------
+
+To be released.
+
+
 Version 0.3.1
 -------------
 
