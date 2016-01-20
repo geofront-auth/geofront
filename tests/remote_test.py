@@ -1,3 +1,4 @@
+import collections.abc
 import datetime
 import time
 
@@ -8,7 +9,7 @@ from geofront.identity import Identity
 from geofront.keystore import format_openssh_pubkey, parse_openssh_pubkey
 from geofront.remote import (AuthorizedKeyList, DefaultPermissionPolicy,
                              GroupMetadataPermissionPolicy, Remote,
-                             RemoteSetFilter, authorize)
+                             RemoteSetFilter, RemoteSetUnion, authorize)
 from geofront.team import Team
 
 
@@ -328,3 +329,86 @@ def test_remote_set_filter():
     assert filtered.get('exc-f') is None
     assert filtered['inc-g'] == filtered.get('inc-g') == g
     assert set(filtered.items()) == {('inc-a', dict_['inc-a']), ('inc-g', g)}
+
+
+def test_remote_set_union():
+    a = {
+        'web-1': Remote('ubuntu', '192.168.0.5'),
+        'web-2': Remote('ubuntu', '192.168.0.6'),
+        'web-3': Remote('ubuntu', '192.168.0.7'),
+        'worker-1': Remote('ubuntu', '192.168.0.8'),
+    }
+    b = {
+        'worker-1': Remote('ubuntu', '192.168.0.25'),
+        'worker-2': Remote('ubuntu', '192.168.0.26'),
+        'db-1': Remote('ubuntu', '192.168.0.27'),
+        'db-2': Remote('ubuntu', '192.168.0.28'),
+        'db-3': Remote('ubuntu', '192.168.0.29'),
+    }
+    c = {
+        'web-1': Remote('ubuntu', '192.168.0.49'),
+        'db-1': Remote('ubuntu', '192.168.0.50'),
+        'db-2': Remote('ubuntu', '192.168.0.51'),
+    }
+    union = RemoteSetUnion(a, b, c)
+    assert isinstance(union, collections.abc.Mapping)
+    assert set(union) == set(union.keys()) == {
+        'web-1', 'web-2', 'web-3', 'worker-1', 'worker-2',
+        'db-1', 'db-2', 'db-3'
+    }
+    assert len(union) == 8
+    assert union['web-1'] == union.get('web-1') == c['web-1']
+    assert union['web-2'] == union.get('web-2') == a['web-2']
+    assert union['web-3'] == union.get('web-3') == a['web-3']
+    assert union['worker-1'] == union.get('worker-1') == b['worker-1']
+    assert union['worker-2'] == union.get('worker-2') == b['worker-2']
+    assert union['db-1'] == union.get('db-1') == c['db-1']
+    assert union['db-2'] == union.get('db-2') == c['db-2']
+    assert union['db-3'] == union.get('db-3') == b['db-3']
+    assert set(union.items()) == {
+        ('web-1', c['web-1']),
+        ('web-2', a['web-2']),
+        ('web-3', a['web-3']),
+        ('worker-1', b['worker-1']),
+        ('worker-2', b['worker-2']),
+        ('db-1', c['db-1']),
+        ('db-2', c['db-2']),
+        ('db-3', b['db-3']),
+    }
+    assert set(union.values()) == {
+        c['web-1'], a['web-2'], a['web-3'],
+        b['worker-1'], b['worker-2'],
+        c['db-1'], c['db-2'], b['db-3'],
+    }
+    #
+    # test lazy evaluation
+    del c['web-1']
+    assert isinstance(union, collections.abc.Mapping)
+    assert set(union) == set(union.keys()) == {
+        'web-1', 'web-2', 'web-3', 'worker-1', 'worker-2',
+        'db-1', 'db-2', 'db-3'
+    }
+    assert len(union) == 8
+    assert union['web-1'] == union.get('web-1') == a['web-1']
+    assert union['web-2'] == union.get('web-2') == a['web-2']
+    assert union['web-3'] == union.get('web-3') == a['web-3']
+    assert union['worker-1'] == union.get('worker-1') == b['worker-1']
+    assert union['worker-2'] == union.get('worker-2') == b['worker-2']
+    assert union['db-1'] == union.get('db-1') == c['db-1']
+    assert union['db-2'] == union.get('db-2') == c['db-2']
+    assert union['db-3'] == union.get('db-3') == b['db-3']
+    assert set(union.items()) == {
+        ('web-1', a['web-1']),
+        ('web-2', a['web-2']),
+        ('web-3', a['web-3']),
+        ('worker-1', b['worker-1']),
+        ('worker-2', b['worker-2']),
+        ('db-1', c['db-1']),
+        ('db-2', c['db-2']),
+        ('db-3', b['db-3']),
+    }
+    assert set(union.values()) == {
+        a['web-1'], a['web-2'], a['web-3'],
+        b['worker-1'], b['worker-2'],
+        c['db-1'], c['db-2'], b['db-3'],
+    }

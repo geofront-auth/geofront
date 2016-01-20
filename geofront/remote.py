@@ -47,7 +47,7 @@ from .util import typed
 
 __all__ = ('AuthorizedKeyList', 'DefaultPermissionPolicy',
            'GroupMetadataPermissionPolicy', 'PermissionPolicy',
-           'Remote', 'RemoteSetFilter',
+           'Remote', 'RemoteSetFilter', 'RemoteSetUnion',
            'authorize')
 
 
@@ -535,6 +535,104 @@ class RemoteSetFilter(collections.abc.Mapping):
         for alias, remote in self.remote_set.items():
             if self.filter(alias, remote):
                 yield alias, remote
+
+    def values(self):
+        for _, remote in self.items():
+            yield remote
+
+
+class RemoteSetUnion(collections.abc.Mapping):
+    """It takes two or more remote sets, and then return a union set of them.
+    Note that the order of arguments affect overriding of aliases (keys).
+    If there are any duplicated aliases (keys), the latter alias (key) is
+    prior to the former.
+
+    >>> a = {
+    ...     'web-1': Remote('ubuntu', '192.168.0.5'),
+    ...     'web-2': Remote('ubuntu', '192.168.0.6'),
+    ...     'web-3': Remote('ubuntu', '192.168.0.7'),
+    ...     'worker-1': Remote('ubuntu', '192.168.0.8'),
+    ... }
+    >>> b = {
+    ...     'worker-1': Remote('ubuntu', '192.168.0.25'),
+    ...     'worker-2': Remote('ubuntu', '192.168.0.26'),
+    ...     'db-1': Remote('ubuntu', '192.168.0.27'),
+    ...     'db-2': Remote('ubuntu', '192.168.0.28'),
+    ...     'db-3': Remote('ubuntu', '192.168.0.29'),
+    ... }
+    >>> c = {
+    ...     'web-1': Remote('ubuntu', '192.168.0.49'),
+    ...     'db-1': Remote('ubuntu', '192.168.0.50'),
+    ...     'db-2': Remote('ubuntu', '192.168.0.51'),
+    ... }
+    >>> union = RemoteSetUnion(a, b, c)
+    >>> dict(union)
+    {
+        'web-1': Remote('ubuntu', '192.168.0.49'),
+        'web-2': Remote('ubuntu', '192.168.0.6'),
+        'web-3': Remote('ubuntu', '192.168.0.7'),
+        'worker-1': Remote('ubuntu', '192.168.0.25'),
+        'worker-2': Remote('ubuntu', '192.168.0.26'),
+        'db-1': Remote('ubuntu', '192.168.0.50'),
+        'db-2': Remote('ubuntu', '192.168.0.51'),
+        'db-3': Remote('ubuntu', '192.168.0.29'),
+    }
+
+    Note that :class:`RemoteSetUnion` is evaluated everytime its contents
+    is needed, like :class:`RemoteSetFilter`:
+
+    >>> del c['web-1']
+    >>> dict(union)
+    {
+        'web-1': Remote('ubuntu', '192.168.0.5'),  # changed!
+        'web-2': Remote('ubuntu', '192.168.0.6'),
+        'web-3': Remote('ubuntu', '192.168.0.7'),
+        'worker-1': Remote('ubuntu', '192.168.0.25'),
+        'worker-2': Remote('ubuntu', '192.168.0.26'),
+        'db-1': Remote('ubuntu', '192.168.0.50'),
+        'db-2': Remote('ubuntu', '192.168.0.51'),
+        'db-3': Remote('ubuntu', '192.168.0.29'),
+    }
+
+    :param \*remote_sets: two or more remote sets.  every remote set has to be
+                          a mapping of alias :class:`str` to :class:`Remote`
+    :type \*remote_sets: :class:`collections.abc.Mapping`
+
+    .. versionadded:: 0.3.2
+
+    """
+
+    def __init__(self, *remote_sets):
+        if len(remote_sets) < 2:
+            raise TypeError('expected two or more arguments')
+        for remote_set in remote_sets:
+            if not isinstance(remote_set, collections.abc.Mapping):
+                raise TypeError('expected mappings, not ' + repr(remote_set))
+        self.remote_sets = remote_sets
+
+    def __iter__(self):
+        for alias, _ in self.items():
+            yield alias
+
+    def __len__(self):
+        return len({a for remote_set in self.remote_sets for a in remote_set})
+
+    def __getitem__(self, alias) -> Remote:
+        for remote_set in reversed(self.remote_sets):
+            try:
+                return remote_set[alias]
+            except KeyError:
+                continue
+        raise KeyError(alias)
+
+    def items(self):
+        keys = set()
+        for remote_set in reversed(self.remote_sets):
+            for alias, remote in remote_set.items():
+                if alias in keys:
+                    continue
+                yield alias, remote
+                keys.add(alias)
 
     def values(self):
         for _, remote in self.items():

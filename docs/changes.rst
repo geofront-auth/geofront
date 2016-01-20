@@ -6,6 +6,9 @@ Version 0.3.2
 
 To be released.
 
+- Added :class:`~geofront.remote.RemoteSetUnion` to make union view of
+  multiple remote sets.
+
 
 Version 0.3.1
 -------------
