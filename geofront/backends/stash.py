@@ -185,7 +185,7 @@ class StashKeyStore(KeyStore):
         })
         try:
             self.request(
-                identity, 'POST', self.REGISTER_URL.format(self), data,
+                identity, 'POST', self.REGISTER_URL.format(self.team), data,
                 headers={'Content-Type': 'application/json'}
             )
         except urllib.error.HTTPError as e:
@@ -216,7 +216,7 @@ class StashKeyStore(KeyStore):
                 response = self.request(
                     identity,
                     'DELETE',
-                    self.DEREGISTER_URL(self, key['id'])
+                    self.DEREGISTER_URL(self.team, key['id'])
                 )
                 assert response.code == 204
                 break
