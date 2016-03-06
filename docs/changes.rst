@@ -4,7 +4,7 @@ Geofront Changelog
 Version 0.3.2
 -------------
 
-To be released.
+Released on March 7, 2016.
 
 - Added :class:`~geofront.remote.RemoteSetUnion` to make union view of
   multiple remote sets.
