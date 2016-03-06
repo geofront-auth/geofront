@@ -33,6 +33,12 @@ def pytest_addoption(parser):
                      type=int,
                      default=12399,
                      help='the maximum unused port number [%default(s)]')
+    parser.addoption('--sshd-state-timeout',
+                     metavar='SECONDS',
+                     type=int,
+                     default=30,
+                     help='the maximum seconds to wait for satisfying '
+                          'condition of sshd server state  [%default(s)]')
     parser.addoption('--redis-host',
                      metavar='HOSTNAME',
                      help='redis host',

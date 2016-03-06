@@ -151,9 +151,15 @@ def wait_for(seconds: int, condition):
         if condition():
             break
         time.sleep(0.5)
+    else:
+        raise TimeoutError(
+            'failed to satisfy condition during {0} seconds'.format(seconds)
+        )
 
 
-def test_periodical_renewal(fx_authorized_servers, fx_master_key, tmpdir):
+def test_periodical_renewal(request, fx_authorized_servers, fx_master_key,
+                            tmpdir):
+    timeout = request.config.getoption('--sshd-state-timeout')
     remote_set = {
         Remote('user', '127.0.0.1', port)
         for port in fx_authorized_servers
@@ -166,13 +172,13 @@ def test_periodical_renewal(fx_authorized_servers, fx_master_key, tmpdir):
     assert store.load() == fx_master_key
     for t, path, ev in fx_authorized_servers.values():
         assert fx_master_key in authorized_key_set(path)
-    wait_for(20, lambda: store.load() != fx_master_key)
+    wait_for(timeout, lambda: store.load() != fx_master_key)
     second_key = store.load()
     assert second_key != fx_master_key
     for t, path, ev in fx_authorized_servers.values():
         key_set = authorized_key_set(path)
         assert second_key in key_set
-    wait_for(20, lambda: store.load() != second_key)
+    wait_for(timeout, lambda: store.load() != second_key)
     third_key = store.load()
     assert third_key != fx_master_key
     assert third_key != second_key
