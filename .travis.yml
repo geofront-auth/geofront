@@ -19,7 +19,7 @@ services:
 - redis-server
 install:
 - pip install --upgrade setuptools pip
-- pip install -f https://github.com/spoqa/sftpserver/releases sftpserver==0.2py3  # FIXME
+- pip install -f https://github.com/spoqa/sftpserver/releases sftpserver==0.2setuptools  # FIXME
 - pip install -e .[tests]
 - pip install psycopg2 PyMySQL http://cdn.mysql.com/Downloads/Connector-Python/mysql-connector-python-2.0.4.zip
 - pip install pytest-cov coveralls flake8
