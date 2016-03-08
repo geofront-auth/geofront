@@ -74,7 +74,18 @@ class StashTeam(Team):
         client = self.create_client(**client_options)
         url, headers, body = client.sign(url, method, body, headers)
         request = urllib.request.Request(url, body, headers, method=method)
-        return urllib.request.urlopen(request)
+        try:
+            return urllib.request.urlopen(request)
+        except urllib.error.HTTPError as e:
+            logger = logging.getLogger(__name__ + '.StashTeam.request')
+            logger.exception(
+                '[%s %s] %s\nrequest headers: %r\nrequest body: %r\n'
+                'client_options: %r\nresponse status: %r\n'
+                'response headers: %r\nresponse body: %r',
+                method, url, e, headers, body, client_options,
+                e.code, dict(e.headers), e.read()
+            )
+            raise
 
     @typed
     def request_authentication(
