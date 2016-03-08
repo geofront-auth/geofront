@@ -1,6 +1,10 @@
 Geofront
 ========
 
+.. image:: https://badges.gitter.im/spoqa/geofront.svg
+   :alt: Join the chat at https://gitter.im/spoqa/geofront
+   :target: https://gitter.im/spoqa/geofront?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
+
 .. image:: https://badge.fury.io/py/Geofront.svg?
    :target: https://pypi.python.org/pypi/Geofront
    :alt: Latest PyPI version
