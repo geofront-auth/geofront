@@ -16,7 +16,7 @@ Released on March 7, 2016.
   multiple remote sets.
 - Fixed :attr:`AttributeError` on :meth:`StashKeyStore.register()
   <geofront.backends.stash.StashKeyStore.register>` or
-  :mth:`StashKeyStore.deregister()
+  :meth:`StashKeyStore.deregister()
   <geofront.backends.stash.StashKeyStore.deregister>` being called.
 
 
