@@ -67,7 +67,7 @@ Prerequisites
 - Python 3.3+
 - Third-party packages (automatically installed together)
 
-  - Paramiko_ 1.13.0+
+  - Paramiko_ 2.0.0+
   - Werkzeug_ 0.9+
   - Flask_ 0.10+
   - OAuthLib_ 1.0.3+

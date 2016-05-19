@@ -16,7 +16,7 @@ def readme():
 
 install_requires = [
     'setuptools',
-    'paramiko >= 1.15.0',
+    'paramiko >= 2.0.0',
     'Werkzeug >= 0.9',
     'oauthlib[rsa, signedtoken] >= 1.0.3, < 2.0.0',
     'Flask >= 0.10',
