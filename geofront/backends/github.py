@@ -10,10 +10,12 @@ import io
 import json
 import logging
 import os
+import typing
 import urllib.request
 
 from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
+from tsukkomi.typed import typechecked
 from werkzeug.http import parse_options_header
 from werkzeug.urls import url_encode, url_decode_stream
 from werkzeug.wrappers import Request
@@ -23,7 +25,6 @@ from ..keystore import (DuplicatePublicKeyError, KeyStore,
                         format_openssh_pubkey, get_key_fingerprint,
                         parse_openssh_pubkey)
 from ..team import AuthenticationContinuation, AuthenticationError, Team
-from ..util import typed
 
 
 __all__ = 'GitHubKeyStore', 'GitHubOrganization', 'request'
@@ -136,13 +137,16 @@ class GitHubOrganization(Team):
     ORGS_LIST_URL = 'https://api.github.com/user/orgs'
     TEAMS_LIST_URL = 'https://api.github.com/user/teams'
 
-    @typed
-    def __init__(self, client_id: str, client_secret: str, org_login: str):
+    @typechecked
+    def __init__(self,
+                 client_id: str,
+                 client_secret: str,
+                 org_login: str) -> None:
         self.client_id = client_id
         self.client_secret = client_secret
         self.org_login = org_login
 
-    @typed
+    @typechecked
     def request_authentication(self,
                                redirect_url: str) -> str:
         auth_nonce = ''.join(map('{:02x}'.format, os.urandom(16)))
@@ -155,11 +159,13 @@ class GitHubOrganization(Team):
         authorize_url = '{}?{}'.format(self.AUTHORIZE_URL, query)
         return AuthenticationContinuation(authorize_url, auth_nonce)
 
-    @typed
-    def authenticate(self,
-                     state,
-                     requested_redirect_url: str,
-                     wsgi_environ: collections.abc.Mapping) -> Identity:
+    @typechecked
+    def authenticate(
+        self,
+        state,
+        requested_redirect_url: str,
+        wsgi_environ: typing.Mapping[str, typing.Any]
+    ) -> Identity:
         req = Request(wsgi_environ, populate_request=False, shallow=True)
         try:
             code = req.args['code']
@@ -240,8 +246,8 @@ class GitHubKeyStore(KeyStore):
     LIST_URL = 'https://api.github.com/user/keys'
     DEREGISTER_URL = 'https://api.github.com/user/keys/{id}'
 
-    @typed
-    def register(self, identity: Identity, public_key: PKey):
+    @typechecked
+    def register(self, identity: Identity, public_key: PKey) -> None:
         title = get_key_fingerprint(public_key)
         data = json.dumps({
             'title': title,
@@ -269,8 +275,8 @@ class GitHubKeyStore(KeyStore):
                 raise DuplicatePublicKeyError(message)
             raise
 
-    @typed
-    def list_keys(self, identity: Identity) -> collections.abc.Set:
+    @typechecked
+    def list_keys(self, identity: Identity) -> typing.AbstractSet[PKey]:
         logger = logging.getLogger(__name__ + '.GitHubKeyStore.list_keys')
         keys = request(identity, self.LIST_URL)
         result = set()
@@ -283,8 +289,8 @@ class GitHubKeyStore(KeyStore):
             result.add(pubkey)
         return result
 
-    @typed
-    def deregister(self, identity: Identity, public_key: PKey):
+    @typechecked
+    def deregister(self, identity: Identity, public_key: PKey) -> None:
         keys = request(identity, self.LIST_URL)
         for key in keys:
             if parse_openssh_pubkey(key['key']) == public_key:

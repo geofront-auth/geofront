@@ -20,6 +20,7 @@ import numbers
 import os.path
 import re
 import tempfile
+import typing
 import xml.etree.ElementTree
 
 from libcloud.common.types import MalformedResponseError
@@ -32,6 +33,7 @@ from libcloud.storage.drivers.s3 import S3StorageDriver
 from libcloud.storage.types import ObjectDoesNotExistError
 from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
+from tsukkomi.typed import typechecked
 
 from ..identity import Identity
 from ..keystore import (DuplicatePublicKeyError, KeyStore,
@@ -39,7 +41,6 @@ from ..keystore import (DuplicatePublicKeyError, KeyStore,
                         parse_openssh_pubkey)
 from ..masterkey import EmptyStoreError, MasterKeyStore, read_private_key_file
 from ..remote import Remote
-from ..util import typed
 
 __all__ = ('CloudKeyStore', 'CloudMasterKeyStore', 'CloudMasterPublicKeyStore',
            'CloudRemoteSet')
@@ -88,11 +89,11 @@ class CloudRemoteSet(collections.abc.Mapping):
 
     """
 
-    @typed
+    @typechecked
     def __init__(self,
                  driver: NodeDriver,
                  user: str='ec2-user',
-                 port: numbers.Integral=22):
+                 port: numbers.Integral=22) -> None:
         self.driver = driver
         self.user = user
         self.port = port
@@ -111,7 +112,7 @@ class CloudRemoteSet(collections.abc.Mapping):
     def __len__(self) -> int:
         return len(self._get_nodes())
 
-    def __iter__(self) -> collections.abc.Iterator:
+    def __iter__(self) -> typing.Iterator[str]:
         return iter(self._get_nodes(True))
 
     def __getitem__(self, alias: str) -> Remote:
@@ -134,7 +135,7 @@ def supports_metadata(driver: NodeDriver) -> bool:
 
 
 @singledispatch
-def get_metadata(driver: NodeDriver, node: Node) -> collections.abc.Mapping:
+def get_metadata(driver: NodeDriver, node: Node) -> typing.Mapping:
     return driver.ex_get_metadata(node)
 
 
@@ -145,7 +146,7 @@ def gce_supports_metadata(driver: GCENodeDriver) -> bool:
 
 @get_metadata.register(GCENodeDriver)
 def gce_get_metadata(driver: GCENodeDriver,
-                     node: Node) -> collections.abc.Mapping:
+                     node: Node) -> typing.Mapping:
     return node.extra['metadata']
 
 
@@ -183,16 +184,16 @@ class CloudMasterKeyStore(MasterKeyStore):
 
     """
 
-    @typed
+    @typechecked
     def __init__(self,
                  driver: StorageDriver,
                  container: Container,
-                 object_name: str):
+                 object_name: str) -> None:
         self.driver = driver
         self.container = container
         self.object_name = object_name
 
-    @typed
+    @typechecked
     def load(self) -> PKey:
         try:
             obj = self.driver.get_object(self.container.name, self.object_name)
@@ -207,8 +208,8 @@ class CloudMasterKeyStore(MasterKeyStore):
             with io.TextIOWrapper(buffer_) as tio:
                 return read_private_key_file(tio)
 
-    @typed
-    def save(self, master_key: PKey):
+    @typechecked
+    def save(self, master_key: PKey) -> None:
         extra = {'content_type': 'application/x-pem-key'}
         if isinstance(self.driver, S3StorageDriver):
             # On some cases (altough unknown condition), S3 driver failed to
@@ -238,8 +239,8 @@ class CloudMasterKeyStore(MasterKeyStore):
 
         """
 
-        @typed
-        def __init__(self, sequence: collections.abc.Sequence):
+        @typechecked
+        def __init__(self, sequence: typing.Sequence):
             self.iterator = iter(sequence)
             self.length = len(sequence)
 
@@ -282,19 +283,20 @@ class CloudKeyStore(KeyStore):
                                '{identity.team_type.__qualname__} '
                                '{identity.identifier} {fingerprint}')
 
-    @typed
+    @typechecked
     def __init__(self, driver: NodeDriver, key_name_format: str=None):
         self.driver = driver
         self.key_name_format = key_name_format or self.DEFAULT_KEY_NAME_FORMAT
 
-    def _get_key_name(self, identity: Identity, public_key: PKey):
+    def _get_key_name(self, identity: Identity, public_key: PKey) -> str:
         return self.key_name_format.format(
             identity=identity,
             public_key=public_key,
             fingerprint=get_key_fingerprint(public_key)
         )
 
-    def _get_key_name_pattern(self, identity: Identity):
+    def _get_key_name_pattern(self,
+                              identity: Identity) -> typing.re.Pattern[str]:
         """Make the regex pattern from the format string.  Put two different
         random keys, compare two outputs, and then replace the difference
         with wildcard.
@@ -317,8 +319,8 @@ class CloudKeyStore(KeyStore):
             '^{}.+?{}$'.format(re.escape(prefix), re.escape(postfix))
         )
 
-    @typed
-    def register(self, identity: Identity, public_key: PKey):
+    @typechecked
+    def register(self, identity: Identity, public_key: PKey) -> None:
         name = self._get_key_name(identity, public_key)
         driver = self.driver
         try:
@@ -331,8 +333,8 @@ class CloudKeyStore(KeyStore):
         else:
             raise DuplicatePublicKeyError()
 
-    @typed
-    def list_keys(self, identity: Identity) -> collections.abc.Set:
+    @typechecked
+    def list_keys(self, identity: Identity) -> typing.AbstractSet[PKey]:
         pattern = self._get_key_name_pattern(identity)
         return frozenset(
             parse_openssh_pubkey(key_pair.public_key)
@@ -340,8 +342,8 @@ class CloudKeyStore(KeyStore):
             if pattern.match(key_pair.name)
         )
 
-    @typed
-    def deregister(self, identity: Identity, public_key: PKey):
+    @typechecked
+    def deregister(self, identity: Identity, public_key: PKey) -> None:
         try:
             key_pair = self.driver.get_key_pair(
                 self._get_key_name(identity, public_key)
@@ -372,21 +374,21 @@ class CloudMasterPublicKeyStore(MasterKeyStore):
 
     """
 
-    @typed
+    @typechecked
     def __init__(self,
                  driver: NodeDriver,
                  key_pair_name: str,
-                 master_key_store: MasterKeyStore):
+                 master_key_store: MasterKeyStore) -> None:
         self.driver = driver
         self.key_pair_name = key_pair_name
         self.master_key_store = master_key_store
 
-    @typed
+    @typechecked
     def load(self) -> PKey:
         return self.master_key_store.load()
 
-    @typed
-    def save(self, master_key: PKey):
+    @typechecked
+    def save(self, master_key: PKey) -> None:
         public_key = format_openssh_pubkey(master_key)
         driver = self.driver
         try:

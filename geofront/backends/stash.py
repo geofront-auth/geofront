@@ -20,11 +20,13 @@ import collections.abc
 import io
 import json
 import logging
+import typing
 import urllib.error
 import urllib.request
 
 from oauthlib.oauth1 import SIGNATURE_RSA, Client
 from paramiko.pkey import PKey
+from tsukkomi.typed import typechecked
 from werkzeug.urls import url_decode_stream, url_encode
 from werkzeug.wrappers import Request
 
@@ -32,7 +34,6 @@ from ..identity import Identity
 from ..keystore import (DuplicatePublicKeyError, KeyStore,
                         format_openssh_pubkey, parse_openssh_pubkey)
 from ..team import AuthenticationContinuation, AuthenticationError, Team
-from ..util import typed
 
 __all__ = 'StashKeyStore', 'StashTeam'
 
@@ -54,7 +55,7 @@ class StashTeam(Team):
     USER_URL = '{0.server_url}/plugins/servlet/applinks/whoami'
     USER_PROFILE_URL = '{0.server_url}/users/{1}'
 
-    @typed
+    @typechecked
     def __init__(self, server_url: str, consumer_key: str, rsa_key: str):
         self.server_url = server_url.rstrip('/')
         self.consumer_key = consumer_key
@@ -68,7 +69,7 @@ class StashTeam(Team):
             **kwargs
         )
 
-    @typed
+    @typechecked
     def request(self, method: str, url: str, body=None, headers=None,
                 **client_options):
         client = self.create_client(**client_options)
@@ -87,7 +88,7 @@ class StashTeam(Team):
             )
             raise
 
-    @typed
+    @typechecked
     def request_authentication(
         self, redirect_url: str
     ) -> AuthenticationContinuation:
@@ -102,7 +103,7 @@ class StashTeam(Team):
             (request_token['oauth_token'], request_token['oauth_token_secret'])
         )
 
-    @typed
+    @typechecked
     def authenticate(self,
                      state,
                      requested_redirect_url: str,
@@ -153,8 +154,8 @@ class StashKeyStore(KeyStore):
     LIST_URL = '{0.server_url}/rest/ssh/1.0/keys?start={1}'
     DEREGISTER_URL = '{0.server_url}/rest/ssh/1.0/keys/{1}'
 
-    @typed
-    def __init__(self, team: StashTeam):
+    @typechecked
+    def __init__(self, team: StashTeam) -> None:
         self.team = team
 
     def request(self, identity, *args, **kwargs):
@@ -166,8 +167,10 @@ class StashKeyStore(KeyStore):
             **kwargs
         )
 
-    @typed
-    def request_list(self, identity: Identity) -> collections.abc.Iterator:
+    @typechecked
+    def request_list(
+        self, identity: Identity
+    ) -> typing.Iterator[typing.Sequence[typing.Mapping[str, typing.Any]]]:
         if not (isinstance(self.team, identity.team_type) and
                 identity.identifier.startswith(self.team.server_url)):
             return
@@ -186,8 +189,8 @@ class StashKeyStore(KeyStore):
                 break
             start = payload['nextPageStart']
 
-    @typed
-    def register(self, identity: Identity, public_key: PKey):
+    @typechecked
+    def register(self, identity: Identity, public_key: PKey) -> None:
         if not (isinstance(self.team, identity.team_type) and
                 identity.identifier.startswith(self.team.server_url)):
             return
@@ -205,8 +208,8 @@ class StashKeyStore(KeyStore):
                 raise DuplicatePublicKeyError(errors[0]['message'])
             raise
 
-    @typed
-    def list_keys(self, identity: Identity) -> collections.abc.Set:
+    @typechecked
+    def list_keys(self, identity: Identity) -> typing.AbstractSet[PKey]:
         logger = logging.getLogger(__name__ + '.StashKeyStore.list_keys')
         keys = self.request_list(identity)
         result = set()
@@ -219,8 +222,8 @@ class StashKeyStore(KeyStore):
             result.add(pubkey)
         return result
 
-    @typed
-    def deregister(self, identity: Identity, public_key: PKey):
+    @typechecked
+    def deregister(self, identity: Identity, public_key: PKey) -> None:
         keys = self.request_list(identity)
         for key in keys:
             if parse_openssh_pubkey(key['text']) == public_key:
