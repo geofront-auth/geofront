@@ -4,7 +4,7 @@
 """
 import collections.abc
 
-from .util import typed
+from tsukkomi.typed import typechecked
 
 __all__ = 'Identity',
 
@@ -37,27 +37,27 @@ class Identity(collections.abc.Hashable):
     #:    operators, and :func:`hash()` function.
     access_token = None
 
-    @typed
+    @typechecked
     def __init__(self,
                  team_type: type,
                  identifier: collections.abc.Hashable,
-                 access_token=None):
+                 access_token=None) -> None:
         self.team_type = team_type
         self.identifier = identifier
         self.access_token = access_token
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return (isinstance(other, type(self)) and
                 self.team_type is other.team_type and
                 self.identifier == other.identifier)
 
-    def __ne__(self, other):
-        return not (self == other)
+    def __ne__(self, other) -> bool:
+        return not self == other
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.team_type, self.identifier))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         fmt = ('{0.__module__}.{0.__qualname__}'
                '({1.__module__}.{1.__qualname__}, {2!r}, access_token={3!r})')
         return fmt.format(

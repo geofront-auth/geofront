@@ -9,6 +9,7 @@ from iso8601 import parse_date
 from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
 from pytest import fail, fixture, mark, raises, skip, yield_fixture
+from tsukkomi.typed import typechecked
 from werkzeug.contrib.cache import (BaseCache, FileSystemCache, RedisCache,
                                     SimpleCache)
 from werkzeug.exceptions import HTTPException, NotFound
@@ -27,7 +28,6 @@ from geofront.server import (FingerprintConverter, Token, TokenIdConverter,
                              get_remote_set, get_team, get_token_store,
                              remote_dict)
 from geofront.team import AuthenticationContinuation, AuthenticationError, Team
-from geofront.util import typed
 from geofront.version import VERSION
 
 
@@ -243,16 +243,16 @@ def test_get_team(fx_team):
 
 class MemoryMasterKeyStore(MasterKeyStore):
 
-    @typed
+    @typechecked
     def __init__(self, master_key: PKey=None):
         if master_key is not None:
             self.save(master_key)
 
-    @typed
+    @typechecked
     def load(self) -> PKey:
         return self.master_key
 
-    @typed
+    @typechecked
     def save(self, master_key: PKey):
         self.master_key = master_key
 

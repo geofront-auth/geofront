@@ -16,6 +16,7 @@ def readme():
 
 install_requires = [
     'setuptools',
+    'tsukkomi >= 0.0.5',
     'paramiko >= 2.0.0',
     'Werkzeug >= 0.9',
     'oauthlib[rsa, signedtoken] >= 1.0.3, < 2.0.0',
@@ -28,6 +29,7 @@ supported_pyversions = [(3, 3), (3, 4), (3, 5)]
 
 pyversion_requires = {
     ('<', (3, 4)): ['singledispatch'],
+    ('<', (3, 5)): ['typing'],
 }
 
 tests_require = [
@@ -88,7 +90,7 @@ setup(
     long_description=readme(),
     url='https://github.com/spoqa/geofront',
     author='Hong Minhee',
-    author_email='minhee' '@' 'member.fsf.org',
+    author_email='hongminhee' '@' 'member.fsf.org',
     maintainer='Spoqa',
     maintainer_email='dev' '@' 'spoqa.com',
     license='AGPLv3 or later',

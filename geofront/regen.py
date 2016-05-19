@@ -5,21 +5,22 @@
 
 """
 import argparse
-import collections.abc
 import logging
 import os.path
+import typing
 
 from paramiko.rsakey import RSAKey
+from tsukkomi.typed import typechecked
 
 from .keystore import get_key_fingerprint
 from .masterkey import EmptyStoreError, MasterKeyStore, renew_master_key
-from .util import typed
+from .remote import Remote
 from .version import VERSION
 
 __all__ = 'main', 'main_parser', 'regenerate'
 
 
-@typed
+@typechecked
 def main_parser(
     parser: argparse.ArgumentParser=None
 ) -> argparse.ArgumentParser:  # pragma: no cover
@@ -51,13 +52,13 @@ def main_parser(
     return parser
 
 
-@typed
+@typechecked
 def regenerate(master_key_store: MasterKeyStore,
-               remote_set: collections.abc.Mapping,
+               remote_set: typing.AbstractSet[Remote],
                bits: int=2048,
                *,
                create_if_empty: bool,
-               renew_unless_empty: bool):
+               renew_unless_empty: bool) -> None:
     """Regenerate or create the master key."""
     logger = logging.getLogger(__name__ + '.regenerate')
     try:

@@ -74,6 +74,8 @@ Prerequisites
   - Apache Libcloud_ 0.15.0+
   - Waitress_ 0.8.8+
   - singledispatch_ (only if Python is older than 3.4)
+  - typing_ (only if Python is older than 3.5)
+  - tsukkomi_ 0.0.4+
 
 .. _Paramiko: http://www.paramiko.org/
 .. _Werkzeug: http://werkzeug.pocoo.org/
@@ -82,6 +84,7 @@ Prerequisites
 .. _Libcloud: http://libcloud.apache.org/
 .. _Waitress: https://github.com/Pylons/waitress
 .. _singledispatch: https://pypi.python.org/pypi/singledispatch
+.. _tsukkomi: https://github.com/spoqa/tsukkomi
 
 
 Author and license
@@ -95,7 +98,7 @@ under AGPL3_ or later.  You can find the source code from GitHub__:
    $ git clone git://github.com/spoqa/geofront.git
 
 
-__ http://dahlia.kr/
+__ https://hongminhee.org/
 .. _Spoqa: http://www.spoqa.com/
 .. _AGPL3: http://www.gnu.org/licenses/agpl-3.0.html
 __ https://github.com/spoqa/geofront

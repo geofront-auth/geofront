@@ -17,9 +17,11 @@ __ http://blog.bitbucket.org/2012/05/30/bitbucket-teams/
 
 """
 import collections.abc
+import typing
+
+from tsukkomi.typed import typechecked
 
 from .identity import Identity
-from .util import typed
 
 __all__ = 'AuthenticationContinuation', 'AuthenticationError', 'Team'
 
@@ -48,7 +50,7 @@ class AuthenticationContinuation:
 
     """
 
-    @typed
+    @typechecked
     def __init__(self, next_url: str, state):
         self.next_url = next_url
         self.state = state
@@ -80,7 +82,7 @@ class Team:
 
     """
 
-    @typed
+    @typechecked
     def request_authentication(
         self, redirect_url: str
     ) -> AuthenticationContinuation:
@@ -107,11 +109,13 @@ class Team:
         raise NotImplementedError('request_authentication() method has to '
                                   'be implemented')
 
-    @typed
-    def authenticate(self,
-                     state: str,
-                     requested_redirect_url: str,
-                     wsgi_environ: collections.abc.Mapping) -> Identity:
+    @typechecked
+    def authenticate(
+        self,
+        state,
+        requested_redirect_url: str,
+        wsgi_environ: typing.Mapping[str, typing.Any]
+    ) -> Identity:
         """Second step of authentication process, to create a verification
         token for the identity.  The token is used by :meth:`authorize()`
         method, and the key store as well (if available).
@@ -123,7 +127,8 @@ class Team:
                                        ``redirect_url`` parameter
         :type requested_redirect_url: :class:`str`
         :param wsgi_environ: forwarded wsgi environ dictionary
-        :type wsgi_environ: :class:`collections.abc.Mapping`
+        :type wsgi_environ: :class:`typing.Mapping`[:class:`str`,
+                                                    :class:`typing.Any`]
         :return: an identity which contains a verification token
         :rtype: :class:`~.identity.Identity`
         :raise geofront.team.AuthenticationError:
@@ -139,7 +144,7 @@ class Team:
         raise NotImplementedError('authenticate() method has to '
                                   'be implemented')
 
-    @typed
+    @typechecked
     def authorize(self, identity: Identity) -> bool:
         """The last step of authentication process.
         Test whether the given ``identity`` belongs to the team.
@@ -155,8 +160,10 @@ class Team:
         """
         raise NotImplementedError('authorize() method has to be implemented')
 
-    @typed
-    def list_groups(self, identity: Identity) -> collections.abc.Set:
+    @typechecked
+    def list_groups(
+        self, identity: Identity
+    ) -> typing.AbstractSet[collections.abc.Hashable]:
         """List the all groups that the given ``identity`` belongs to.
         Any hashable value can be an element to represent a group e.g.::
 

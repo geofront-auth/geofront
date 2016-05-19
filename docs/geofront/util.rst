@@ -1,3 +1,0 @@
-
-.. automodule:: geofront.util
-   :members:

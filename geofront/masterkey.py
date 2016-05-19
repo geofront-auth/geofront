@@ -19,23 +19,23 @@ For more details, see also :class:`TwoPhaseRenewal`.
    See :class:`~.backends.cloud.CloudMasterKeyStore`.
 
 """
-import collections.abc
 import datetime
 import io
 import logging
 import os.path
 import socket
 import threading
+import typing
 
 from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
 from paramiko.sftp_client import SFTPClient
 from paramiko.ssh_exception import SSHException
 from paramiko.transport import Transport
+from tsukkomi.typed import typechecked
 
 from .keystore import get_key_fingerprint
 from .remote import AuthorizedKeyList, Remote
-from .util import typed
 
 __all__ = ('EmptyStoreError', 'FileSystemMasterKeyStore', 'MasterKeyStore',
            'PeriodicalRenewal', 'TwoPhaseRenewal',
@@ -48,7 +48,7 @@ class MasterKeyStore:
 
     """
 
-    @typed
+    @typechecked
     def load(self) -> PKey:
         """Load the stored master key.
 
@@ -60,8 +60,8 @@ class MasterKeyStore:
         """
         raise NotImplementedError('load() has to be implemented')
 
-    @typed
-    def save(self, master_key: PKey):
+    @typechecked
+    def save(self, master_key: PKey) -> None:
         """Remove the stored master key, and then save the new master key.
         The operation should be atomic.
 
@@ -117,9 +117,9 @@ class TwoPhaseRenewal:
         # State: *servers allow only new_key;*
         #        new_key is in the master_key_store
 
-    :param servers: the set of :class:`~geofront.remote.Remote` servers
+    :param servers: the set of :class:`~.remote.Remote` servers
                     to renew their master key
-    :type servers: :class:`collections.abc.Set`
+    :type servers: :class:`typing.AbstractSet`[:class:`~.remote.Remote`]
     :param old_key: the previous master key to expire
     :type old_key: :class:`paramiko.pkey.PKey`
     :param new_key: the new master key to replace ``old_key``
@@ -128,9 +128,9 @@ class TwoPhaseRenewal:
     """
 
     def __init__(self,
-                 servers: collections.abc.Set,
+                 servers: typing.AbstractSet[Remote],
                  old_key: PKey,
-                 new_key: PKey):
+                 new_key: PKey) -> None:
         for server in servers:
             if not isinstance(server, Remote):
                 raise TypeError('{0!r} is not an instance of {1.__module__}.'
@@ -140,7 +140,7 @@ class TwoPhaseRenewal:
         self.new_key = new_key
         self.sftp_clients = None
 
-    def __enter__(self):
+    def __enter__(self) -> typing.AbstractSet[Remote]:
         assert self.sftp_clients is None, 'the context is already started'
         sftp_clients = {}
         for server in self.servers:
@@ -170,7 +170,7 @@ class TwoPhaseRenewal:
         self.sftp_clients = sftp_clients
         return self.servers
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         assert self.sftp_clients is not None, 'the context is not started yet'
         for transport, client, authorized_keys in self.sftp_clients.values():
             if exc_val is None:
@@ -180,8 +180,8 @@ class TwoPhaseRenewal:
         self.sftp_clients = None
 
 
-@typed
-def renew_master_key(servers: collections.abc.Set,
+@typechecked
+def renew_master_key(servers: typing.AbstractSet[Remote],
                      key_store: MasterKeyStore,
                      bits: int=2048) -> PKey:
     """Renew the master key.  It creates a new master key, makes ``servers``
@@ -193,7 +193,7 @@ def renew_master_key(servers: collections.abc.Set,
     :param servers: servers to renew the master key.
                     every element has to be an instance of
                     :class:`~.remote.Remote`
-    :type servers: :class:`collections.abc.Set`
+    :type servers: :class:`typing.AbstractSet`[:class:`~.remote.Remote`]
     :param key_store: the master key store to update
     :type key_store: :class:`MasterKeyStore`
     :param bits: the number of bits the generated key should be.
@@ -230,7 +230,7 @@ class PeriodicalRenewal(threading.Thread):
     :param servers: servers to renew the master key.
                     every element has to be an instance of
                     :class:`~.remote.Remote`
-    :type servers: :class:`collections.abc.Set`
+    :type servers: :class:`typing.AbstractSet`[:class:`~.remote.Remote`]
     :param key_store: the master key store to update
     :type key_store: :class:`MasterKeyStore`
     :param interval: the interval to renew
@@ -248,9 +248,9 @@ class PeriodicalRenewal(threading.Thread):
 
     """
 
-    @typed
+    @typechecked
     def __init__(self,
-                 servers: collections.abc.Set,
+                 servers: typing.AbstractSet[Remote],
                  key_store: MasterKeyStore,
                  interval: datetime.timedelta,
                  bits: int=2048,
@@ -289,8 +289,8 @@ class FileSystemMasterKeyStore(MasterKeyStore):
 
     """
 
-    @typed
-    def __init__(self, path: str):
+    @typechecked
+    def __init__(self, path: str) -> None:
         dirname = os.path.dirname(path)
         if not os.path.isdir(dirname):
             raise NotADirectoryError(dirname + ' is not a directory')
@@ -298,7 +298,7 @@ class FileSystemMasterKeyStore(MasterKeyStore):
             raise IsADirectoryError(path + ' is not a file, but a directory')
         self.path = path
 
-    @typed
+    @typechecked
     def load(self) -> PKey:
         if os.path.isfile(self.path):
             classes = PKey.__subclasses__()
@@ -312,6 +312,6 @@ class FileSystemMasterKeyStore(MasterKeyStore):
                     continue
         raise EmptyStoreError()
 
-    @typed
-    def save(self, master_key: PKey):
+    @typechecked
+    def save(self, master_key: PKey) -> None:
         master_key.write_private_key_file(self.path)

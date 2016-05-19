@@ -9,16 +9,16 @@
 
 """
 import base64
-import collections.abc
 import contextlib
 import types
+import typing
 
 from paramiko.pkey import PKey
+from tsukkomi.typed import typechecked
 
 from ..identity import Identity
 from ..keystore import (KEY_TYPES, DuplicatePublicKeyError, KeyStore,
                         KeyTypeError, get_key_fingerprint)
-from ..util import typed
 
 __all__ = 'DatabaseKeyStore',
 
@@ -49,8 +49,8 @@ class DatabaseKeyStore(KeyStore):
 
     """
 
-    @typed
-    def __init__(self, db_module: types.ModuleType, *args, **kwargs):
+    @typechecked
+    def __init__(self, db_module: types.ModuleType, *args, **kwargs) -> None:
         if not callable(getattr(db_module, 'connect', None)):
             module_name = db_module.__name__
             raise TypeError('db_module must be DB-API 2.0 compliant, but {} '
@@ -82,7 +82,7 @@ class DatabaseKeyStore(KeyStore):
         yield connection
         connection.close()
 
-    def _execute(self, cursor, sql: str, params: tuple):
+    def _execute(self, cursor, sql: str, params: tuple) -> None:
         """To support various paramstyles.  See the following specification:
 
         http://legacy.python.org/dev/peps/pep-0249/#paramstyle
@@ -107,10 +107,11 @@ class DatabaseKeyStore(KeyStore):
                 i += 1
         cursor.execute(sql, params)
 
-    def _get_key_params(self, public_key: PKey) -> tuple:
+    def _get_key_params(self, public_key: PKey) -> typing.Tuple[str, str]:
         return public_key.get_name(), get_key_fingerprint(public_key, '')
 
-    def _get_identity_params(self, identity: Identity) -> tuple:
+    def _get_identity_params(self,
+                             identity: Identity) -> typing.Tuple[str, str]:
         return ('{0.__module__}.{0.__qualname__}'.format(identity.team_type),
                 str(identity.identifier))
 
@@ -120,8 +121,8 @@ class DatabaseKeyStore(KeyStore):
         except KeyError:
             raise KeyTypeError('unsupported key type: ' + repr(keytype))
 
-    @typed
-    def register(self, identity: Identity, public_key: PKey):
+    @typechecked
+    def register(self, identity: Identity, public_key: PKey) -> None:
         with self._connect() as connection:
             cursor = connection.cursor()
             try:
@@ -140,8 +141,8 @@ class DatabaseKeyStore(KeyStore):
             finally:
                 cursor.close()
 
-    @typed
-    def list_keys(self, identity: Identity) -> collections.abc.Set:
+    @typechecked
+    def list_keys(self, identity: Identity) -> typing.AbstractSet[PKey]:
         with self._connect() as connection:
             cursor = connection.cursor()
             try:
@@ -157,8 +158,8 @@ class DatabaseKeyStore(KeyStore):
             finally:
                 cursor.close()
 
-    @typed
-    def deregister(self, identity: Identity, public_key: PKey):
+    @typechecked
+    def deregister(self, identity: Identity, public_key: PKey) -> None:
         with self._connect() as connection:
             cursor = connection.cursor()
             try:

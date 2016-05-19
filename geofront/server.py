@@ -52,6 +52,7 @@ from flask import (Flask, Response, current_app, helpers, json, jsonify,
                    make_response, request)
 from paramiko.pkey import PKey
 from paramiko.ssh_exception import SSHException
+from tsukkomi.typed import typechecked
 from waitress import serve
 from waitress.adjustments import Adjustments
 from werkzeug.contrib.cache import BaseCache, SimpleCache
@@ -69,7 +70,6 @@ from .regen import RegenError, main_parser as regen_main_parser, regenerate
 from .remote import (DefaultPermissionPolicy, PermissionPolicy, Remote,
                      authorize)
 from .team import AuthenticationError, Team
-from .util import typed
 from .version import VERSION
 
 __all__ = ('AUTHORIZATION_TIMEOUT',
@@ -126,7 +126,7 @@ class FingerprintConverter(BaseConverter):
             return bytes(int(hex_, 16) for hex_ in match.group(1).split(':'))
         raise ValidationError()
 
-    @typed
+    @typechecked
     def to_url(self, value: bytes):
         return ':'.join(map('{:02x}'.format, value))
 
@@ -291,7 +291,7 @@ Token = collections.namedtuple('Token', 'identity, expires_at')
 
 
 @app.route('/tokens/<token_id:token_id>/', methods=['PUT'])
-@typed
+@typechecked
 def create_access_token(token_id: str):
     """Create a new access token.
 
@@ -337,7 +337,7 @@ def create_access_token(token_id: str):
 
 
 @app.route('/tokens/<token_id:token_id>/authenticate/')
-@typed
+@typechecked
 def authenticate(token_id: str):
     """Finalize the authentication process.  It will be shown on web browser.
 
@@ -395,7 +395,7 @@ def authenticate(token_id: str):
     )
 
 
-@typed
+@typechecked
 def get_identity(token_id: str) -> Identity:
     """Get the identity object from the given ``token_id``.
 
@@ -455,7 +455,7 @@ def get_identity(token_id: str) -> Identity:
 
 
 @app.route('/tokens/<token_id:token_id>/')
-@typed
+@typechecked
 def token(token_id: str):
     """The owner identity that the given token holds if the token is
     authenticated.  Otherwise it responds :http:statuscode:`403`,
@@ -585,7 +585,7 @@ def get_key_store() -> KeyStore:
 
 
 @app.route('/tokens/<token_id:token_id>/keys/')
-@typed
+@typechecked
 def list_public_keys(token_id: str):
     """List registered keys to the token owner.
 
@@ -625,7 +625,7 @@ def list_public_keys(token_id: str):
 
 
 @app.route('/tokens/<token_id:token_id>/keys/', methods=['POST'])
-@typed
+@typechecked
 def add_public_key(token_id: str):
     """Register a public key to the token.  It takes an OpenSSH public key
     line through the request content body.
@@ -704,7 +704,7 @@ def add_public_key(token_id: str):
     return response
 
 
-@typed
+@typechecked
 def get_public_key(token_id: str, fingerprint: bytes) -> PKey:
     """Internal function to find the public key by its ``fingerprint``.
 
