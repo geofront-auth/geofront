@@ -16,8 +16,8 @@ Geofront
 .. image:: https://travis-ci.org/spoqa/geofront.svg?branch=master
    :target: https://travis-ci.org/spoqa/geofront
 
-.. image:: https://img.shields.io/coveralls/spoqa/geofront.svg
-   :target: https://coveralls.io/r/spoqa/geofront
+.. image:: https://codecov.io/gh/spoqa/geofront/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/spoqa/geofront
 
 Geofront is a simple SSH key management server.  It helps to maintain servers
 to SSH, and ``authorized_keys`` list for them.  `Read the docs`__ for more
