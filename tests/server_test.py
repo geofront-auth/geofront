@@ -423,11 +423,23 @@ def test_token_404(fx_app, fx_token_id):
 def test_master_key(fx_app, fx_master_key,
                     fx_authorized_identity, fx_token_id):
     with fx_app.test_client() as c:
-        response = c.get(get_url('master_key', token_id=fx_token_id))
+        response = c.get(get_url('master_key'))
         assert response.status_code == 200
         assert response.mimetype == 'text/plain'
         assert (parse_openssh_pubkey(response.get_data(as_text=True)) ==
                 fx_master_key)
+
+
+def test_token_master_key(fx_app, fx_master_key,
+                          fx_authorized_identity, fx_token_id):
+    """Deprecated; for backward compatibility."""
+    with fx_app.test_client() as c:
+        response = c.get(get_url('token_master_key', token_id=fx_token_id))
+        expected = c.get(get_url('master_key'))
+        assert response.status_code == expected.status_code
+        assert response.mimetype == expected.mimetype
+        assert (response.get_data(as_text=True) ==
+                expected.get_data(as_text=True))
 
 
 class DummyKeyStore(KeyStore):
