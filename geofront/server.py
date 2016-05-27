@@ -195,7 +195,7 @@ def server_endpoint():
 
     .. code-block:: http
 
-       GET / HTTPS/1.1
+       GET / HTTP/1.1
        Accept: application/json
 
     .. code-block:: http
@@ -297,13 +297,13 @@ def create_access_token(token_id: str):
 
     .. code-block:: http
 
-       PUT /tokens/0123456789abcdef/ HTTPS/1.1
+       PUT /tokens/0123456789abcdef/ HTTP/1.1
        Accept: application/json
        Content-Length: 0
 
     .. code-block:: http
 
-       HTTPS/1.1 202 Accepted
+       HTTP/1.1 202 Accepted
        Content-Type: application/json
        Date: Tue, 15 Apr 2014 03:44:43 GMT
        Expires: Tue, 15 Apr 2014 04:14:43 GMT
@@ -464,12 +464,12 @@ def token(token_id: str):
 
     .. code-block:: http
 
-       GET /tokens/0123456789abcdef/ HTTPS/1.1
+       GET /tokens/0123456789abcdef/ HTTP/1.1
        Accept: application/json
 
     .. code-block:: http
 
-       HTTPS/1.0 200 OK
+       HTTP/1.0 200 OK
        Content-Type: application/json
        Link: <https://example.com/tokens/0123456789abcdef/remo...>; rel=remotes
        Link: <https://example.com/tokens/0123456789abcdef/keys/>; rel=keys
@@ -540,12 +540,12 @@ def master_key(token_id: str):
 
     .. code-block:: http
 
-       GET /tokens/0123456789abcdef/masterkey/ HTTPS/1.1
+       GET /tokens/0123456789abcdef/masterkey/ HTTP/1.1
        Accept: text/plain
 
     .. code-block:: http
 
-       HTTPS/1.1 200 OK
+       HTTP/1.1 200 OK
        Content-Type: text/plain
 
        ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDAEMUvjBcX.../MuLLzC/m8Q==
@@ -591,12 +591,12 @@ def list_public_keys(token_id: str):
 
     .. code-block:: http
 
-       GET /tokens/0123456789abcdef/keys/ HTTPS/1.1
+       GET /tokens/0123456789abcdef/keys/ HTTP/1.1
        Accept: application/json
 
     .. code-block:: http
 
-       HTTPS/1.1 200 OK
+       HTTP/1.1 200 OK
        Content-Type: application/json
 
        {
@@ -632,7 +632,7 @@ def add_public_key(token_id: str):
 
     .. code-block:: http
 
-       POST /tokens/0123456789abcdef/keys/ HTTPS/1.1
+       POST /tokens/0123456789abcdef/keys/ HTTP/1.1
        Accept: application/json
        Content-Type: text/plain
 
@@ -640,7 +640,7 @@ def add_public_key(token_id: str):
 
     .. code-block:: http
 
-       HTTPS/1.1 201 Created
+       HTTP/1.1 201 Created
        Content-Type: text/plain
        Location: /tokens/0123456789abcdef/keys/\
 50:5a:9a:12:75:8b:b0:88:7d:7a:8d:66:29:63:d0:47
@@ -741,12 +741,12 @@ def public_key(token_id: str, fingerprint: bytes):
     .. code-block:: http
 
        GET /tokens/0123456789abcdef/keys/\
-50:5a:9a:12:75:8b:b0:88:7d:7a:8d:66:29:63:d0:47/ HTTPS/1.1
+50:5a:9a:12:75:8b:b0:88:7d:7a:8d:66:29:63:d0:47/ HTTP/1.1
        Accept: text/plain
 
     .. code-block:: http
 
-       HTTPS/1.1 200 OK
+       HTTP/1.1 200 OK
        Content-Type: text/plain
 
        ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDAEMUvjBcX.../MuLLzC/m8Q==
@@ -771,12 +771,12 @@ def delete_public_key(token_id: str, fingerprint: bytes):
     .. code-block:: http
 
        DELETE /tokens/0123456789abcdef/keys/\
-50:5a:9a:12:75:8b:b0:88:7d:7a:8d:66:29:63:d0:47/ HTTPS/1.1
+50:5a:9a:12:75:8b:b0:88:7d:7a:8d:66:29:63:d0:47/ HTTP/1.1
        Accept: application/json
 
     .. code-block:: http
 
-       HTTPS/1.1 200 OK
+       HTTP/1.1 200 OK
        Content-Type: application/json
 
        {
@@ -865,12 +865,12 @@ def list_remotes(token_id: str):
 
     .. code-block:: http
 
-       GET /tokens/0123456789abcdef/remotes/ HTTPS/1.1
+       GET /tokens/0123456789abcdef/remotes/ HTTP/1.1
        Accept: application/json
 
     .. code-block:: http
 
-       HTTPS/1.1 200 OK
+       HTTP/1.1 200 OK
        Content-Type: application/json
 
        {
@@ -907,13 +907,13 @@ def authorize_remote(token_id: str, alias: str):
 
     .. code-block:: http
 
-       POST /tokens/0123456789abcdef/remotes/web-1/ HTTPS/1.1
+       POST /tokens/0123456789abcdef/remotes/web-1/ HTTP/1.1
        Accept: application/json
        Content-Length: 0
 
     .. code-block:: http
 
-       HTTPS/1.1 200 OK
+       HTTP/1.1 200 OK
        Content-Type: application/json
 
        {
