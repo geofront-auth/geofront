@@ -14,7 +14,7 @@ from tsukkomi.typed import typechecked
 
 from .keystore import get_key_fingerprint
 from .masterkey import EmptyStoreError, MasterKeyStore, renew_master_key
-from .remote import Remote
+from .remote import RemoteSet
 from .version import VERSION
 
 __all__ = 'main', 'main_parser', 'regenerate'
@@ -54,7 +54,7 @@ def main_parser(
 
 @typechecked
 def regenerate(master_key_store: MasterKeyStore,
-               remote_set: typing.AbstractSet[Remote],
+               remote_set: RemoteSet,
                bits: int=2048,
                *,
                create_if_empty: bool,
