@@ -68,11 +68,11 @@ Prerequisites
 - Third-party packages (automatically installed together)
 
   - Paramiko_ 2.0.0+
-  - Werkzeug_ 0.9+
-  - Flask_ 0.10+
-  - OAuthLib_ 1.0.3+
-  - Apache Libcloud_ 0.15.0+
-  - Waitress_ 0.8.8+
+  - Werkzeug_ 0.11+
+  - Flask_ 0.10.1+
+  - OAuthLib_ 1.1.1+
+  - Apache Libcloud_ 0.20.0+
+  - Waitress_ 0.9.0+
   - singledispatch_ (only if Python is older than 3.4)
   - typing_ (only if Python is older than 3.5)
   - tsukkomi_ 0.0.4+

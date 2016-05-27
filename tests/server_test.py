@@ -119,7 +119,7 @@ def test_server_endpoint():
         response = client.get('/')
         assert (parse_link_header(response.headers['Link']) ==
                 (expected_url, 'tokens'))
-        assert json.loads(response.data) == {'tokens_url': expected_url}
+        assert json.loads(response.get_data()) == {'tokens_url': expected_url}
 
 
 def test_get_token_store__no_config():
@@ -292,7 +292,7 @@ def test_create_access_token(fx_app, fx_token_id):
         assert link.startswith('<http://example.com/auth/')
         assert link.endswith('>; rel=next')
         qs = url_decode(link[link.find('?') + 1:link.find('>')])
-        result = json.loads(response.data)
+        result = json.loads(response.get_data())
         assert qs['redirect_url'] == get_url('authenticate',
                                              token_id=fx_token_id,
                                              _external=True)
@@ -343,7 +343,7 @@ def test_get_identity_403(fx_app, fx_token_store, fx_token_id):
         except HTTPException as e:
             response = e.get_response(request.environ)
             assert response.status_code == 403
-            data = json.loads(response.data)
+            data = json.loads(response.get_data())
             assert data['error'] == 'not-authorized'
         else:
             fail('get_identity() does not raise HTTPException, but returns ' +
@@ -357,7 +357,7 @@ def test_get_identity_404(fx_app, fx_token_id):
         except HTTPException as e:
             response = e.get_response(request.environ)
             assert response.status_code == 404
-            data = json.loads(response.data)
+            data = json.loads(response.get_data())
             assert data['error'] == 'token-not-found'
         else:
             fail('get_identity() does not raise HTTPException, but returns ' +
@@ -372,7 +372,7 @@ def test_get_identity_412(fx_app, fx_token_store, fx_token_id):
         except HTTPException as e:
             response = e.get_response(request.environ)
             assert response.status_code == 412
-            data = json.loads(response.data)
+            data = json.loads(response.get_data())
             assert data['error'] == 'unfinished-authentication'
         else:
             fail('get_identity() does not raise HTTPException, but returns ' +
@@ -395,7 +395,7 @@ def test_token(fx_app, fx_authorized_identity, fx_token_id):
                                  _external=True)
         }
         t = fx_authorized_identity.team_type
-        assert json.loads(response.data) == {
+        assert json.loads(response.get_data()) == {
             'team_type': t.__module__ + '.' + t.__qualname__,
             'identifier': fx_authorized_identity.identifier,
             'remotes_url': links['remotes'],
@@ -409,7 +409,7 @@ def test_token_412(fx_app, fx_token_store, fx_token_id):
     with fx_app.test_client() as c:
         response = c.get(get_url('token', token_id=fx_token_id))
         assert response.status_code == 412
-        assert (json.loads(response.data)['error'] ==
+        assert (json.loads(response.get_data())['error'] ==
                 'unfinished-authentication')
 
 
@@ -417,7 +417,7 @@ def test_token_404(fx_app, fx_token_id):
     with fx_app.test_client() as c:
         response = c.get(get_url('token', token_id=fx_token_id))
         assert response.status_code == 404
-        assert json.loads(response.data)['error'] == 'token-not-found'
+        assert json.loads(response.get_data())['error'] == 'token-not-found'
 
 
 def test_master_key(fx_app, fx_master_key,
@@ -426,7 +426,8 @@ def test_master_key(fx_app, fx_master_key,
         response = c.get(get_url('master_key', token_id=fx_token_id))
         assert response.status_code == 200
         assert response.mimetype == 'text/plain'
-        assert parse_openssh_pubkey(response.data.decode()) == fx_master_key
+        assert (parse_openssh_pubkey(response.get_data(as_text=True)) ==
+                fx_master_key)
 
 
 class DummyKeyStore(KeyStore):
@@ -487,7 +488,7 @@ def test_list_public_keys(fx_app, fx_key_store,
         response = c.get(get_url('list_public_keys', token_id=fx_token_id))
         assert response.status_code == 200
         assert response.mimetype == 'application/json'
-        assert response.data == b'{}'
+        assert response.get_data() == b'{}'
     key = RSAKey.generate(1024)
     fx_key_store.register(fx_authorized_identity, key)
     with fx_app.test_client() as c:
@@ -495,7 +496,7 @@ def test_list_public_keys(fx_app, fx_key_store,
         assert response.status_code == 200
         assert response.mimetype == 'application/json'
         data = {f: parse_openssh_pubkey(k)
-                for f, k in json.loads(response.data).items()}
+                for f, k in json.loads(response.get_data()).items()}
         assert data == {get_key_fingerprint(key): key}
 
 
@@ -508,7 +509,7 @@ def test_add_public_key_415(fx_app, fx_key_store,
             data={'key': format_openssh_pubkey(pkey)}
         )
         assert response.status_code == 415
-        error = json.loads(response.data)
+        error = json.loads(response.get_data())
         assert error['error'] == 'unsupported-content-type'
         assert pkey not in fx_key_store.list_keys(fx_authorized_identity)
 
@@ -523,7 +524,7 @@ def test_add_public_key_unsupported_type(fx_app, fx_key_store,
             data=('invalid-type ' + format_openssh_pubkey(pkey)[7:]).encode()
         )
         assert response.status_code == 400
-        error = json.loads(response.data)
+        error = json.loads(response.get_data())
         assert error['error'] == 'unsupported-key-type'
         assert pkey not in fx_key_store.list_keys(fx_authorized_identity)
 
@@ -537,7 +538,7 @@ def test_add_public_key_invalid_key(fx_app, fx_key_store,
             data=b'INVALID-FORMAT!!'
         )
         assert response.status_code == 400
-        error = json.loads(response.data)
+        error = json.loads(response.get_data())
         assert error['error'] == 'invalid-key'
 
 
@@ -552,7 +553,7 @@ def test_add_public_key_duplicate_key(fx_app, fx_key_store,
             data=format_openssh_pubkey(pkey).encode()
         )
         assert response.status_code == 400
-        error = json.loads(response.data)
+        error = json.loads(response.get_data())
         assert error['error'] == 'duplicate-key'
 
 
@@ -566,11 +567,11 @@ def test_add_public_key(fx_app, fx_key_store,
             data=format_openssh_pubkey(pkey).encode()
         )
         assert response.status_code == 201
-        key_data = response.data
+        key_data = response.get_data()
         assert parse_openssh_pubkey(key_data.decode()) == pkey
         assert pkey in fx_key_store.list_keys(fx_authorized_identity)
         r = c.get(response.location)
-        assert r.data == key_data
+        assert r.get_data() == key_data
 
 
 def test_get_public_key(fx_app, fx_key_store,
@@ -593,7 +594,7 @@ def test_get_public_key_404(fx_app, fx_key_store,
             response = e.get_response(request.environ)
             assert response.status_code == 404
             assert response.mimetype == 'application/json'
-            error = json.loads(response.data.decode('utf-8'))
+            error = json.loads(response.get_data(as_text=True))
             assert error['error'] == 'not-found'
         else:
             fail('get_public_key() does not raise HTTPException, '
@@ -615,7 +616,7 @@ def test_public_key(fx_app, fx_key_store,
         )
         assert response.status_code == 200
         assert response.mimetype == 'text/plain'
-        assert parse_openssh_pubkey(response.data.decode()) == key
+        assert parse_openssh_pubkey(response.get_data(as_text=True)) == key
     with fx_app.test_client() as client:
         response = client.get(
             get_url(
@@ -626,7 +627,7 @@ def test_public_key(fx_app, fx_key_store,
         )
         assert response.status_code == 404
         assert response.mimetype == 'application/json'
-        error = json.loads(response.data.decode('utf-8'))
+        error = json.loads(response.get_data(as_text=True))
         assert error['error'] == 'not-found'
 
 
@@ -655,7 +656,7 @@ def test_delete_public_key(fx_app, fx_key_store,
         )
         assert response.status_code == 404
         assert response.mimetype == 'application/json'
-        error = json.loads(response.data.decode('utf-8'))
+        error = json.loads(response.get_data(as_text=True))
         assert error['error'] == 'not-found'
 
 
@@ -719,7 +720,7 @@ def test_list_remotes(fx_app, fx_mock_remote_set,
         response = client.get(get_url('list_remotes', token_id=fx_token_id))
         assert response.status_code == 200
         assert response.mimetype == 'application/json'
-        assert json.loads(response.data) == {
+        assert json.loads(response.get_data()) == {
             alias: remote_dict(remote)
             for alias, remote in fx_mock_remote_set.items()
         }
@@ -736,7 +737,7 @@ def test_list_remotes_filtered(fx_app, fx_mock_remote_set,
             )
             assert response.status_code == 200
             assert response.mimetype == 'application/json'
-            assert json.loads(response.data) == {}
+            assert json.loads(response.get_data()) == {}
     finally:
         fx_app.config['PERMISSION_POLICY'] = default
 
@@ -764,7 +765,7 @@ def test_authorize_remote(fx_app, fx_authorized_servers, fx_master_key,
         )
         assert response.status_code == 200
         assert response.mimetype == 'application/json'
-        result = json.loads(response.data)
+        result = json.loads(response.get_data())
         assert result['success'] == 'authorized'
         assert result['remote'] == remote_dict(remote)
         expires_at = parse_date(result['expires_at'])
@@ -789,7 +790,7 @@ def test_authorize_remote_404(fx_app, fx_mock_remote_set,
         )
         assert response.status_code == 404
         assert response.mimetype == 'application/json'
-        result = json.loads(response.data)
+        result = json.loads(response.get_data())
         assert result['error'] == 'not-found'
 
 
@@ -806,7 +807,7 @@ def test_authorize_remote_403(fx_app, fx_mock_remote_set,
             )
             assert response.status_code == 403
             assert response.mimetype == 'application/json'
-            result = json.loads(response.data)
+            result = json.loads(response.get_data())
             assert result['error'] == 'forbidden'
     finally:
         fx_app.config['PERMISSION_POLICY'] = default

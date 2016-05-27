@@ -7,6 +7,11 @@ Version 0.4.0
 To be released.
 
 - Geofront becomes to require Paramiko 2.0.0 or higher.
+- Geofront becomes to require Werkzeug 0.11 or higher.
+- Geofront becomes to require Flask 0.10.1 or higher.
+- Geofront becomes to require Apache Libcloud 0.20.1 or higher.
+- Geofront becomes to require OAuthLib 1.1.1 or higher.
+- Geofront becomes to require Waitress 0.9.0 or higher.
 - :mod:`geofront.util` is gone now.  Geofront instead becomes to require
   :mod:`typing` and :mod:`tsukkomi`.
 

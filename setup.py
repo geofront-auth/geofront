@@ -18,11 +18,11 @@ install_requires = [
     'setuptools',
     'tsukkomi >= 0.0.5',
     'paramiko >= 2.0.0',
-    'Werkzeug >= 0.9',
-    'oauthlib[rsa, signedtoken] >= 1.0.3, < 2.0.0',
-    'Flask >= 0.10',
-    'apache-libcloud >= 0.15.0',
-    'waitress >= 0.8.8'
+    'Werkzeug >= 0.11',
+    'oauthlib[rsa, signedtoken] >= 1.1.1, < 2.0.0',
+    'Flask >= 0.10.1',
+    'apache-libcloud >= 0.20.0',
+    'waitress >= 0.9.0'
 ]
 
 supported_pyversions = [(3, 3), (3, 4), (3, 5)]
