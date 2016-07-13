@@ -7,7 +7,6 @@
 import argparse
 import logging
 import os.path
-import typing
 
 from paramiko.rsakey import RSAKey
 from tsukkomi.typed import typechecked
