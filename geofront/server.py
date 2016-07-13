@@ -501,9 +501,9 @@ def token(token_id: str):
         'master_key': url_for('master_key', token_id=token_id, _external=True)
     }
     response = jsonify(
-        {rel + '_url': url for rel, url in links.items()},
         team_type='{0.__module__}.{0.__qualname__}'.format(identity.team_type),
         identifier=identity.identifier,
+        **{rel + '_url': url for rel, url in links.items()}
     )
     for rel, href in links.items():
         response.headers.add('Link', '<{}>'.format(href),
