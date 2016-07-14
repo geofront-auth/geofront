@@ -27,7 +27,7 @@ __all__ = 'AuthenticationContinuation', 'AuthenticationError', 'Team'
 
 
 class AuthenticationContinuation:
-    """The contunuation value for the process between
+    """The continuation value for the process between
     :meth:`Team.request_authentication()` and :meth:`Team.authenticate()`.
 
     It is created by :meth:`Team.request_authentication()` method,
