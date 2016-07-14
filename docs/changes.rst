@@ -10,7 +10,7 @@ To be released.
   :http:get:`/masterkey/` API.
 - Deprecated :http:get:`/tokens/(token_id:token_id)/masterkey/`.
   Use :http:get:`/masterkey/` instead.
-- Geofront becomes to require Paramiko 2.0.0 or higher.
+- Geofront becomes to require Paramiko 2.0.1 or higher.
 - Geofront becomes to require Werkzeug 0.11 or higher.
 - Geofront becomes to require Flask 0.10.1 or higher.
 - Geofront becomes to require Apache Libcloud 0.20.1 or higher.

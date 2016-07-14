@@ -67,7 +67,7 @@ Prerequisites
 - Python 3.3+
 - Third-party packages (automatically installed together)
 
-  - Paramiko_ 2.0.0+
+  - Paramiko_ 2.0.1+ (which requires cryptography_)
   - Werkzeug_ 0.11+
   - Flask_ 0.10.1+
   - OAuthLib_ 1.1.1+
@@ -78,6 +78,7 @@ Prerequisites
   - tsukkomi_ 0.0.4+
 
 .. _Paramiko: http://www.paramiko.org/
+.. _cryptography: https://cryptography.io/
 .. _Werkzeug: http://werkzeug.pocoo.org/
 .. _Flask: http://flask.pocoo.org/
 .. _OAuthLib: https://github.com/idan/oauthlib

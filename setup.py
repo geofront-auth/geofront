@@ -17,7 +17,9 @@ def readme():
 install_requires = [
     'setuptools',
     'tsukkomi >= 0.0.5',
-    'paramiko >= 2.0.0',
+    'cryptography >= 1.4',
+    # indirect dependency thorugh paramiko; just for version constraint (>=1.4)
+    'paramiko >= 2.0.1',
     'Werkzeug >= 0.11',
     'oauthlib[rsa, signedtoken] >= 1.1.1, < 2.0.0',
     'Flask >= 0.10.1',
