@@ -23,7 +23,7 @@ install_requires = [
     'Werkzeug >= 0.11',
     'oauthlib[rsa, signedtoken] >= 1.1.1, < 2.0.0',
     'Flask >= 0.10.1',
-    'apache-libcloud >= 0.20.0',
+    'apache-libcloud >= 1.1.0',
     'waitress >= 0.9.0'
 ]
 

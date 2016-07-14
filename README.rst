@@ -71,7 +71,7 @@ Prerequisites
   - Werkzeug_ 0.11+
   - Flask_ 0.10.1+
   - OAuthLib_ 1.1.1+
-  - Apache Libcloud_ 0.20.0+
+  - Apache Libcloud_ 1.1.0+
   - Waitress_ 0.9.0+
   - singledispatch_ (only if Python is older than 3.4)
   - typing_ (only if Python is older than 3.5)
