@@ -1,13 +1,15 @@
+import typing
+
 from pytest import fixture, skip, yield_fixture
 
-from geofront.backends.github import (GitHubKeyStore, GitHubOrganization,
-                                      request)
+from geofront.backends.github import GitHubKeyStore, GitHubOrganization
+from geofront.backends.oauth import request
 from geofront.identity import Identity
 from ..keystore_test import assert_keystore_compliance
 
 
-@fixture
-def fx_github_access_token(request):
+@fixture(scope='session')
+def fx_github_access_token(request) -> str:
     try:
         token = request.config.getoption('--github-access-token')
     except ValueError:
@@ -18,7 +20,7 @@ def fx_github_access_token(request):
 
 
 @fixture
-def fx_github_org_login(request):
+def fx_github_org_login(request) -> str:
     try:
         org_login = request.config.getoption('--github-org-login')
     except ValueError:
@@ -29,7 +31,7 @@ def fx_github_org_login(request):
 
 
 @fixture
-def fx_github_team_slugs(request):
+def fx_github_team_slugs(request) -> typing.AbstractSet[str]:
     try:
         slugs = request.config.getoption('--github-team-slugs')
     except ValueError:
@@ -39,26 +41,17 @@ def fx_github_team_slugs(request):
     return {slug.strip() for slug in slugs.split()}
 
 
-_fx_github_identity_cache = None
-
-
-@fixture
-def fx_github_identity(fx_github_access_token):
-    global _fx_github_identity_cache
-    if not _fx_github_identity_cache:
-        _fx_github_identity_cache = request(
-            fx_github_access_token,
-            'https://api.github.com/user',
-            'GET'
-        )
-    return Identity(
-        GitHubOrganization,
-        _fx_github_identity_cache['login'],
-        fx_github_access_token
+@fixture(scope='session')
+def fx_github_identity(fx_github_access_token: str) -> Identity:
+    resp = request(
+        fx_github_access_token,
+        'https://api.github.com/user',
+        'GET'
     )
+    return Identity(GitHubOrganization, resp['login'], fx_github_access_token)
 
 
-def test_request(fx_github_access_token, fx_github_identity):
+def test_request(fx_github_access_token: str, fx_github_identity: Identity):
     result = request(
         fx_github_access_token,
         'https://api.github.com/user',
@@ -73,31 +66,32 @@ def test_request(fx_github_access_token, fx_github_identity):
     assert result == result2
 
 
-def test_authorize(fx_github_identity, fx_github_org_login):
+def test_authorize(fx_github_identity: Identity, fx_github_org_login: str):
     org = GitHubOrganization('', '', fx_github_org_login)
     assert org.authorize(fx_github_identity)
 
 
-def test_list_groups(fx_github_identity, fx_github_org_login,
-                     fx_github_team_slugs):
+def test_list_groups(fx_github_identity: Identity, fx_github_org_login: str,
+                     fx_github_team_slugs: typing.AbstractSet[str]):
     org = GitHubOrganization('', '', fx_github_org_login)
     groups = org.list_groups(fx_github_identity)
     assert groups == fx_github_team_slugs
 
 
-def cleanup_ssh_keys(identity):
-    keys = request(identity, GitHubKeyStore.LIST_URL, 'GET')
+def cleanup_ssh_keys(identity: Identity):
+    keys = request(identity, GitHubKeyStore.list_url, 'GET')
     for key in keys:
-        url = GitHubKeyStore.DEREGISTER_URL.format(**key)
+        url = GitHubKeyStore.deregister_url.format(**key)
         request(identity, url, 'DELETE')
 
 
 @yield_fixture
-def fx_github_keystore(fx_github_identity):
+def fx_github_keystore(fx_github_identity: Identity):
     cleanup_ssh_keys(fx_github_identity)
     yield GitHubKeyStore()
     cleanup_ssh_keys(fx_github_identity)
 
 
-def test_github_keystore(fx_github_identity, fx_github_keystore):
+def test_github_keystore(fx_github_identity: Identity,
+                         fx_github_keystore: GitHubKeyStore):
     assert_keystore_compliance(fx_github_keystore, fx_github_identity)

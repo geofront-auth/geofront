@@ -378,7 +378,8 @@ def authenticate(token_id: str):
             requested_redirect_url,
             request.environ
         )
-    except AuthenticationError:
+    except AuthenticationError as e:
+        current_app.logger.debug(e, exc_info=1)
         raise BadRequest()
     expires_at = datetime.datetime.now(datetime.timezone.utc) + token_expire
     token_store.set(token_id, ('token', Token(identity, expires_at)),
