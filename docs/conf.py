@@ -276,7 +276,7 @@ texinfo_documents = [
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
     'python': ('http://docs.python.org/3/', None),
-    'paramiko': ('http://docs.paramiko.org/en/1.13/', None),
+    'paramiko': ('http://docs.paramiko.org/en/2.0/', None),
     'tsukkomi': ('https://tsukkomi.readthedocs.io/en/latest/', None),
     'werkzeug': ('http://werkzeug.pocoo.org/docs/', None),
     'flask': ('http://flask.pocoo.org/docs/', None),

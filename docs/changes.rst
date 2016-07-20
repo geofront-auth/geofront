@@ -6,6 +6,9 @@ Version 0.4.0
 
 To be released.
 
+- Geofront now supports ECDSA key.
+  Under the hood, :func:`parse_openssh_pubkey()` function becomes to be
+  possible to parse ECDSA public keys.
 - Now master key can be found without token through
   :http:get:`/masterkey/` API.
 - Deprecated :http:get:`/tokens/(token_id:token_id)/masterkey/`.

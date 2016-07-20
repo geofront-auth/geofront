@@ -1,5 +1,6 @@
 import collections.abc
 
+from paramiko.ecdsakey import ECDSAKey
 from paramiko.dsskey import DSSKey
 from paramiko.rsakey import RSAKey
 from pytest import fixture, raises
@@ -54,12 +55,27 @@ def test_parse_openssh_pubkey_dsa():
     assert pkey.get_base64() == id_dsa_pub
 
 
+def test_parse_openssh_pubkey_ecdsa():
+    id_ecdsa_pub = (
+        'AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAA'
+        'ABBBDs0y6X8UquYBtTvDjbK+RZIAWduMbfWfUmh2MRtWpo2Zq'
+        'EyQiyeTRDJ/41A5heiONtm7QhUJoBF5VBUjsxiIFk='
+    )
+    pkey = parse_openssh_pubkey('ecdsa-sha2-nistp256 ' + id_ecdsa_pub)
+    assert isinstance(pkey, ECDSAKey)
+    assert pkey.get_name() == 'ecdsa-sha2-nistp256'
+    assert pkey.get_base64() == id_ecdsa_pub
+    pkey = parse_openssh_pubkey('ecdsa-sha2-nistp256 ' + id_ecdsa_pub + ' cmt')
+    assert isinstance(pkey, ECDSAKey)
+    assert pkey.get_name() == 'ecdsa-sha2-nistp256'
+    assert pkey.get_base64() == id_ecdsa_pub
+
+
 def test_parse_openssh_unsupported():
     with raises(KeyTypeError):
         parse_openssh_pubkey(
-            'ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyN'
-            'TYAAABBBDs0y6X8UquYBtTvDjbK+RZIAWduMbfWfUmh2MRtWpo2ZqEyQiyeTRDJ/4'
-            '1A5heiONtm7QhUJoBF5VBUjsxiIFk= dahlia@hongminhee-thinkpad-e435'
+            'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGMI9M959cz5sY823QX8W0oBRZuMe'
+            '4QYclVQPIDRfETh dahlia@Hong-Minhees-MacBook-Pro.local'
         )
 
 

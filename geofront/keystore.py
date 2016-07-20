@@ -5,6 +5,7 @@
 import base64
 import typing
 
+from paramiko.ecdsakey import ECDSAKey
 from paramiko.dsskey import DSSKey
 from paramiko.rsakey import RSAKey
 from paramiko.pkey import PKey
@@ -20,9 +21,14 @@ __all__ = ('KEY_TYPES', 'AuthorizationError', 'DuplicatePublicKeyError',
 
 #: (:class:`typing.Mapping`[:class:`str`, :class:`type`]) The mapping
 #: of supported key types.
+#:
+#: .. versionadded:: 0.4.0
+#:    Added ``ecdsa-sha2-nistp256`` (:class:`~paramiko.ecdsakey.ECDSAKey)
+#:    support.
 KEY_TYPES = {
     'ssh-rsa': RSAKey,
-    'ssh-dss': DSSKey
+    'ssh-dss': DSSKey,
+    'ecdsa-sha2-nistp256': ECDSAKey,
 }  # type: typing.Mapping[str, type]
 
 
@@ -37,6 +43,10 @@ def parse_openssh_pubkey(line: str) -> PKey:
     :rtype: :class:`paramiko.pkey.PKey`
     :raise ValueError: when the given ``line`` is an invalid format
     :raise KeyTypeError: when it's an unsupported key type
+
+    .. versionchanged:: 0.4.0
+       Added ``ecdsa-sha2-nistp256`` (:class:`~paramiko.ecdsakey.ECDSAKey)
+       support.
 
     """
     keytype, b64, *_ = line.split()
