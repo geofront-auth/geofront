@@ -85,6 +85,7 @@ Prerequisites
 .. _Libcloud: http://libcloud.apache.org/
 .. _Waitress: https://github.com/Pylons/waitress
 .. _singledispatch: https://pypi.python.org/pypi/singledispatch
+.. _typing: https://pypi.python.org/pypi/typing
 .. _tsukkomi: https://github.com/spoqa/tsukkomi
 
 
@@ -109,7 +110,6 @@ Missing features
 ----------------
 
 - Google Apps backend [`#3`_]
-- Bitbucket backend [`#4`_]
 - Fabric_ integration
 - PuTTY_ integration
 
@@ -118,4 +118,3 @@ Missing features
 .. _Fabric: http://www.fabfile.org/
 .. _PuTTY: http://www.chiark.greenend.org.uk/~sgtatham/putty/
 .. _#3: https://github.com/spoqa/geofront/issues/3
-.. _#4: https://github.com/spoqa/geofront/issues/4

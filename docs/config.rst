@@ -35,6 +35,14 @@ be uppercase.
          The :class:`~geofront.team.Team` implementation for GitHub
          organizations.
 
+      Class :class:`geofront.backends.bitbucket.BitbucketTeam`
+         The :class:`~geofront.team.Team` implementation for Bitbucket Cloud
+         teams.
+
+      Class :class:`geofront.backends.stash.StashTeam`
+         The :class:`~geofront.team.Team` implementation for Atlassian's
+         Bitbucket Server (which was Stash).
+
 .. data:: REMOTE_SET
 
    (:class:`collections.abc.Mapping`) The set of remote servers to be managed
@@ -173,6 +181,9 @@ be uppercase.
    .. versionadded:: 0.2.0
       Added :class:`~geofront.backends.dbapi.DatabaseKeyStore` class.
       Added :class:`~geofront.backends.cloud.CloudKeyStore` class.
+
+   .. versionadded:: 0.3.0
+      Added :class:`~geofront.backends.stash.StashKeyStore` class.
 
 .. data:: MASTER_KEY_STORE
 

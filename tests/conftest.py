@@ -125,6 +125,21 @@ def pytest_addoption(parser):
                      metavar='BUCKET',
                      help='aws s3 bucket to be used for master key store test',
                      **env_default('AWS_S3_BUCKET'))
+    parser.addoption('--bitbucket-access-token',
+                     metavar='TOKEN',
+                     help='bitbucket access token for key store test '
+                          '(caution: it will remove all ssh keys of the '
+                          'account)',
+                     **env_default('BITBUCKET_ACCESS_TOKEN'))
+    parser.addoption('--bitbucket-team-username',
+                     metavar='USERNAME',
+                     help='bitbucket team username for team test',
+                     **env_default('BITBUCKET_TEAM_USERNAME'))
+    parser.addoption('--bitbucket-group-slugs',
+                     metavar='SLUGS',
+                     help='space-separated bitbucket group slugs for group '
+                          'listing test',
+                     **env_default('BITBUCKET_GROUP_SLUGS'))
 
 
 def pytest_assertrepr_compare(op, left, right):

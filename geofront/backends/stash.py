@@ -9,7 +9,8 @@ Provides implementations of team and key store for Atlassian's
 .. note::
 
    Not to be confused with `Bitbucket Cloud`_.  `As from September 22,
-   Atlassian Stash becomes Bitbucket Server.`__
+   Atlassian Stash becomes Bitbucket Server.`__  For Bitbucket Cloud,
+   use :mod:`geofront.backends.bitbucket` module instead.
 
 .. _Bitbucket Server: https://bitbucket.org/product/server
 .. _Bitbucket Cloud: https://bitbucket.org/
