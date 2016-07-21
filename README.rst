@@ -75,7 +75,7 @@ Prerequisites
   - Waitress_ 0.9.0+
   - singledispatch_ (only if Python is older than 3.4)
   - typing_ (only if Python is older than 3.5)
-  - tsukkomi_ 0.0.4+
+  - tsukkomi_ 0.0.5+
 
 .. _Paramiko: http://www.paramiko.org/
 .. _cryptography: https://cryptography.io/

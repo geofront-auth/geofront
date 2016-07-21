@@ -23,6 +23,7 @@ To be released.
 - Geofront becomes to require Apache Libcloud 1.1.0 or higher.
 - Geofront becomes to require OAuthLib 1.1.1 or higher.
 - Geofront becomes to require Waitress 0.9.0 or higher.
+- Goefront becomes to require tsukkomi 0.0.5 or higher.
 - :mod:`geofront.util` is gone now.  Geofront instead becomes to require
   :mod:`typing` and :mod:`tsukkomi`.
 
