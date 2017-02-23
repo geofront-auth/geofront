@@ -19,7 +19,7 @@ __ http://blog.bitbucket.org/2012/05/30/bitbucket-teams/
 import collections.abc
 import typing
 
-from tsukkomi.typed import typechecked
+from typeguard import typechecked
 
 from .identity import Identity
 

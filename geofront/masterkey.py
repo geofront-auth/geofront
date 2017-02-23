@@ -32,7 +32,7 @@ from paramiko.rsakey import RSAKey
 from paramiko.sftp_client import SFTPClient
 from paramiko.ssh_exception import SSHException
 from paramiko.transport import Transport
-from tsukkomi.typed import typechecked
+from typeguard import typechecked
 
 from .keystore import get_key_fingerprint
 from .remote import AuthorizedKeyList, Remote

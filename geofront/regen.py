@@ -9,7 +9,7 @@ import logging
 import os.path
 
 from paramiko.rsakey import RSAKey
-from tsukkomi.typed import typechecked
+from typeguard import typechecked
 
 from .keystore import get_key_fingerprint
 from .masterkey import EmptyStoreError, MasterKeyStore, renew_master_key

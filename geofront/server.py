@@ -52,7 +52,7 @@ from flask import (Flask, Response, current_app, helpers, json, jsonify,
                    make_response, request)
 from paramiko.pkey import PKey
 from paramiko.ssh_exception import SSHException
-from tsukkomi.typed import typechecked
+from typeguard import typechecked
 from waitress import serve
 from waitress.adjustments import Adjustments
 from werkzeug.contrib.cache import BaseCache, SimpleCache

@@ -10,7 +10,7 @@ import typing
 import urllib.request
 
 from paramiko.pkey import PKey
-from tsukkomi.typed import typechecked
+from typeguard import typechecked
 from werkzeug.http import parse_options_header
 
 from ..identity import Identity

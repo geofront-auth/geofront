@@ -14,7 +14,7 @@ import types
 import typing
 
 from paramiko.pkey import PKey
-from tsukkomi.typed import typechecked
+from typeguard import typechecked
 
 from ..identity import Identity
 from ..keystore import (KEY_TYPES, DuplicatePublicKeyError, KeyStore,

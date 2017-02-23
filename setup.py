@@ -16,7 +16,7 @@ def readme():
 
 install_requires = [
     'setuptools',
-    'tsukkomi >= 0.0.5',
+    'typeguard >= 2.1.1, < 3.0.0',
     'cryptography >= 1.4',
     # indirect dependency thorugh paramiko; just for version constraint (>=1.4)
     'paramiko >= 2.0.1',

@@ -51,7 +51,7 @@ OAuth consumer has to be set like the following:
 import collections.abc
 import logging
 
-from tsukkomi.typed import typechecked
+from typeguard import typechecked
 
 from ..identity import Identity
 from .oauth import OAuth2Team, request

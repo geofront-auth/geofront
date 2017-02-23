@@ -27,7 +27,7 @@ import urllib.request
 
 from oauthlib.oauth1 import SIGNATURE_RSA, Client
 from paramiko.pkey import PKey
-from tsukkomi.typed import typechecked
+from typeguard import typechecked
 from werkzeug.urls import url_decode_stream, url_encode
 from werkzeug.wrappers import Request
 

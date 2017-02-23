@@ -14,7 +14,7 @@ import typing
 import urllib.error
 import urllib.request
 
-from tsukkomi.typed import typechecked
+from typeguard import typechecked
 from werkzeug.http import parse_options_header
 from werkzeug.urls import url_encode, url_decode_stream
 from werkzeug.wrappers import Request

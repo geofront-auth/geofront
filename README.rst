@@ -75,7 +75,7 @@ Prerequisites
   - Waitress_ 0.9.0+
   - singledispatch_ (only if Python is older than 3.4)
   - typing_ (only if Python is older than 3.5)
-  - tsukkomi_ 0.0.5+
+  - typeguard_ 2.1.1+
 
 .. _Paramiko: http://www.paramiko.org/
 .. _cryptography: https://cryptography.io/
@@ -86,7 +86,7 @@ Prerequisites
 .. _Waitress: https://github.com/Pylons/waitress
 .. _singledispatch: https://pypi.python.org/pypi/singledispatch
 .. _typing: https://pypi.python.org/pypi/typing
-.. _tsukkomi: https://github.com/spoqa/tsukkomi
+.. _typeguard: https://github.com/agronholm/typeguard
 
 
 Author and license

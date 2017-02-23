@@ -9,7 +9,7 @@ from iso8601 import parse_date
 from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
 from pytest import fail, fixture, mark, raises, skip, yield_fixture
-from tsukkomi.typed import typechecked
+from typeguard import typechecked
 from werkzeug.contrib.cache import (BaseCache, FileSystemCache, RedisCache,
                                     SimpleCache)
 from werkzeug.exceptions import HTTPException, NotFound

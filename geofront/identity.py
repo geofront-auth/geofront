@@ -4,7 +4,7 @@
 """
 import collections.abc
 
-from tsukkomi.typed import typechecked
+from typeguard import typechecked
 
 __all__ = 'Identity',
 

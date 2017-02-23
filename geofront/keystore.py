@@ -9,7 +9,7 @@ from paramiko.ecdsakey import ECDSAKey
 from paramiko.dsskey import DSSKey
 from paramiko.rsakey import RSAKey
 from paramiko.pkey import PKey
-from tsukkomi.typed import typechecked
+from typeguard import typechecked
 
 from .identity import Identity
 

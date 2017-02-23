@@ -33,7 +33,7 @@ from libcloud.storage.drivers.s3 import S3StorageDriver
 from libcloud.storage.types import ObjectDoesNotExistError
 from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
-from tsukkomi.typed import typechecked
+from typeguard import typechecked
 
 from ..identity import Identity
 from ..keystore import (DuplicatePublicKeyError, KeyStore,
