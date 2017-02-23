@@ -4,6 +4,7 @@ python:
 - 3.3
 - 3.4
 - 3.5
+- 3.6
 - pypy3
 matrix:
  allow_failures:
@@ -18,18 +19,31 @@ env:
 services:
 - redis-server
 install:
-- pip install --upgrade setuptools pip
-- pip install -f https://github.com/spoqa/sftpserver/releases sftpserver==0.2setuptools  # FIXME
-- pip install -e .[tests]
 - pip install psycopg2 PyMySQL http://cdn.mysql.com/Downloads/Connector-Python/mysql-connector-python-2.0.4.zip
-- pip install pytest-cov codecov flake8
+- pip install tox-travis codecov
 - pip freeze || true
 before_script:
 - createdb -U postgres -E utf8 -T postgres geofront_test
 - mysql -e 'CREATE DATABASE geofront_test;'
 script:
 - python -mgeofront.version
-- REDIS_HOST=localhost PGDATABASE=geofront_test PGUSER=postgres MYSQL_DATABASE=geofront_test MYSQL_HOST=localhost MYSQL_USER=root py.test -vv --cov geofront --durations=20 --sshd-state-timeout=60
-- flake8
+- >
+    tox -- \
+        --cov geofront \
+        --durations=20 \
+        --sshd-state-timeout=60 \
+        --redis-host=localhost \
+        --postgresql-database=geofront_test \
+        --postgresql-user=postgres \
+        --mysql-database=geofront_test \
+        --mysql-host=localhost \
+        --mysql-user=root \
+        --github-access-token="$GITHUB_ACCESS_TOKEN" \
+        --github-org-login="$GITHUB_ORG_LOGIN" \
+        --github-team-slugs="$GITHUB_TEAM_SLUGS" \
+        --aws-access-key="$AWS_ACCESS_KEY" \
+        --aws-secret-key="$AWS_SECRET_KEY" \
+        --aws-s3-bucket="$AWS_S3_BUCKET" \
+        -vv
 after_success:
 - codecov
