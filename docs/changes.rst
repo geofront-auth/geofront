@@ -35,7 +35,7 @@ Released on March 7, 2016.
 
 - Added :class:`~geofront.remote.RemoteSetUnion` to make union view of
   multiple remote sets.
-- Fixed :attr:`AttributeError` on :meth:`StashKeyStore.register()
+- Fixed :exc:`AttributeError` on :meth:`StashKeyStore.register()
   <geofront.backends.stash.StashKeyStore.register>` or
   :meth:`StashKeyStore.deregister()
   <geofront.backends.stash.StashKeyStore.deregister>` being called.
