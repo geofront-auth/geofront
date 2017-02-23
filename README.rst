@@ -10,7 +10,7 @@ Geofront
    :alt: Latest PyPI version
 
 .. image:: https://readthedocs.org/projects/geofront/badge/
-   :target: https://geofront.readthedocs.org/
+   :target: https://geofront.readthedocs.io/
    :alt: Read the Docs
 
 .. image:: https://travis-ci.org/spoqa/geofront.svg?branch=master
