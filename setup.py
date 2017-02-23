@@ -27,7 +27,7 @@ install_requires = [
     'waitress >= 0.9.0'
 ]
 
-supported_pyversions = [(3, 3), (3, 4), (3, 5)]
+supported_pyversions = [(3, 3), (3, 4), (3, 5), (3, 6)]
 
 pyversion_requires = {
     ('<', (3, 4)): ['singledispatch'],
@@ -97,6 +97,7 @@ setup(
     maintainer_email='dev' '@' 'spoqa.com',
     license='AGPLv3 or later',
     packages=find_packages(exclude=['tests']),
+    python_requires='>=3.3.0',
     install_requires=install_requires,
     tests_require=tests_require,
     extras_require=extras_require,
@@ -117,6 +118,7 @@ setup(
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: Implementation :: CPython',
         'Topic :: Internet :: WWW/HTTP :: WSGI :: Application',
         'Topic :: System :: Systems Administration :: Authentication/Directory'
