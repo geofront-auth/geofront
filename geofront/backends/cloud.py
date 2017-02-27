@@ -21,6 +21,7 @@ import os.path
 import re
 import tempfile
 import typing
+from typing import Callable
 import xml.etree.ElementTree
 
 from libcloud.common.types import MalformedResponseError
@@ -72,6 +73,12 @@ class CloudRemoteSet(collections.abc.Mapping):
     :param port: the port number to :program:`ssh`.
                 the default is 22 which is the default :program:`ssh` port
     :type port: :class:`numbers.Integral`
+    :param alias_namer: A function to name an alias for the given node.
+                        :attr:`Node.name <libcloud.compute.base.Node.name>`
+                        is used by default.
+    :type alias_nameer:
+        :class:`~typing.Callable`\ [[:class:`libcloud.compute.base.Node`],
+                                    :class:`str`]
 
     .. seealso::
 
@@ -83,6 +90,8 @@ class CloudRemoteSet(collections.abc.Mapping):
     .. _Libcloud: http://libcloud.apache.org/
     __ https://libcloud.readthedocs.org/en/latest/compute/
 
+    .. versionadded:: 0.4.0
+
     .. versionchanged:: 0.2.0
        It fills :attr:`~geofront.remote.Remote.metadata` of the resulted
        :class:`~geofront.remote.Remote` objects if the ``driver`` supports.
@@ -90,19 +99,24 @@ class CloudRemoteSet(collections.abc.Mapping):
     """
 
     @typechecked
-    def __init__(self,
-                 driver: NodeDriver,
-                 user: str='ec2-user',
-                 port: numbers.Integral=22) -> None:
+    def __init__(
+        self,
+        driver: NodeDriver,
+        user: str='ec2-user',
+        port: numbers.Integral=22,
+        alias_namer: Callable[[Node], str]=lambda node: node.name
+    ) -> None:
         self.driver = driver
         self.user = user
         self.port = port
+        self.alias_namer = alias_namer
         self._nodes = None
         self._metadata = {} if supports_metadata(driver) else None
 
     def _get_nodes(self, refresh: bool=False) -> dict:
         if refresh or self._nodes is None:
-            self._nodes = {node.name: node
+            make_alias = self.alias_namer
+            self._nodes = {make_alias(node): node
                            for node in self.driver.list_nodes()
                            if node.public_ips}
             if self._metadata is not None:

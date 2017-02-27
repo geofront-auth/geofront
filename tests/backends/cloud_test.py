@@ -42,6 +42,10 @@ def test_cloud_remote_set():
     assert set_['dummy-1'].metadata == {'dummy': 'test'}
     assert set_['dummy-2'] == Remote('ec2-user', '127.0.0.1')
     assert set_['dummy-2'].metadata == {'dummy': 'test'}
+    id_set = CloudRemoteSet(driver, alias_namer=lambda n: 'id-' + n.id)
+    assert frozenset(id_set) == {'id-1', 'id-2'}
+    assert id_set['id-1'] == set_['dummy-1']
+    assert id_set['id-2'] == set_['dummy-2']
 
 
 def test_cloud_master_key_store():

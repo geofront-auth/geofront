@@ -13,6 +13,8 @@ To be released.
   See also :mod:`geofront.backends.bitbucket` module.  [:issue:`4`]
 - Added :mod:`geofront.backends.oauth` module which provides
   base team implementations for OAuth.
+- Added ``alias_namer`` option to :class:`CloudRemoteSet
+  <geofront.backends.cloud.CloudRemoteSet>` constructor.
 - Now master key can be found without token through
   :http:get:`/masterkey/` API.
 - Deprecated :http:get:`/tokens/(token_id:token_id)/masterkey/`.
