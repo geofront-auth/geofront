@@ -175,7 +175,8 @@ def test_cloud_key_store_get_key_name_pattern():
         'tests.server_test.DummyTeam abcd ',
         'junk'
     })
-    assert frozenset(result) == actual
+    result = frozenset(result)
+    assert result == actual
 
 
 def test_cloud_master_public_key_store():
