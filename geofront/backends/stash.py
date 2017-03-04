@@ -17,17 +17,17 @@ Provides implementations of team and key store for Atlassian's
 __ https://twitter.com/Atlassian/status/646357289939664896
 
 """
-import collections.abc
 import io
 import json
 import logging
-import typing
+from typing import AbstractSet, Iterator, Mapping, Sequence, cast
 import urllib.error
 import urllib.request
 
 from oauthlib.oauth1 import SIGNATURE_RSA, Client
 from paramiko.pkey import PKey
 from typeguard import typechecked
+from werkzeug.datastructures import ImmutableMultiDict
 from werkzeug.urls import url_decode_stream, url_encode
 from werkzeug.wrappers import Request
 
@@ -57,7 +57,10 @@ class StashTeam(Team):
     USER_PROFILE_URL = '{0.server_url}/users/{1}'
 
     @typechecked
-    def __init__(self, server_url: str, consumer_key: str, rsa_key: str):
+    def __init__(self,
+                 server_url: str,
+                 consumer_key: str,
+                 rsa_key: str) -> None:
         self.server_url = server_url.rstrip('/')
         self.consumer_key = consumer_key
         self.rsa_key = rsa_key
@@ -108,7 +111,7 @@ class StashTeam(Team):
     def authenticate(self,
                      state,
                      requested_redirect_url: str,
-                     wsgi_environ: collections.abc.Mapping) -> Identity:
+                     wsgi_environ: Mapping[str, object]) -> Identity:
         logger = logging.getLogger(__name__ + '.StashTeam.authenticate')
         logger.debug('state = %r', state)
         try:
@@ -116,8 +119,9 @@ class StashTeam(Team):
         except ValueError:
             raise AuthenticationError()
         req = Request(wsgi_environ, populate_request=False, shallow=True)
-        logger.debug('req.args = %r', req.args)
-        if req.args.get('oauth_token') != oauth_token:
+        args = cast(ImmutableMultiDict, req.args)
+        logger.debug('req.args = %r', args)
+        if args.get('oauth_token') != oauth_token:
             raise AuthenticationError()
         response = self.request(
             'POST', self.ACCESS_TOKEN_URL.format(self),
@@ -142,7 +146,7 @@ class StashTeam(Team):
     def authorize(self, identity: Identity) -> bool:
         if not issubclass(identity.team_type, type(self)):
             return False
-        return identity.identifier.startswith(self.server_url)
+        return cast(str, identity.identifier).startswith(self.server_url)
 
     def list_groups(self, identity: Identity):
         return frozenset()
@@ -171,9 +175,10 @@ class StashKeyStore(KeyStore):
     @typechecked
     def request_list(
         self, identity: Identity
-    ) -> typing.Iterator[typing.Sequence[typing.Mapping[str, typing.Any]]]:
-        if not (isinstance(self.team, identity.team_type) and
-                identity.identifier.startswith(self.team.server_url)):
+    ) -> Iterator[Sequence[Mapping[str, object]]]:
+        team = self.team
+        if not (isinstance(team, identity.team_type) and
+                cast(str, identity.identifier).startswith(team.server_url)):
             return
         start = 0
         while True:
@@ -192,8 +197,9 @@ class StashKeyStore(KeyStore):
 
     @typechecked
     def register(self, identity: Identity, public_key: PKey) -> None:
-        if not (isinstance(self.team, identity.team_type) and
-                identity.identifier.startswith(self.team.server_url)):
+        team = self.team
+        if not (isinstance(team, identity.team_type) and
+                cast(str, identity.identifier).startswith(team.server_url)):
             return
         data = json.dumps({
             'text': format_openssh_pubkey(public_key)
@@ -210,7 +216,7 @@ class StashKeyStore(KeyStore):
             raise
 
     @typechecked
-    def list_keys(self, identity: Identity) -> typing.AbstractSet[PKey]:
+    def list_keys(self, identity: Identity) -> AbstractSet[PKey]:
         logger = logging.getLogger(__name__ + '.StashKeyStore.list_keys')
         keys = self.request_list(identity)
         result = set()
@@ -218,7 +224,7 @@ class StashKeyStore(KeyStore):
             try:
                 pubkey = parse_openssh_pubkey(key['text'])
             except Exception as e:
-                logger.exception(e)
+                logger.exception(str(e))
                 continue
             result.add(pubkey)
         return result
@@ -231,7 +237,7 @@ class StashKeyStore(KeyStore):
                 response = self.request(
                     identity,
                     'DELETE',
-                    self.DEREGISTER_URL(self.team, key['id'])
+                    self.DEREGISTER_URL.format(self.team, key['id'])
                 )
                 assert response.code == 204
                 break

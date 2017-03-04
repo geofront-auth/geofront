@@ -11,7 +11,7 @@
 import base64
 import contextlib
 import types
-import typing
+from typing import AbstractSet, Mapping, Tuple, Type, Union, cast
 
 from paramiko.pkey import PKey
 from typeguard import typechecked
@@ -55,8 +55,18 @@ class DatabaseKeyStore(KeyStore):
             module_name = db_module.__name__
             raise TypeError('db_module must be DB-API 2.0 compliant, but {} '
                             'lacks connect() function'.format(module_name))
+        elif not isinstance(getattr(db_module, 'IntegrityError', None),
+                            type):
+            raise TypeError('db_module must be DB-API 2.0 compliant, but {} '
+                            'lacks IntegrityError'.format(module_name))
+        integrity_error = db_module.IntegrityError  # type: ignore
+        if not issubclass(integrity_error, Exception):
+            raise TypeError(
+                'db_module must be DB-API 2.0 compliant, but {}.'
+                'IntegrityError is not an exception class'.format(module_name)
+            )
         self.db_module = db_module
-        self.integrity_error = db_module.IntegrityError
+        self.integrity_error = cast(Type[Exception], integrity_error)
         self.connection_args = args
         self.connection_kwargs = kwargs
 
@@ -82,13 +92,14 @@ class DatabaseKeyStore(KeyStore):
         yield connection
         connection.close()
 
-    def _execute(self, cursor, sql: str, params: tuple) -> None:
+    def _execute(self, cursor, sql: str, params: Tuple[str, ...]) -> None:
         """To support various paramstyles.  See the following specification:
 
         http://legacy.python.org/dev/peps/pep-0249/#paramstyle
 
         """
-        paramstyle = self.db_module.paramstyle
+        final_params = cast(Union[Tuple[str, ...], Mapping[str, str]], params)
+        paramstyle = self.db_module.paramstyle  # type: ignore
         if paramstyle == 'format':
             sql = sql.replace('?', '%s')
         elif paramstyle != 'qmark':
@@ -100,18 +111,18 @@ class DatabaseKeyStore(KeyStore):
                     fmt = ':p{}'
                 else:  # pyformat
                     fmt = '%(p{})s'
-                params = {'p' + str(i): val for i, val in enumerate(params)}
+                final_params = \
+                    {'p' + str(i): val for i, val in enumerate(params)}
                 i = 0
             while '?' in sql:
                 sql = sql.replace('?', fmt.format(i), 1)
                 i += 1
-        cursor.execute(sql, params)
+        cursor.execute(sql, final_params)
 
-    def _get_key_params(self, public_key: PKey) -> typing.Tuple[str, str]:
+    def _get_key_params(self, public_key: PKey) -> Tuple[str, str]:
         return public_key.get_name(), get_key_fingerprint(public_key, '')
 
-    def _get_identity_params(self,
-                             identity: Identity) -> typing.Tuple[str, str]:
+    def _get_identity_params(self, identity: Identity) -> Tuple[str, str]:
         return ('{0.__module__}.{0.__qualname__}'.format(identity.team_type),
                 str(identity.identifier))
 
@@ -142,7 +153,7 @@ class DatabaseKeyStore(KeyStore):
                 cursor.close()
 
     @typechecked
-    def list_keys(self, identity: Identity) -> typing.AbstractSet[PKey]:
+    def list_keys(self, identity: Identity) -> AbstractSet[PKey]:
         with self._connect() as connection:
             cursor = connection.cursor()
             try:

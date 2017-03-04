@@ -132,7 +132,7 @@ https://api.bitbucket.org/1.0/groups/YourTeamUsername/
             try:
                 response = request(identity, url)
             except IOError as e:
-                logger.debug(e, exc_info=1)
+                logger.debug(str(e), exc_info=True)
                 return False
             if isinstance(response, collections.abc.Mapping) and \
                'error' in response:

@@ -2,11 +2,11 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 """
-import collections
 import collections.abc
 import json
 import logging
 import typing
+import urllib.error
 import urllib.request
 
 from paramiko.pkey import PKey
@@ -17,6 +17,7 @@ from ..identity import Identity
 from ..keystore import (DuplicatePublicKeyError, KeyStore,
                         format_openssh_pubkey, get_key_fingerprint,
                         parse_openssh_pubkey)
+from ..team import GroupSet
 from .oauth import OAuth2Team, request
 
 
@@ -101,7 +102,7 @@ class GitHubOrganization(OAuth2Team):
             return False
         return any(o['login'] == self.org_login for o in response)
 
-    def list_groups(self, identity: Identity):
+    def list_groups(self, identity: Identity) -> GroupSet:
         if not issubclass(identity.team_type, type(self)):
             return frozenset()
         try:
@@ -133,7 +134,7 @@ class GitHubKeyStore(KeyStore):
         })
         try:
             request(identity, self.list_url, 'POST', data=data.encode())
-        except urllib.request.HTTPError as e:
+        except urllib.error.HTTPError as e:
             if e.code != 422:
                 raise
             content_type = e.headers.get('Content-Type')
@@ -163,7 +164,7 @@ class GitHubKeyStore(KeyStore):
             try:
                 yield parse_openssh_pubkey(key['key']), key
             except Exception as e:
-                logger.exception(e)
+                logger.exception(str(e))
                 continue
 
     @typechecked

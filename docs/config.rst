@@ -45,7 +45,7 @@ be uppercase.
 
 .. data:: REMOTE_SET
 
-   (:class:`collections.abc.Mapping`) The set of remote servers to be managed
+   (:class:`~geofront.remote.RemoteSet`) The set of remote servers to be managed
    by Geofront.  It can be anything only if it's an mapping object.
    For example, you can hard-code it by using Python :class:`dict` data
    structure::
@@ -59,7 +59,7 @@ be uppercase.
            'worker-1': Remote('ubuntu', '192.168.0.25'),
            'worker-2': Remote('ubuntu', '192.168.0.26'),
            'db-1': Remote('ubuntu', '192.168.0.50'),
-           'db-2': Remote('ubuntu', '192.168.0.51')
+           'db-2': Remote('ubuntu', '192.168.0.51'),
        }
 
    Every key has to be a string, and every valye has to be an instance of

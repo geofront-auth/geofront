@@ -16,14 +16,24 @@ __ https://support.google.com/a/answer/182433?hl=en
 __ http://blog.bitbucket.org/2012/05/30/bitbucket-teams/
 
 """
-import collections.abc
-import typing
+from typing import AbstractSet, Hashable, Mapping
 
 from typeguard import typechecked
 
 from .identity import Identity
 
-__all__ = 'AuthenticationContinuation', 'AuthenticationError', 'Team'
+__all__ = ('AuthenticationContinuation', 'AuthenticationError',
+           'GroupSet', 'Team')
+
+
+#: The type to represent a set of groups.  Group sets consist of group
+#: identifiers.  Group identifiers are usually a string, but can be anything
+#: hashable.
+#:
+#: Alias of :class:`~typing.AbstractSet`\ [:class:`~typing.Hashable`]
+#:
+#: .. versionadded:: 0.4.0
+GroupSet = AbstractSet[Hashable]
 
 
 class AuthenticationContinuation:
@@ -51,7 +61,7 @@ class AuthenticationContinuation:
     """
 
     @typechecked
-    def __init__(self, next_url: str, state):
+    def __init__(self, next_url: str, state) -> None:
         self.next_url = next_url
         self.state = state
 
@@ -114,7 +124,7 @@ class Team:
         self,
         state,
         requested_redirect_url: str,
-        wsgi_environ: typing.Mapping[str, typing.Any]
+        wsgi_environ: Mapping[str, object]
     ) -> Identity:
         """Second step of authentication process, to create a verification
         token for the identity.  The token is used by :meth:`authorize()`
@@ -127,8 +137,8 @@ class Team:
                                        ``redirect_url`` parameter
         :type requested_redirect_url: :class:`str`
         :param wsgi_environ: forwarded wsgi environ dictionary
-        :type wsgi_environ: :class:`typing.Mapping`[:class:`str`,
-                                                    :class:`typing.Any`]
+        :type wsgi_environ: :class:`~typing.Mapping`\ [:class:`str`,
+                                                       :class:`object`]
         :return: an identity which contains a verification token
         :rtype: :class:`~.identity.Identity`
         :raise geofront.team.AuthenticationError:
@@ -161,9 +171,7 @@ class Team:
         raise NotImplementedError('authorize() method has to be implemented')
 
     @typechecked
-    def list_groups(
-        self, identity: Identity
-    ) -> typing.AbstractSet[collections.abc.Hashable]:
+    def list_groups(self, identity: Identity) -> GroupSet:
         """List the all groups that the given ``identity`` belongs to.
         Any hashable value can be an element to represent a group e.g.::
 
@@ -182,7 +190,7 @@ class Team:
         :param identity: the identity to list his/her groups
         :type identity: :class:`~.identity.Identity`
         :return: the set of groups associated with the ``identity``
-        :rtype: :class:`collections.abc.Set`
+        :rtype: :class:`GroupSet`
 
         .. versionadded:: 0.2.0
 

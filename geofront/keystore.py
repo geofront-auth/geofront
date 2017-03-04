@@ -3,7 +3,7 @@
 
 """
 import base64
-import typing
+from typing import TYPE_CHECKING, AbstractSet
 
 from paramiko.dsskey import DSSKey
 from paramiko.ecdsakey import ECDSAKey
@@ -13,14 +13,18 @@ from typeguard import typechecked
 
 from .identity import Identity
 
+if TYPE_CHECKING:
+    from typing import Mapping, Type  # noqa: F401
+
 __all__ = ('KEY_TYPES', 'AuthorizationError', 'DuplicatePublicKeyError',
            'KeyStore', 'KeyStoreError', 'KeyTypeError',
            'format_openssh_pubkey', 'get_key_fingerprint',
            'parse_openssh_pubkey')
 
 
-#: (:class:`typing.Mapping`[:class:`str`, :class:`type`]) The mapping
-#: of supported key types.
+#: (:class:`~typing.Mapping`\ [:class:`str`,
+#: :class:`~typing.Type`\ [:class:`~paramiko.pkey.Pkey`]])
+#: The mapping of supported key types.
 #:
 #: .. versionadded:: 0.4.0
 #:    Added ``ecdsa-sha2-nistp256`` (:class:`~paramiko.ecdsakey.ECDSAKey)
@@ -29,7 +33,7 @@ KEY_TYPES = {
     'ssh-rsa': RSAKey,
     'ssh-dss': DSSKey,
     'ecdsa-sha2-nistp256': ECDSAKey,
-}  # type: typing.Mapping[str, type]
+}  # type: Mapping[str, Type[PKey]]
 
 
 @typechecked
@@ -113,14 +117,14 @@ class KeyStore:
         raise NotImplementedError('register() has to be implemented')
 
     @typechecked
-    def list_keys(self, identity: Identity) -> typing.AbstractSet[PKey]:
+    def list_keys(self, identity: Identity) -> AbstractSet[PKey]:
         """List registered public keys of the given ``identity``.
 
         :param identity: the owner of keys to list
         :type identity: :class:`~.identity.Identity`
         :return: the set of :class:`paramiko.pkey.PKey`
                  owned by the ``identity``
-        :rtype: :class:`typing.AbstractSet`
+        :rtype: :class:`~typing.AbstractSet`
         :raise geofront.keystore.AuthorizationError:
             when the given ``identity`` has no required permission
             to the key store

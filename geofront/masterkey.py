@@ -20,12 +20,11 @@ For more details, see also :class:`TwoPhaseRenewal`.
 
 """
 import datetime
-import io
 import logging
 import os.path
 import socket
 import threading
-import typing
+from typing import IO, TYPE_CHECKING, AbstractSet
 
 from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
@@ -36,6 +35,9 @@ from typeguard import typechecked
 
 from .keystore import get_key_fingerprint
 from .remote import AuthorizedKeyList, Remote
+
+if TYPE_CHECKING:
+    from typing import Dict, Optional, Tuple  # noqa: F401
 
 __all__ = ('EmptyStoreError', 'FileSystemMasterKeyStore', 'MasterKeyStore',
            'PeriodicalRenewal', 'TwoPhaseRenewal',
@@ -77,12 +79,12 @@ class EmptyStoreError(Exception):
     """Exception that rises when there's no master key yet in the store."""
 
 
-def read_private_key_file(file_: io.IOBase) -> PKey:
+def read_private_key_file(file_: IO[str]) -> PKey:
     """Read a private key file.  Similar to :meth:`PKey.from_private_key()
     <paramiko.pkey.PKey.from_private_key>` except it guess the key type.
 
     :param file_: a stream of the private key to read
-    :type file_: :class:`io.IOBase`
+    :type file_: :class:`~typing.IO`\ [:class:`str`]
     :return: the read private key
     :rtype: :class:`paramiko.pkey.PKery`
     :raise paramiko.ssh_exception.SSHException: when something goes wrong
@@ -119,7 +121,7 @@ class TwoPhaseRenewal:
 
     :param servers: the set of :class:`~.remote.Remote` servers
                     to renew their master key
-    :type servers: :class:`typing.AbstractSet`[:class:`~.remote.Remote`]
+    :type servers: :class:`~typing.AbstractSet`\ [:class:`~.remote.Remote`]
     :param old_key: the previous master key to expire
     :type old_key: :class:`paramiko.pkey.PKey`
     :param new_key: the new master key to replace ``old_key``
@@ -128,7 +130,7 @@ class TwoPhaseRenewal:
     """
 
     def __init__(self,
-                 servers: typing.AbstractSet[Remote],
+                 servers: AbstractSet[Remote],
                  old_key: PKey,
                  new_key: PKey) -> None:
         for server in servers:
@@ -138,11 +140,11 @@ class TwoPhaseRenewal:
         self.servers = servers
         self.old_key = old_key
         self.new_key = new_key
-        self.sftp_clients = None
+        self.sftp_clients = None  # type: Optional[Dict[Remote, Tuple[Transport, SFTPClient, AuthorizedKeyList]]]  # noqa: E501
 
-    def __enter__(self) -> typing.AbstractSet[Remote]:
+    def __enter__(self) -> AbstractSet[Remote]:
         assert self.sftp_clients is None, 'the context is already started'
-        sftp_clients = {}
+        sftp_clients = {}  # type: Dict[Remote, Tuple[Transport, SFTPClient, AuthorizedKeyList]]  # noqa: E501
         for server in self.servers:
             try:
                 transport = Transport((server.host, server.port))
@@ -181,7 +183,7 @@ class TwoPhaseRenewal:
 
 
 @typechecked
-def renew_master_key(servers: typing.AbstractSet[Remote],
+def renew_master_key(servers: AbstractSet[Remote],
                      key_store: MasterKeyStore,
                      bits: int=2048) -> PKey:
     """Renew the master key.  It creates a new master key, makes ``servers``
@@ -193,7 +195,7 @@ def renew_master_key(servers: typing.AbstractSet[Remote],
     :param servers: servers to renew the master key.
                     every element has to be an instance of
                     :class:`~.remote.Remote`
-    :type servers: :class:`typing.AbstractSet`[:class:`~.remote.Remote`]
+    :type servers: :class:`~typing.AbstractSet`\ [:class:`~.remote.Remote`]
     :param key_store: the master key store to update
     :type key_store: :class:`MasterKeyStore`
     :param bits: the number of bits the generated key should be.
@@ -230,7 +232,7 @@ class PeriodicalRenewal(threading.Thread):
     :param servers: servers to renew the master key.
                     every element has to be an instance of
                     :class:`~.remote.Remote`
-    :type servers: :class:`typing.AbstractSet`[:class:`~.remote.Remote`]
+    :type servers: :class:`~typing.AbstractSet`\ [:class:`~.remote.Remote`]
     :param key_store: the master key store to update
     :type key_store: :class:`MasterKeyStore`
     :param interval: the interval to renew
@@ -250,11 +252,11 @@ class PeriodicalRenewal(threading.Thread):
 
     @typechecked
     def __init__(self,
-                 servers: typing.AbstractSet[Remote],
+                 servers: AbstractSet[Remote],
                  key_store: MasterKeyStore,
                  interval: datetime.timedelta,
                  bits: int=2048,
-                 start: bool=True):
+                 start: bool=True) -> None:
         super().__init__()
         self.servers = servers
         self.key_store = key_store

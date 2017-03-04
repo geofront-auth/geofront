@@ -9,9 +9,9 @@ def bad_request_handler_for_testing(exception: Exception):
     to know how it's going in the application.
 
     """
-    traceback.print_exc(exception)
+    traceback.print_exc()
     return (
-        traceback.format_exc(exception),
+        traceback.format_exc(),
         400,
         {'Content-Type': 'text/plain; charset=utf-8'}
     )
@@ -23,9 +23,9 @@ def server_error_handler_for_testing(exception: Exception):
     to know how it's going in the application.
 
     """
-    traceback.print_exc(exception)
+    traceback.print_exc()
     return (
-        traceback.format_exc(exception),
+        traceback.format_exc(),
         500,
         {'Content-Type': 'text/plain; charset=utf-8'}
     )

@@ -1,19 +1,30 @@
 from geofront.identity import Identity
+from geofront.team import Team
+
+
+class DummyTeamA(Team):
+
+    pass
+
+
+class DummyTeamB(Team):
+
+    pass
 
 
 def test_identity_eq():
-    assert Identity(int, 1) == Identity(int, 1)
-    assert not (Identity(int, 1) == Identity(int, 2))
-    assert not (Identity(int, 1) == Identity(str, 1))
-    assert not (Identity(int, 1) == Identity(str, 2))
+    assert Identity(DummyTeamA, 1) == Identity(DummyTeamA, 1)
+    assert not (Identity(DummyTeamA, 1) == Identity(DummyTeamA, 2))
+    assert not (Identity(DummyTeamA, 1) == Identity(DummyTeamB, 1))
+    assert not (Identity(DummyTeamA, 1) == Identity(DummyTeamB, 2))
 
 
 def test_identity_ne():
-    assert not (Identity(int, 1) != Identity(int, 1))
-    assert Identity(int, 1) != Identity(int, 2)
-    assert Identity(int, 1) != Identity(str, 1)
-    assert Identity(int, 1) != Identity(str, 2)
+    assert not (Identity(DummyTeamA, 1) != Identity(DummyTeamA, 1))
+    assert Identity(DummyTeamA, 1) != Identity(DummyTeamA, 2)
+    assert Identity(DummyTeamA, 1) != Identity(DummyTeamB, 1)
+    assert Identity(DummyTeamA, 1) != Identity(DummyTeamB, 2)
 
 
 def test_identity_hash():
-    assert hash(Identity(int, 1)) == hash(Identity(int, 1))
+    assert hash(Identity(DummyTeamA, 1)) == hash(Identity(DummyTeamA, 1))

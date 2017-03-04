@@ -14,14 +14,14 @@ import collections.abc
 try:
     from functools import singledispatch
 except ImportError:
-    from singledispatch import singledispatch
+    from singledispatch import singledispatch  # type: ignore
 import io
-import numbers
 import os.path
 import re
 import tempfile
-import typing
-from typing import Callable
+from typing import (TYPE_CHECKING,
+                    AbstractSet, Callable, Iterator, Mapping, Sequence)
+from typing.re import Pattern  # type: ignore  # noqa: I901
 import xml.etree.ElementTree
 
 from libcloud.common.types import MalformedResponseError
@@ -42,6 +42,9 @@ from ..keystore import (DuplicatePublicKeyError, KeyStore,
                         parse_openssh_pubkey)
 from ..masterkey import EmptyStoreError, MasterKeyStore, read_private_key_file
 from ..remote import Remote
+
+if TYPE_CHECKING:
+    from typing import MutableMapping, Optional  # noqa: F401
 
 __all__ = ('CloudKeyStore', 'CloudMasterKeyStore', 'CloudMasterPublicKeyStore',
            'CloudRemoteSet')
@@ -72,7 +75,7 @@ class CloudRemoteSet(collections.abc.Mapping):
     :type user: :class:`str`
     :param port: the port number to :program:`ssh`.
                 the default is 22 which is the default :program:`ssh` port
-    :type port: :class:`numbers.Integral`
+    :type port: :class:`int`
     :param alias_namer: A function to name an alias for the given node.
                         :attr:`Node.name <libcloud.compute.base.Node.name>`
                         is used by default.
@@ -103,17 +106,18 @@ class CloudRemoteSet(collections.abc.Mapping):
         self,
         driver: NodeDriver,
         user: str='ec2-user',
-        port: numbers.Integral=22,
+        port: int=22,
         alias_namer: Callable[[Node], str]=lambda node: node.name
     ) -> None:
         self.driver = driver
         self.user = user
         self.port = port
         self.alias_namer = alias_namer
-        self._nodes = None
-        self._metadata = {} if supports_metadata(driver) else None
+        self._nodes = None  # type: Optional[Mapping[str, Node]]
+        self._metadata = {} if supports_metadata(driver) else None  \
+            # type: Optional[MutableMapping[str, object]]
 
-    def _get_nodes(self, refresh: bool=False) -> dict:
+    def _get_nodes(self, refresh: bool=False) -> Mapping[str, Node]:
         if refresh or self._nodes is None:
             make_alias = self.alias_namer
             self._nodes = {make_alias(node): node
@@ -126,13 +130,13 @@ class CloudRemoteSet(collections.abc.Mapping):
     def __len__(self) -> int:
         return len(self._get_nodes())
 
-    def __iter__(self) -> typing.Iterator[str]:
+    def __iter__(self) -> Iterator[str]:
         return iter(self._get_nodes(True))
 
     def __getitem__(self, alias: str) -> Remote:
         node = self._get_nodes()[alias]
         if self._metadata is None:
-            metadata = {}
+            metadata = {}  # type: object
         else:
             try:
                 metadata = self._metadata[alias]
@@ -149,7 +153,7 @@ def supports_metadata(driver: NodeDriver) -> bool:
 
 
 @singledispatch
-def get_metadata(driver: NodeDriver, node: Node) -> typing.Mapping:
+def get_metadata(driver: NodeDriver, node: Node) -> Mapping[str, object]:
     return driver.ex_get_metadata(node)
 
 
@@ -160,7 +164,7 @@ def gce_supports_metadata(driver: GCENodeDriver) -> bool:
 
 @get_metadata.register(GCENodeDriver)
 def gce_get_metadata(driver: GCENodeDriver,
-                     node: Node) -> typing.Mapping:
+                     node: Node) -> Mapping[str, object]:
     return node.extra['metadata']
 
 
@@ -231,16 +235,16 @@ class CloudMasterKeyStore(MasterKeyStore):
             # This is workaround to upload the master key without stream.
             with tempfile.NamedTemporaryFile('w+', encoding='utf-8') as f:
                 master_key.write_private_key(f)
-                f.file.flush()
+                getattr(f, 'file').flush()  # workaround mypy
                 self.driver.upload_object(
                     f.name, self.container, self.object_name, extra
                 )
             return
         with io.StringIO() as buffer_:
             master_key.write_private_key(buffer_)
-            pem = buffer_.getvalue()
+            pem = getattr(buffer_, 'getvalue')()  # workaround mypy
         self.driver.upload_object_via_stream(
-            self._countable_iterator([pem]),
+            type(self)._countable_iterator([pem]),
             self.container,
             self.object_name,
             extra
@@ -254,7 +258,7 @@ class CloudMasterKeyStore(MasterKeyStore):
         """
 
         @typechecked
-        def __init__(self, sequence: typing.Sequence):
+        def __init__(self, sequence: Sequence[object]) -> None:
             self.iterator = iter(sequence)
             self.length = len(sequence)
 
@@ -297,8 +301,10 @@ class CloudKeyStore(KeyStore):
                                '{identity.team_type.__qualname__} '
                                '{identity.identifier} {fingerprint}')
 
+    _sample_keys = None  # type: Optional[RSAKey]
+
     @typechecked
-    def __init__(self, driver: NodeDriver, key_name_format: str=None):
+    def __init__(self, driver: NodeDriver, key_name_format: str=None) -> None:
         self.driver = driver
         self.key_name_format = key_name_format or self.DEFAULT_KEY_NAME_FORMAT
 
@@ -310,18 +316,17 @@ class CloudKeyStore(KeyStore):
         )
 
     def _get_key_name_pattern(self,
-                              identity: Identity) -> typing.re.Pattern[str]:
+                              identity: Identity) -> Pattern[str]:
         """Make the regex pattern from the format string.  Put two different
         random keys, compare two outputs, and then replace the difference
         with wildcard.
 
         """
         cls = type(self)
-        try:
-            sample_keys = cls.sample_keys
-        except AttributeError:
+        sample_keys = cls._sample_keys
+        if sample_keys is None:
             sample_keys = RSAKey.generate(1024), RSAKey.generate(1024)
-            cls.sample_keys = sample_keys
+            cls._sample_keys = sample_keys
         sample_name_a = self._get_key_name(identity, sample_keys[0])
         sample_name_b = self._get_key_name(identity, sample_keys[1])
         if sample_name_a == sample_name_b:
@@ -348,7 +353,7 @@ class CloudKeyStore(KeyStore):
             raise DuplicatePublicKeyError()
 
     @typechecked
-    def list_keys(self, identity: Identity) -> typing.AbstractSet[PKey]:
+    def list_keys(self, identity: Identity) -> AbstractSet[PKey]:
         pattern = self._get_key_name_pattern(identity)
         return frozenset(
             parse_openssh_pubkey(key_pair.public_key)
@@ -416,7 +421,7 @@ class CloudMasterPublicKeyStore(MasterKeyStore):
                 raise
             tree = xml.etree.ElementTree.fromstring(e.body)
             if not (tree.tag == 'Response' and
-                    tree.find('Errors/Error/Code').text ==
+                    getattr(tree.find('Errors/Error/Code'), 'text', None) ==
                     'InvalidKeyPair.NotFound'):
                 raise
         else:

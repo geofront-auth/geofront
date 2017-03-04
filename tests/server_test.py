@@ -1,8 +1,8 @@
-import collections.abc
 import datetime
 import os
 import random
 import time
+from typing import AbstractSet, cast
 
 from flask import json, request, url_for
 from iso8601 import parse_date
@@ -22,12 +22,13 @@ from geofront.keystore import (DuplicatePublicKeyError, KeyStore,
                                format_openssh_pubkey, get_key_fingerprint,
                                parse_openssh_pubkey)
 from geofront.masterkey import MasterKeyStore
-from geofront.remote import PermissionPolicy, Remote
+from geofront.remote import PermissionPolicy, Remote, RemoteSet
 from geofront.server import (FingerprintConverter, Token, TokenIdConverter,
                              app, get_identity, get_key_store, get_public_key,
                              get_remote_set, get_team, get_token_store,
                              remote_dict)
-from geofront.team import AuthenticationContinuation, AuthenticationError, Team
+from geofront.team import (AuthenticationContinuation, AuthenticationError,
+                           GroupSet, Team)
 from geofront.version import VERSION
 
 
@@ -214,7 +215,8 @@ class DummyTeam(Team):
                 identity.access_token is not False)
 
     def list_groups(self, identity: Identity):
-        return {'odd' if identity.identifier % 2 else 'even'}
+        identifier = cast(int, identity.identifier)
+        return {'odd' if identifier % 2 else 'even'}
 
 
 def test_get_team__no_config():
@@ -244,7 +246,7 @@ def test_get_team(fx_team):
 class MemoryMasterKeyStore(MasterKeyStore):
 
     @typechecked
-    def __init__(self, master_key: PKey=None):
+    def __init__(self, master_key: PKey=None) -> None:
         if master_key is not None:
             self.save(master_key)
 
@@ -283,7 +285,7 @@ def get_url(endpoint, **values):
         return url_for(endpoint, **values)
 
 
-def test_create_access_token(fx_app, fx_token_id):
+def test_create_access_token(fx_app, fx_token_id) -> None:
     url = get_url('create_access_token', token_id=fx_token_id)
     with app.test_client() as c:
         response = c.put(url)
@@ -454,7 +456,7 @@ class DummyKeyStore(KeyStore):
         self.keys[public_key] = identity
         self.identities.setdefault(identity, set()).add(public_key)
 
-    def list_keys(self, identity: Identity) -> collections.abc.Set:
+    def list_keys(self, identity: Identity) -> AbstractSet[PKey]:
         try:
             keys = self.identities[identity]
         except KeyError:
@@ -714,15 +716,15 @@ def test_remote_dict():
 class DisallowAllPolicy(PermissionPolicy):
 
     def filter(self,
-               remotes: collections.abc.Mapping,
+               remotes: RemoteSet,
                identity: Identity,
-               groups: collections.abc.Set) -> collections.abc.Mapping:
+               groups: GroupSet) -> RemoteSet:
         return {}
 
     def permit(self,
                remote: Remote,
                identity: Identity,
-               groups: collections.abc.Set) -> bool:
+               groups: GroupSet) -> bool:
         return False
 
 

@@ -3,8 +3,10 @@
 
 """
 import collections.abc
+from typing import TYPE_CHECKING, Hashable, Type, Union, cast
 
-from typeguard import typechecked
+if TYPE_CHECKING:
+    from .team import Team  # noqa: F401
 
 __all__ = 'Identity',
 
@@ -17,17 +19,18 @@ class Identity(collections.abc.Hashable):
     :type team_type: :class:`type`
     :param identifier: any hashable identifier for the owner.
                        it's interpreted by ``team_type``
-    :type identifier: :class:`collections.abc.Hashable`
+    :type identifier: :class:`~typing.Hashable`
     :param access_token: an optional access token which may used by key store
 
     """
 
-    #: (:class:`type`) A subclass of :class:`~.team.Team`.
-    team_type = None
+    #: (:class:`~typing.Type`\ [:class:`~.team.Type`]) A subclass of
+    #: :class:`~.team.Team`.
+    team_type = None  # type: Type[Team]
 
-    #: (:class:`collections.abc.Hashable`) Any hashable identifier for
+    #: (:class:`~typing.Hashable`) Any hashable identifier for
     #: the owner.  It's interpreted by :attr:`team_type`.
-    identifier = None
+    identifier = None  # type: Union[Hashable, str, int]
 
     #: An optional access token which may be used by key store.
     #:
@@ -37,13 +40,21 @@ class Identity(collections.abc.Hashable):
     #:    operators, and :func:`hash()` function.
     access_token = None
 
-    @typechecked
     def __init__(self,
-                 team_type: type,
-                 identifier: collections.abc.Hashable,
+                 team_type: Type['Team'],
+                 identifier: Union[Hashable, str, int],  # workaround mypy bug
                  access_token=None) -> None:
-        self.team_type = team_type
-        self.identifier = identifier
+        if not isinstance(team_type, type):
+            raise TypeError('team_type must be a type, not ' + repr(team_type))
+        from .team import Team  # noqa: F811
+        if not issubclass(team_type, Team):
+            raise TypeError('team_type must be a subclass of {0.__module__}.'
+                            '{0.__qualname__}'.format(Team))
+        elif not callable(getattr(identifier, '__hash__')):
+            raise TypeError('identifier must be hashable, not ' +
+                            repr(identifier))
+        self.team_type = cast(Type[Team], team_type)
+        self.identifier = identifier  # type: Union[Hashable, str, int]
         self.access_token = access_token
 
     def __eq__(self, other) -> bool:

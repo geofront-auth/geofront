@@ -5,16 +5,18 @@
 
 """
 import contextlib
+import http.client
 import io
 import json
 import logging
 import os
 import shutil
-import typing
+from typing import TYPE_CHECKING, IO, Mapping, cast
 import urllib.error
 import urllib.request
 
 from typeguard import typechecked
+from werkzeug.datastructures import ImmutableMultiDict
 from werkzeug.http import parse_options_header
 from werkzeug.urls import url_encode, url_decode_stream
 from werkzeug.wrappers import Request
@@ -54,7 +56,11 @@ def request(access_token, url: str, method: str='GET', data: bytes=None):
     )
     try:
         with contextlib.closing(urllib.request.urlopen(req)) as response:
-            content_type = response.headers.get('Content-Type')
+            assert isinstance(response, http.client.HTTPResponse), \
+                'isinstance(response, {0.__module__}.{0.__qualname__})'.format(
+                    type(response))
+            headers = getattr(response, 'headers')  # workaround mypy
+            content_type = headers.get('Content-Type')
             mimetype, options = parse_options_header(content_type)
             assert mimetype == 'application/json' or method == 'DELETE', \
                 'Content-Type of {} is not application/json but {}'.format(
@@ -62,19 +68,23 @@ def request(access_token, url: str, method: str='GET', data: bytes=None):
                     content_type
                 )
             charset = options.get('charset', 'utf-8')
-            io_wrapper = io.TextIOWrapper(response, encoding=charset)
+            io_wrapper = io.TextIOWrapper(cast(IO[bytes], response),
+                                          encoding=charset)
             if logger.isEnabledFor(logging.DEBUG):
                 read = io_wrapper.read()
-                logger.debug(
-                    'HTTP/%d.%d %d %s\n%s\n\n%s',
-                    response.version // 10,
-                    response.version % 10,
-                    response.status,
-                    response.reason,
-                    '\n'.join('{}: {}'.format(k, v)
-                              for k, v in response.headers.items()),
-                    read
-                )
+                if not TYPE_CHECKING:
+                    logger.debug(
+                        'HTTP/%d.%d %d %s\n%s\n\n%s',
+                        response.version // 10,
+                        response.version % 10,
+                        response.code,
+                        response.reason,
+                        '\n'.join(
+                            '{}: {}'.format(k, v)
+                            for k, v in response.headers.items()
+                        ),
+                        read
+                    )
                 if method == 'DELETE':
                     return
                 return json.loads(read)
@@ -87,19 +97,24 @@ def request(access_token, url: str, method: str='GET', data: bytes=None):
         if logger.isEnabledFor(logging.DEBUG):
             f = io.BytesIO()
             shutil.copyfileobj(e, f)
-            logger.debug(
-                'HTTP/%d.%d %d %s\n%s\n\n%r',
-                e.version // 10,
-                e.version % 10,
-                e.status,
-                e.reason,
-                '\n'.join('{}: {}'.format(k, v) for k, v in e.headers.items()),
-                f.getvalue()
-            )
+            if not TYPE_CHECKING:
+                logger.debug(
+                    'HTTP/%d.%d %d %s\n%s\n\n%r',
+                    e.version // 10,
+                    e.version % 10,
+                    e.code,
+                    e.reason,
+                    '\n'.join(
+                        '{}: {}'.format(k, v)
+                        for k, v in e.headers.items()
+                    ),
+                    f.getvalue()
+                )
             f.seek(0)
-            logger.debug(str(e), exc_info=1)
-            raise urllib.error.HTTPError(e.url, e.code, e.reason, e.headers,
-                                         f) from e
+            logger.debug(str(e), exc_info=True)
+            make_error = urllib.error.HTTPError  # workaround mypy
+            restored = make_error(e.geturl(), e.code, e.reason, e.headers, f)
+            raise restored from e
         else:
             raise
 
@@ -189,13 +204,14 @@ class OAuth2Team(Team):
         self,
         state,
         requested_redirect_url: str,
-        wsgi_environ: typing.Mapping[str, typing.Any]
+        wsgi_environ: Mapping[str, object]
     ) -> Identity:
         logger = self.logger.getChild('authenticate')
         req = Request(wsgi_environ, populate_request=False, shallow=True)
+        args = cast(ImmutableMultiDict, req.args)
         try:
-            code = req.args['code']
-            if req.args['state'] != state:
+            code = args['code']
+            if args['state'] != state:
                 raise AuthenticationError()
         except KeyError:
             raise AuthenticationError()
@@ -212,14 +228,18 @@ class OAuth2Team(Team):
             logger.debug('Response of POST %s (with/ %r): %s\n%s',
                          self.access_token_url, data, e.code, e.read())
             raise
-        content_type = response.headers['Content-Type']
+        assert isinstance(response, http.client.HTTPResponse), \
+            'isinstance(response, {0.__module__}.{0.__qualname__})'.format(
+                type(response))
+        headers = getattr(response, 'headers')  # workaround mypy
+        content_type = headers['Content-Type']
         mimetype, options = parse_options_header(content_type)
         if mimetype == 'application/x-www-form-urlencoded':
             token_data = url_decode_stream(response)
         elif mimetype == 'application/json':
             charset = options.get('charset', 'utf-8')
             token_data = json.load(
-                io.TextIOWrapper(response, encoding=charset)
+                io.TextIOWrapper(cast(IO[bytes], response), encoding=charset)
             )
         else:
             response.close()

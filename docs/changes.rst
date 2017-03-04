@@ -15,6 +15,8 @@ To be released.
   base team implementations for OAuth.
 - Added ``alias_namer`` option to :class:`CloudRemoteSet
   <geofront.backends.cloud.CloudRemoteSet>` constructor.
+- Added :const:`geofront.team.GroupSet` type which is alias of
+  :class:`~typing.AbstractSet`\ [:class:`~typing.Hashable`].
 - Now master key can be found without token through
   :http:get:`/masterkey/` API.
 - Deprecated :http:get:`/tokens/(token_id:token_id)/masterkey/`.

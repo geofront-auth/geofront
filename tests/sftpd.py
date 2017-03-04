@@ -2,7 +2,7 @@ import os.path
 try:
     import selectors
 except ImportError:
-    from asyncio import selectors
+    from asyncio import selectors  # type: ignore
 import socket
 import threading
 import time

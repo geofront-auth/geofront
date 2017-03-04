@@ -20,7 +20,7 @@ remote nodes.
 
 Geofront provides builtin :class:`~.backends.cloud.CloudRemoteSet`,
 a subtype of :class:`RemoteSet` (which is alias of
-:class:`typing.Mapping`[:class:`str`, :class:`Remote`]), that proxies to
+:class:`~typing.Mapping`\ [:class:`str`, :class:`Remote`]), that proxies to
 the list dynamically made by cloud providers.
 
 .. versionchanged:: 0.2.0
@@ -34,10 +34,12 @@ import datetime
 import io
 import itertools
 import logging
-import numbers
 import threading
 import time
-import typing
+from typing import (TYPE_CHECKING,
+                    AbstractSet, Callable, ItemsView, Iterable, Iterator,
+                    List, Mapping, Optional, Tuple, Union, ValuesView,
+                    cast)
 
 from paramiko.pkey import PKey
 from paramiko.sftp_client import SFTPClient
@@ -46,6 +48,10 @@ from typeguard import typechecked
 
 from .identity import Identity
 from .keystore import format_openssh_pubkey, parse_openssh_pubkey
+from .team import GroupSet
+
+if TYPE_CHECKING:
+    from typing import Set  # noqa: F401
 
 __all__ = ('AuthorizedKeyList', 'DefaultPermissionPolicy',
            'GroupMetadataPermissionPolicy', 'PermissionPolicy',
@@ -62,10 +68,10 @@ class Remote:
     :type host: :class:`str`
     :param port: the port number to :program:`ssh`.
                  the default is 22 which is the default :program:`ssh` port
-    :type port: :class:`numbers.Integral`
+    :type port: :class:`int`
     :param metadata: optional metadata mapping.  keys and values have to
                      be all strings.  empty by default
-    :type metadata: :class:`typing.Mapping`
+    :type metadata: :class:`~typing.Mapping`\ [:class:`str`, :class:`object`]
 
     .. versionadded:: 0.2.0
        Added optional ``metadata`` parameter.
@@ -73,24 +79,28 @@ class Remote:
     """
 
     #: (:class:`str`) The username to SSH.
-    user = None
+    user = None  # type: str
 
     #: (:class:`str`) The hostname to access.
-    host = None
+    host = None  # type: str
 
-    #: (:class:`numbers.Integral`) The port number to SSH.
-    port = None
+    #: (:class:`int`) The port number to SSH.
+    port = None  # type: int
 
-    #: (:class:`typing.Mapping`) The additional metadata.
+    #: (:class:`~typing.Mapping`\ [:class:`str`, :class:`object`])
+    #: The additional metadata.
     #: Note that it won't affect to :func:`hash()` of the object,
     #: nor :token:`==`/:token:`!=` comparison of the object.
     #:
     #: .. versionadded:: 0.2.0
-    metadata = None
+    metadata = None  # type: Mapping[str, object]
 
     @typechecked
-    def __init__(self, user: str, host: str, port: numbers.Integral=22,
-                 metadata: typing.Mapping={}):
+    def __init__(self,
+                 user: str,
+                 host: str,
+                 port: int=22,
+                 metadata: Mapping[str, object]={}) ->None:
         self.user = user
         self.host = host
         self.port = port
@@ -120,10 +130,10 @@ class Remote:
 #: The abstract type for remote sets.  Keys are strings and values are
 #: :class:`Remote` objects.
 #:
-#: Alias of :class:`typing.AbstractSet`\ [:class:`str`, :class:`Remote`]
+#: Alias of :class:`~typing.AbstractSet`\ [:class:`str`, :class:`Remote`].
 #:
 #: .. versionadded:: 0.4.0
-RemoteSet = typing.Mapping[str, Remote]
+RemoteSet = Mapping[str, Remote]
 
 
 class AuthorizedKeyList(collections.abc.MutableSequence):
@@ -151,16 +161,18 @@ class AuthorizedKeyList(collections.abc.MutableSequence):
     def __init__(self, sftp_client: SFTPClient) -> None:
         self.sftp_client = sftp_client
 
-    def _iterate_lines(self) -> typing.Iterator[str]:
+    def _iterate_lines(self) -> Iterator[str]:
         with io.BytesIO() as fo:
             self.sftp_client.getfo(self.FILE_PATH, fo)
             fo.seek(0)
             for line in fo:
-                line = line.decode().strip()
-                if line:
-                    yield line
+                line_str = line.decode().strip()
+                if line_str:
+                    yield line_str
 
-    def _save(self, lines: list, existing_lines=None) -> None:
+    def _save(self,
+              lines: List[str],
+              existing_lines: Optional[List[str]]=None) -> None:
         check = frozenset(line.strip() for line in lines)
         if existing_lines is None:
             mode = 'w'
@@ -180,7 +192,7 @@ class AuthorizedKeyList(collections.abc.MutableSequence):
                          check, actual)
             raise IOError('failed to write to ' + self.FILE_PATH)
 
-    def __iter__(self) -> typing.Iterator[PKey]:
+    def __iter__(self) -> Iterator[PKey]:
         for line in self._iterate_lines():
             line = line.strip()
             if line:
@@ -192,7 +204,7 @@ class AuthorizedKeyList(collections.abc.MutableSequence):
             i += 1
         return i
 
-    def __getitem__(self, index: typing.Union[slice, int]) -> PKey:
+    def __getitem__(self, index: Union[slice, int]) -> PKey:
         if isinstance(index, slice):
             lines = list(self._iterate_lines())
             return list(map(parse_openssh_pubkey, lines[index]))
@@ -211,11 +223,11 @@ class AuthorizedKeyList(collections.abc.MutableSequence):
             '{0.__module__}.{0.__qualname__}'.format(type(index))
         )
 
-    def __setitem__(self, index: typing.Union[slice, int], value: PKey):
+    def __setitem__(self, index: Union[slice, int], value: PKey):
         lines = list(self._iterate_lines())
         if isinstance(index, slice):
             lines[index] = map(format_openssh_pubkey, value)
-        elif isinstance(index, numbers.Integral):
+        elif isinstance(index, int):
             lines[index] = format_openssh_pubkey(value)
         else:
             raise TypeError(
@@ -225,7 +237,7 @@ class AuthorizedKeyList(collections.abc.MutableSequence):
         self._save(lines)
 
     def insert(self, index: int, value: PKey) -> None:
-        if not isinstance(index, numbers.Integral):
+        if not isinstance(index, int):
             raise TypeError(
                 'authorized_keys indices must be integers, not '
                 '{0.__module__}.{0.__qualname__}'.format(type(index))
@@ -234,14 +246,14 @@ class AuthorizedKeyList(collections.abc.MutableSequence):
         lines.insert(index, format_openssh_pubkey(value))
         self._save(lines)
 
-    def extend(self, values: typing.Iterable[PKey]) -> None:
+    def extend(self, values: Iterable[PKey]) -> None:
         existing_lines = list(self._iterate_lines())
         appended_lines = map(format_openssh_pubkey, values)
         lines = itertools.chain(existing_lines, appended_lines)
         self._save(list(lines), existing_lines=existing_lines)
 
-    def __delitem__(self, index: int) -> None:
-        if not isinstance(index, (numbers.Integral, slice)):
+    def __delitem__(self, index: Union[int, slice]) -> None:
+        if not isinstance(index, (int, slice)):
             raise TypeError(
                 'authorized_keys indices must be integers, not '
                 '{0.__module__}.{0.__qualname__}'.format(type(index))
@@ -252,16 +264,16 @@ class AuthorizedKeyList(collections.abc.MutableSequence):
 
 
 @typechecked
-def authorize(public_keys: typing.AbstractSet[PKey],
+def authorize(public_keys: AbstractSet[PKey],
               master_key: PKey,
               remote: Remote,
               timeout: datetime.timedelta) -> datetime.datetime:
     """Make an one-time authorization to the ``remote``, and then revokes
     it when ``timeout`` reaches soon.
 
-    :param public_keys: the set of public keys (:class:`paramiko.pkey.PKey`)
-                        to authorize
-    :type public_keys: :class:`typing.AbstractSet`[:class:`paramiko.pkey.PKey`]
+    :param public_keys: the set of public keys to authorize
+    :type public_keys:
+        :class:`~typing.AbstractSet`\ [:class:`paramiko.pkey.PKey`]
     :param master_key: the master key (*not owner's key*)
     :type master_key: :class:`paramiko.pkey.PKey`
     :param remote: a remote to grant access permission
@@ -327,7 +339,7 @@ class PermissionPolicy:
     def filter(self,
                remotes: RemoteSet,
                identity: Identity,
-               groups: typing.AbstractSet) -> RemoteSet:
+               groups: GroupSet) -> RemoteSet:
         """Determine which ones in the given ``remotes`` are visible
         to the ``identity`` (which belongs to ``groups``).  The resulted
         mapping of filtered remotes has to be a subset of the input
@@ -341,8 +353,8 @@ class PermissionPolicy:
         :type identity: :class:`~.identity.Identity`
         :param groups: the groups that the given ``identity`` belongs to.
                        every element is a group identifier and
-                       :class:`collections.abc.Hashable`
-        :type groups: :class:`typing.AbstractSet`
+                       :class:`~typing.Hashable`
+        :type groups: :class:`~.team.GroupSet`
         :return: the filtered result remote set
         :rtype: :class:`RemoteSet`
 
@@ -353,7 +365,7 @@ class PermissionPolicy:
     def permit(self,
                remote: Remote,
                identity: Identity,
-               groups: typing.AbstractSet) -> bool:
+               groups: GroupSet) -> bool:
         """Determine whether to allow the given ``identity`` (which belongs
         to ``groups``) to SSH the given ``remote``.
 
@@ -363,8 +375,8 @@ class PermissionPolicy:
         :type identity: :class:`~.identity.Identity`
         :param groups: the groups that the given ``identity`` belongs to.
                        every element is a group identifier and
-                       :class:`collections.abc.Hashable`
-        :type groups: :class:`typing.AbstractSet`
+                       :class:`~typing.Hashable`
+        :type groups: :class:`~.team.GroupSet`
 
         """
         raise NotImplementedError('permit() method has to be implemented')
@@ -381,14 +393,14 @@ class DefaultPermissionPolicy(PermissionPolicy):
     def filter(self,
                remotes: RemoteSet,
                identity: Identity,
-               groups: typing.AbstractSet) -> RemoteSet:
+               groups: GroupSet) -> RemoteSet:
         return remotes
 
     @typechecked
     def permit(self,
                remote: Remote,
                identity: Identity,
-               groups: typing.AbstractSet) -> bool:
+               groups: GroupSet) -> bool:
         return True
 
 
@@ -430,7 +442,7 @@ class GroupMetadataPermissionPolicy(PermissionPolicy):
     """
 
     @typechecked
-    def __init__(self, metadata_key: str, separator: str=None):
+    def __init__(self, metadata_key: str, separator: str=None) -> None:
         self.metadata_key = metadata_key
         self.separator = separator
 
@@ -446,7 +458,7 @@ class GroupMetadataPermissionPolicy(PermissionPolicy):
     def filter(self,
                remotes: RemoteSet,
                identity: Identity,
-               groups: typing.AbstractSet) -> RemoteSet:
+               groups: GroupSet) -> RemoteSet:
         return {alias: remote
                 for alias, remote in remotes.items()
                 if self.permit(remote, identity, groups)}
@@ -455,7 +467,7 @@ class GroupMetadataPermissionPolicy(PermissionPolicy):
     def permit(self,
                remote: Remote,
                identity: Identity,
-               groups: typing.AbstractSet) -> bool:
+               groups: GroupSet) -> bool:
         return not self._get_groups(remote).isdisjoint(groups)
 
 
@@ -512,8 +524,8 @@ class RemoteSetFilter(collections.abc.Mapping):
     :param filter: a filter function which takes key (alias name) and
                    :class:`Remote`, and :const:`False` if exclude it,
                    or :const:`True` if include it
-    :type filter: :class:`typing.Callable`[[:class:`str`, :class:`Remote`],
-                                           :class:`bool`]
+    :type filter: :class:`~typing.Callable`\ [[:class:`str`, :class:`Remote`],
+                                              :class:`bool`]
     :param remote_set: a set of remotes.  it has to be a mapping of
                        alias name to :class:`Remote`
     :type remote_set: :class:`RemoteSet`
@@ -523,12 +535,12 @@ class RemoteSetFilter(collections.abc.Mapping):
     """
 
     def __init__(self,
-                 filter: typing.Callable[[str, Remote], bool],
-                 remote_set: RemoteSet):
+                 filter: Callable[[str, Remote], bool],
+                 remote_set: RemoteSet) -> None:
         self.filter = filter
         self.remote_set = remote_set
 
-    def __iter__(self) -> typing.Iterator[str]:
+    def __iter__(self) -> Iterator[str]:
         for alias, _ in self.items():
             yield alias
 
@@ -544,14 +556,20 @@ class RemoteSetFilter(collections.abc.Mapping):
             i += 1
         return i
 
-    def items(self) -> typing.Iterable[typing.Tuple[str, Remote]]:
+    def iteritems(self) -> Iterable[Tuple[str, Remote]]:
         for alias, remote in self.remote_set.items():
             if self.filter(alias, remote):
                 yield alias, remote
 
-    def values(self) -> typing.ValuesView[Remote]:
+    def items(self) -> ItemsView[str, Remote]:
+        return cast(ItemsView[str, Remote], list(self.iteritems()))
+
+    def itervalues(self) -> Iterable[Remote]:
         for _, remote in self.items():
             yield remote
+
+    def values(self) -> ValuesView[Remote]:
+        return cast(ValuesView[Remote], list(self.itervalues()))
 
 
 class RemoteSetUnion(collections.abc.Mapping):
@@ -615,7 +633,7 @@ class RemoteSetUnion(collections.abc.Mapping):
 
     """
 
-    def __init__(self, *remote_sets):
+    def __init__(self, *remote_sets) -> None:
         if len(remote_sets) < 2:
             raise TypeError('expected two or more arguments')
         for remote_set in remote_sets:
@@ -623,7 +641,7 @@ class RemoteSetUnion(collections.abc.Mapping):
                 raise TypeError('expected mappings, not ' + repr(remote_set))
         self.remote_sets = remote_sets
 
-    def __iter__(self) -> typing.Iterator[str]:
+    def __iter__(self) -> Iterator[str]:
         for alias, _ in self.items():
             yield alias
 
@@ -638,8 +656,8 @@ class RemoteSetUnion(collections.abc.Mapping):
                 continue
         raise KeyError(alias)
 
-    def items(self) -> typing.Iterable[typing.Tuple[str, Remote]]:
-        keys = set()
+    def iteritems(self) -> Iterable[Tuple[str, Remote]]:
+        keys = set()  # type: Set[str]
         for remote_set in reversed(self.remote_sets):
             for alias, remote in remote_set.items():
                 if alias in keys:
@@ -647,6 +665,12 @@ class RemoteSetUnion(collections.abc.Mapping):
                 yield alias, remote
                 keys.add(alias)
 
-    def values(self) -> typing.ValuesView[Remote]:
+    def items(self) -> ItemsView[str, Remote]:
+        return cast(ItemsView[str, Remote], list(self.iteritems()))
+
+    def itervalues(self) -> Iterable[Remote]:
         for _, remote in self.items():
             yield remote
+
+    def values(self) -> ValuesView[Remote]:
+        return cast(ValuesView[Remote], list(self.itervalues()))

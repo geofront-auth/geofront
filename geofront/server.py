@@ -46,6 +46,7 @@ import logging
 import os
 import os.path
 import re
+from typing import Mapping, NamedTuple, Union
 import warnings
 
 from flask import (Flask, Response, current_app, helpers, json, jsonify,
@@ -68,7 +69,7 @@ from .keystore import (DuplicatePublicKeyError, KeyStore, KeyTypeError,
 from .masterkey import MasterKeyStore, PeriodicalRenewal
 from .regen import RegenError, main_parser as regen_main_parser, regenerate
 from .remote import (DefaultPermissionPolicy, PermissionPolicy, Remote,
-                     authorize)
+                     RemoteSet, authorize)
 from .team import AuthenticationError, Team
 from .version import VERSION
 
@@ -286,8 +287,11 @@ def get_token_store() -> BaseCache:
     )
 
 
-#: (:class:`type`) The named tuple type that stores a token.
-Token = collections.namedtuple('Token', 'identity, expires_at')
+#: The named tuple type that stores a token.
+Token = NamedTuple('Token', [
+    ('identity', Identity),
+    ('expires_at', datetime.datetime),
+])
 
 
 @app.route('/tokens/<token_id:token_id>/', methods=['PUT'])
@@ -833,11 +837,11 @@ def delete_public_key(token_id: str, fingerprint: bytes):
     return make_response(list_public_keys(token_id))
 
 
-def get_remote_set() -> collections.abc.Mapping:
+def get_remote_set() -> RemoteSet:
     """Get the configured remote set.
 
     :return: the configured remote set
-    :rtype: :class:`collections.abc.Mapping`
+    :rtype: :class:`~.remote.RemoteSet`
     :raise RuntimeError: if ``'REMOTE_SET'`` is not configured,
                          or it's not a mapping object
 
@@ -878,14 +882,15 @@ def get_permission_policy() -> PermissionPolicy:
     )
 
 
-def remote_dict(remote: Remote) -> collections.abc.Mapping:
+def remote_dict(remote: Remote) -> Mapping[str, Union[str, int]]:
     """Convert a ``remote`` to a simple dictionary that can be serialized
     to JSON.
 
     :param remote: a remote instance to serialize
     :type remote: :class:`~.remote.Remote`
     :return: the converted dictionary
-    :rtype: :class:`collections.abc.Mapping`
+    :rtype: :class:`~typing.Mapping`\ [:class:`~typing.Union`\ [:class:`str`,
+                                                                :class:`int`]]
 
     """
     return {'user': remote.user, 'host': remote.host, 'port': remote.port}
