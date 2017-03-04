@@ -5,10 +5,10 @@
 import base64
 import typing
 
-from paramiko.ecdsakey import ECDSAKey
 from paramiko.dsskey import DSSKey
-from paramiko.rsakey import RSAKey
+from paramiko.ecdsakey import ECDSAKey
 from paramiko.pkey import PKey
+from paramiko.rsakey import RSAKey
 from typeguard import typechecked
 
 from .identity import Identity

@@ -12,6 +12,8 @@ from libcloud.storage.types import ObjectDoesNotExistError, Provider
 from paramiko.rsakey import RSAKey
 from pytest import raises, skip
 
+from ..keystore_test import assert_keystore_compliance
+from ..server_test import DummyTeam, MemoryMasterKeyStore
 from geofront.backends.cloud import (CloudKeyStore, CloudMasterKeyStore,
                                      CloudMasterPublicKeyStore, CloudRemoteSet,
                                      get_metadata, supports_metadata)
@@ -20,8 +22,6 @@ from geofront.keystore import (format_openssh_pubkey, get_key_fingerprint,
                                parse_openssh_pubkey)
 from geofront.masterkey import EmptyStoreError, read_private_key_file
 from geofront.remote import Remote
-from ..keystore_test import assert_keystore_compliance
-from ..server_test import DummyTeam, MemoryMasterKeyStore
 
 
 @supports_metadata.register(DummyNodeDriver)

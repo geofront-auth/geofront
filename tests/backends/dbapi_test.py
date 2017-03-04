@@ -1,10 +1,10 @@
 from pytest import fail, fixture, skip, yield_fixture
 from werkzeug.utils import import_string
 
-from geofront.backends.dbapi import DatabaseKeyStore
-from geofront.identity import Identity
 from ..keystore_test import assert_keystore_compliance
 from ..server_test import DummyTeam
+from geofront.backends.dbapi import DatabaseKeyStore
+from geofront.identity import Identity
 
 
 DRIVERS = {

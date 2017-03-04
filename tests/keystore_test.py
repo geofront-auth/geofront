@@ -1,7 +1,7 @@
 import collections.abc
 
-from paramiko.ecdsakey import ECDSAKey
 from paramiko.dsskey import DSSKey
+from paramiko.ecdsakey import ECDSAKey
 from paramiko.rsakey import RSAKey
 from pytest import fixture, raises
 

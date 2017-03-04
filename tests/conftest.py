@@ -8,9 +8,9 @@ from paramiko.sftp_client import SFTPClient
 from paramiko.transport import Transport
 from pytest import fixture, yield_fixture
 
-from geofront.keystore import format_openssh_pubkey
-from geofront import server
 from .sftpd import start_server
+from geofront import server
+from geofront.keystore import format_openssh_pubkey
 
 
 # By default it's a minute, but a minute is enough to make the test suite

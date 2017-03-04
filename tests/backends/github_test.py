@@ -2,10 +2,10 @@ import typing
 
 from pytest import fixture, skip, yield_fixture
 
+from ..keystore_test import assert_keystore_compliance
 from geofront.backends.github import GitHubKeyStore, GitHubOrganization
 from geofront.backends.oauth import request
 from geofront.identity import Identity
-from ..keystore_test import assert_keystore_compliance
 
 
 @fixture(scope='session')

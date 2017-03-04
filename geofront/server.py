@@ -56,10 +56,10 @@ from typeguard import typechecked
 from waitress import serve
 from waitress.adjustments import Adjustments
 from werkzeug.contrib.cache import BaseCache, SimpleCache
+from werkzeug.contrib.fixers import ProxyFix
 from werkzeug.exceptions import BadRequest, Forbidden, HTTPException, NotFound
 from werkzeug.routing import BaseConverter, ValidationError
 from werkzeug.utils import html
-from werkzeug.contrib.fixers import ProxyFix
 
 from .identity import Identity
 from .keystore import (DuplicatePublicKeyError, KeyStore, KeyTypeError,

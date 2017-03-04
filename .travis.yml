@@ -29,6 +29,7 @@ script:
 - python -mgeofront.version
 - >
     tox -- \
+        --flake8 \
         --cov geofront \
         --durations=20 \
         --sshd-state-timeout=60 \

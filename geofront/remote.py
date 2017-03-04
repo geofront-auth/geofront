@@ -42,9 +42,9 @@ import typing
 from paramiko.pkey import PKey
 from paramiko.sftp_client import SFTPClient
 from paramiko.transport import Transport
-from geofront.identity import Identity
 from typeguard import typechecked
 
+from .identity import Identity
 from .keystore import format_openssh_pubkey, parse_openssh_pubkey
 
 __all__ = ('AuthorizedKeyList', 'DefaultPermissionPolicy',
@@ -120,7 +120,7 @@ class Remote:
 #: The abstract type for remote sets.  Keys are strings and values are
 #: :class:`Remote` objects.
 #:
-#: Alias of :class:`typing.AbstractSet`[:class:`str`, :class:`Remote`]
+#: Alias of :class:`typing.AbstractSet`\ [:class:`str`, :class:`Remote`]
 #:
 #: .. versionadded:: 0.4.0
 RemoteSet = typing.Mapping[str, Remote]
