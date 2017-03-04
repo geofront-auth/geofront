@@ -59,6 +59,7 @@ def fx_db_module(request, tmpdir):
                 del kwargs[option]
     else:
         fail('arguments to {}.connect() are not ready'.format(import_name))
+    kwargs = {k: v for k, v in kwargs.items() if v is not None}
     yield db_module, args, kwargs
     if 'sqlite' not in import_name.lower():
         connection = db_module.connect(*args, **kwargs)
