@@ -231,10 +231,36 @@ be uppercase.
 
    .. versionadded:: 0.2.0
 
+.. data:: MASTER_KEY_TYPE
+
+   (:class:`~typing.Type`\ [:class:`~paramiko.pkey.PKey`])  The type of
+   the master key that will be generated.  It has to be a subclass of
+   :class:`paramiko.pkey.PKey`:
+
+   RSA
+      :class:`paramiko.rsakey.RSAKey`
+   ECDSA
+      :class:`paramiko.ecdsakey.ECDSAKey`
+   DSA (DSS)
+      :class:`paramiko.dsskey.DSSKey`
+
+   :class:`~paramiko.rsakey.RSAKey` by default.
+
+   .. versionadded:: 0.4.0
+
 .. data:: MASTER_KEY_BITS
 
-   The number of bits the generated master key should be.
+   (:class:`~typing.Optional`\ [:class:`int`]) The number of bits
+   the generated master key should be.
    2048 by default.
+
+    .. versionchanged:: 0.4.0
+       Since the appropriate :data:`MASTER_KEY_BITS` depends on its
+       :data:`MASTER_KEY_TYPE`, the default value of :data:`MASTER_KEY_BITS`
+       became :const:`None` (from 2048).
+
+       :const:`None` means to follow :const:`MASTER_KEY_TYPE`'s own default
+       (appropriate) bits.
 
    .. versionadded:: 0.2.0
 

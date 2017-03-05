@@ -1,15 +1,19 @@
 import datetime
 import os.path
 import time
+from typing import Type
 
+from paramiko.ecdsakey import ECDSAKey
 from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
-from pytest import raises
+from pytest import mark, raises
 
 from geofront.keystore import parse_openssh_pubkey
 from geofront.masterkey import (EmptyStoreError, FileSystemMasterKeyStore,
-                                PeriodicalRenewal, TwoPhaseRenewal,
-                                read_private_key_file, renew_master_key)
+                                KeyGenerationError, PeriodicalRenewal,
+                                TwoPhaseRenewal,
+                                generate_key, read_private_key_file,
+                                renew_master_key)
 from geofront.remote import Remote
 
 
@@ -98,7 +102,16 @@ def test_two_phase_renewal_stop(fx_authorized_servers, fx_master_key):
         assert old_key in authorized_key_set(path)
 
 
-def test_renew_master_key(fx_authorized_servers, fx_master_key, tmpdir):
+@mark.parametrize('key_type, bits', [
+    (RSAKey, None),
+    (RSAKey, 1024),
+    (RSAKey, 2048),
+    (ECDSAKey, None),
+    (ECDSAKey, 256),
+    (ECDSAKey, 384),
+])
+def test_renew_master_key(fx_authorized_servers, fx_master_key, tmpdir,
+                          key_type: Type[PKey], bits: int):
     remote_set = {
         Remote('user', '127.0.0.1', port)
         for port in fx_authorized_servers
@@ -107,7 +120,9 @@ def test_renew_master_key(fx_authorized_servers, fx_master_key, tmpdir):
     store.save(fx_master_key)
     for t, path, ev in fx_authorized_servers.values():
         assert authorized_key_set(path) == {fx_master_key}
-    new_key = renew_master_key(remote_set, store)
+    new_key = renew_master_key(remote_set, store, key_type, bits)
+    assert new_key.get_bits() == bits or bits is None
+    assert isinstance(new_key, key_type)
     assert new_key != fx_master_key
     assert store.load() == new_key
     for t, path, ev in fx_authorized_servers.values():
@@ -191,3 +206,31 @@ def test_periodical_renewal(request, fx_authorized_servers, fx_master_key,
     assert store.load() == last_key
     for t, path, ev in fx_authorized_servers.values():
         assert authorized_key_set(path) == {last_key}
+
+
+def test_generate_key():
+    default_default = generate_key()
+    assert isinstance(default_default, RSAKey)
+    assert default_default.get_bits() == 1024
+    rsa_default = generate_key(RSAKey)
+    assert rsa_default.get_bits() == 1024
+    assert isinstance(rsa_default, RSAKey)
+    rsa_2048 = generate_key(RSAKey, 2048)
+    assert isinstance(rsa_2048, RSAKey)
+    assert rsa_2048.get_bits() == 2048
+    ecdsa_default = generate_key(ECDSAKey)
+    assert isinstance(ecdsa_default, ECDSAKey)
+    assert ecdsa_default.get_bits() == 256
+    ecdsa_256 = generate_key(ECDSAKey, 256)
+    assert isinstance(ecdsa_256, ECDSAKey)
+    assert ecdsa_256.get_bits() == 256
+    ecdsa_384 = generate_key(ECDSAKey, 384)
+    assert isinstance(ecdsa_384, ECDSAKey)
+    assert ecdsa_384.get_bits() == 384
+    ecdsa_521 = generate_key(ECDSAKey, 521)
+    assert isinstance(ecdsa_521, ECDSAKey)
+    assert ecdsa_521.get_bits() == 521
+    with raises(KeyGenerationError):
+        generate_key(RSAKey, 256)
+    with raises(KeyGenerationError):
+        generate_key(ECDSAKey, 1024)

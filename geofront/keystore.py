@@ -27,12 +27,14 @@ __all__ = ('KEY_TYPES', 'AuthorizationError', 'DuplicatePublicKeyError',
 #: The mapping of supported key types.
 #:
 #: .. versionadded:: 0.4.0
-#:    Added ``ecdsa-sha2-nistp256`` (:class:`~paramiko.ecdsakey.ECDSAKey)
-#:    support.
+#:    Added ``ecdsa-sha2-nistp256``, ``ecdsa-sha2-nistp384``, and
+#:    ``ecdsa-sha2-nistp521`` (:class:`~paramiko.ecdsakey.ECDSAKey`) support.
 KEY_TYPES = {
     'ssh-rsa': RSAKey,
     'ssh-dss': DSSKey,
     'ecdsa-sha2-nistp256': ECDSAKey,
+    'ecdsa-sha2-nistp384': ECDSAKey,
+    'ecdsa-sha2-nistp521': ECDSAKey,
 }  # type: Mapping[str, Type[PKey]]
 
 
@@ -49,7 +51,8 @@ def parse_openssh_pubkey(line: str) -> PKey:
     :raise KeyTypeError: when it's an unsupported key type
 
     .. versionchanged:: 0.4.0
-       Added ``ecdsa-sha2-nistp256`` (:class:`~paramiko.ecdsakey.ECDSAKey)
+       Added ``ecdsa-sha2-nistp256``, ``ecdsa-sha2-nistp384``, and
+       ``ecdsa-sha2-nistp521`` (:class:`~paramiko.ecdsakey.ECDSAKey`)
        support.
 
     """

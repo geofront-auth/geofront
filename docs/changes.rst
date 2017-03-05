@@ -11,8 +11,25 @@ To be released.
   possible to parse ECDSA public keys.
 - Geofront now supports Atlassian Bitbucket Cloud.
   See also :mod:`geofront.backends.bitbucket` module.  [:issue:`4`]
+- Geofront now can generate other than RSA master key (e.g. ECDSA).
+  The new configuration :data:`~config.MASTER_KEY_TYPE` is added to
+  choose the type of the master key Geofront will generate.
+  It's :class:`~paramiko.rsakey.RSAKey` by default.
 - Added :mod:`geofront.backends.oauth` module which provides
   base team implementations for OAuth.
+- Added ``key_type`` optional parameter to
+  :func:`~geofront.masterkey.renew_master_key()` function,
+  :class:`~geofront.masterkey.PeriodicalRenewal` class constructor, and
+  :func:`~geofront.regent.regenerate()` function.
+- Since ``key_type`` now can be other than :class:`~paramiko.rsakey.RSAKey`,
+  the ``bits`` optional parameter of
+  :func:`~geofront.masterkey.renew_master_key()` function,
+  :class:`~geofront.masterkey.PeriodicalRenewal` class constructor, and
+  :func:`~geofront.regent.regenerate()` function now have the default value
+  :const:`None` instead of 2048.  :const:`None` automatically choose
+  the appropriate bits of the ``key_type``.
+- Added :func:`~geofront.masterkey.generate_key()` function and
+  :exc:`~geofront.masterkey.KeyGenerationError` that it raises.
 - Added ``alias_namer`` option to :class:`CloudRemoteSet
   <geofront.backends.cloud.CloudRemoteSet>` constructor.
 - Added :const:`geofront.team.GroupSet` type which is alias of

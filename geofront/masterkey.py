@@ -20,11 +20,12 @@ For more details, see also :class:`TwoPhaseRenewal`.
 
 """
 import datetime
+import inspect
 import logging
 import os.path
 import socket
 import threading
-from typing import IO, TYPE_CHECKING, AbstractSet
+from typing import IO, TYPE_CHECKING, AbstractSet, Optional, Type
 
 from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
@@ -37,11 +38,11 @@ from .keystore import get_key_fingerprint
 from .remote import AuthorizedKeyList, Remote
 
 if TYPE_CHECKING:
-    from typing import Dict, Optional, Tuple  # noqa: F401
+    from typing import Dict, Tuple  # noqa: F401
 
-__all__ = ('EmptyStoreError', 'FileSystemMasterKeyStore', 'MasterKeyStore',
-           'PeriodicalRenewal', 'TwoPhaseRenewal',
-           'read_private_key_file', 'renew_master_key')
+__all__ = ('EmptyStoreError', 'FileSystemMasterKeyStore', 'KeyGenerationError',
+           'MasterKeyStore', 'PeriodicalRenewal', 'TwoPhaseRenewal',
+           'generate_key', 'read_private_key_file', 'renew_master_key')
 
 
 class MasterKeyStore:
@@ -183,9 +184,57 @@ class TwoPhaseRenewal:
 
 
 @typechecked
+def generate_key(key_type: Type[PKey]=RSAKey,
+                 bits: Optional[int]=None) -> PKey:
+    """Generate a new key of the given ``key_type``.  If ``bits`` is omitted
+    generate one with an appropriate bits.
+
+    :param key_type: the type of a new master key.
+                     it has to be a subclass of :class:`~paramiko.pkey.PKey`.
+                     :class:`~paramiko.rsakey.RSAKey` by default.
+                     (the default ``key_type`` can change in the future.)
+    :type key_type: :class:`~typing.Type`\ [:class:`~paramiko.pkey.PKey`]
+    :param bits: the number of bits the generated key should be.
+                 if ``key_type`` is :class:`~paramiko.rsakey.RSAKey`
+                 it has to be 512 at least.
+                 the default value is :const:`None`, which means to
+                 ``key_type``'s own default (appropriate) bits
+    :return: a generate key which is an instance of the given ``key_type``
+    :rtype: :class:`~paramiko.pkey.PKey`
+    :raise KeyGenerationError: when it failed to generate a key using given
+                               options (``key_type`` and ``bits``)
+
+    .. versionadded:: 0.4.0
+
+    """
+    generate = key_type.generate  # type: ignore
+    bits_param = inspect.signature(generate).parameters['bits']
+    if bits is None and bits_param.default is inspect.Signature.empty:
+        new_key = generate(bits=1024)  # FIXME
+    else:
+        try:
+            new_key = generate(bits=bits)
+        except ValueError as e:
+            raise KeyGenerationError(
+                '{0.__name__}: {1!s}'.format(key_type, e)
+            ) from e
+    return new_key
+
+
+class KeyGenerationError(ValueError):
+    """A subtype of :exc:`ValueError` which rise when failed to
+    generate a key.
+
+    .. versionadded:: 0.4.0
+
+    """
+
+
+@typechecked
 def renew_master_key(servers: AbstractSet[Remote],
                      key_store: MasterKeyStore,
-                     bits: int=2048) -> PKey:
+                     key_type: Type[PKey]=RSAKey,
+                     bits: Optional[int]=None) -> PKey:
     """Renew the master key.  It creates a new master key, makes ``servers``
     to authorize the new key, replaces the existing master key with the
     new key in the ``key_store``, and then makes ``servers`` to deauthorize
@@ -198,12 +247,28 @@ def renew_master_key(servers: AbstractSet[Remote],
     :type servers: :class:`~typing.AbstractSet`\ [:class:`~.remote.Remote`]
     :param key_store: the master key store to update
     :type key_store: :class:`MasterKeyStore`
+    :param key_type: the type of a new master key.
+                     it has to be a subclass of :class:`~paramiko.pkey.PKey`.
+                     :class:`~paramiko.rsakey.RSAKey` by default.
+                     (the default ``key_type`` can change in the future.)
+    :type key_type: :class:`~typing.Type`\ [:class:`~paramiko.pkey.PKey`]
     :param bits: the number of bits the generated key should be.
-                 it has to be 1024 at least, and a multiple of 256.
-                 2048 by default
-    :type bits: :class:`int`
+                 if ``key_type`` is :class:`~paramiko.rsakey.RSAKey`
+                 it has to be 512 at least.
+                 the default value is :const:`None`, which means to
+                 ``key_type``'s own default (appropriate) bits
+    :type bits: :class:`~typing.Optional`\ [:class:`int`]
     :returns: the created new master key
     :rtype: :class:`paramiko.pkey.PKey`
+
+    .. versionadded:: 0.4.0
+       The ``key_type`` optional parameter.
+
+    .. versionchanged:: 0.4.0
+       Since the appropriate ``bits`` depends on its ``key_type``,
+       the default value of ``bits`` became :const:`None` (from 2048).
+       :const:`None` means to follow ``key_type``'s own default (appropriate)
+       bits.
 
     .. versionadded:: 0.2.0
        The ``bits`` optional parameter.
@@ -213,7 +278,7 @@ def renew_master_key(servers: AbstractSet[Remote],
     logger.info('renew the master key...')
     old_key = key_store.load()
     logger.info('the existing master key: %s', get_key_fingerprint(old_key))
-    new_key = RSAKey.generate(bits)
+    new_key = generate_key(key_type, bits)
     logger.info('created new master key: %s', get_key_fingerprint(new_key))
     logger.info('authorize the new master key...')
     with TwoPhaseRenewal(servers, old_key, new_key):
@@ -237,13 +302,29 @@ class PeriodicalRenewal(threading.Thread):
     :type key_store: :class:`MasterKeyStore`
     :param interval: the interval to renew
     :type interval: :class:`datetime.timedelta`
+    :param key_type: the type of a new master key.
+                     it has to be a subclass of :class:`~paramiko.pkey.PKey`.
+                     :class:`~paramiko.rsakey.RSAKey` by default.
+                     (the default ``key_type`` can change in the future.)
+    :type key_type: :class:`~typing.Type`\ [:class:`~paramiko.pkey.PKey`]
     :param bits: the number of bits the generated key should be.
-                 it has to be 1024 at least, and a multiple of 256.
-                 2048 by default
-    :type bits: :class:`int`
+                 if ``key_type`` is :class:`~paramiko.rsakey.RSAKey`
+                 it has to be 512 at least.
+                 the default value is :const:`None`, which means to
+                 ``key_type``'s own default (appropriate) bits
+    :type bits: :class:`~typing.Optional`\ [:class:`int`]
     :param start: whether to start the background thread immediately.
                   :const:`True` by default
     :type start: :class:`bool`
+
+    .. versionadded:: 0.4.0
+       The ``key_type`` optional parameter.
+
+    .. versionchanged:: 0.4.0
+       Since the appropriate ``bits`` depends on its ``key_type``,
+       the default value of ``bits`` became :const:`None` (from 2048).
+       :const:`None` means to follow ``key_type``'s own default (appropriate)
+       bits.
 
     .. versionadded:: 0.2.0
        The ``bits`` optional parameter.
@@ -255,12 +336,14 @@ class PeriodicalRenewal(threading.Thread):
                  servers: AbstractSet[Remote],
                  key_store: MasterKeyStore,
                  interval: datetime.timedelta,
-                 bits: int=2048,
+                 key_type: Type[PKey]=RSAKey,
+                 bits: Optional[int]=None,
                  start: bool=True) -> None:
         super().__init__()
         self.servers = servers
         self.key_store = key_store
         self.interval = interval
+        self.key_type = key_type
         self.bits = bits
         self.terminated = threading.Event()
         if self.start:
@@ -273,7 +356,8 @@ class PeriodicalRenewal(threading.Thread):
             terminated.wait(seconds)
             if terminated.is_set():
                 break
-            renew_master_key(self.servers, self.key_store, self.bits)
+            renew_master_key(self.servers, self.key_store,
+                             self.key_type, self.bits)
 
     def terminate(self):
         """Graceful termination."""

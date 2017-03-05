@@ -7,16 +7,19 @@
 import argparse
 import logging
 import os.path
+from typing import Optional, Mapping, Tuple, Type
 
+from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
 from typeguard import typechecked
 
 from .keystore import get_key_fingerprint
-from .masterkey import EmptyStoreError, MasterKeyStore, renew_master_key
+from .masterkey import (EmptyStoreError, KeyGenerationError, MasterKeyStore,
+                        generate_key, renew_master_key)
 from .remote import RemoteSet
 from .version import VERSION
 
-__all__ = 'main', 'main_parser', 'regenerate'
+__all__ = 'main', 'main_parser', 'get_regen_options', 'regenerate'
 
 
 @typechecked
@@ -54,7 +57,8 @@ def main_parser(
 @typechecked
 def regenerate(master_key_store: MasterKeyStore,
                remote_set: RemoteSet,
-               bits: int=2048,
+               key_type: Type[PKey]=RSAKey,
+               bits: Optional[int]=None,
                *,
                create_if_empty: bool,
                renew_unless_empty: bool) -> None:
@@ -65,7 +69,7 @@ def regenerate(master_key_store: MasterKeyStore,
     except EmptyStoreError:
         if create_if_empty:
             logger.warn('no master key;  create one...')
-            key = RSAKey.generate(bits)
+            key = generate_key(key_type, bits)
             master_key_store.save(key)
             logger.info('created new master key: %s', get_key_fingerprint(key))
         else:
@@ -75,11 +79,34 @@ def regenerate(master_key_store: MasterKeyStore,
         if renew_unless_empty:
             renew_master_key(frozenset(remote_set.values()),
                              master_key_store,
-                             bits)
+                             key_type, bits)
 
 
 class RegenError(Exception):
     """Error raised by :func:`regenerate()`."""
+
+
+def get_regen_options(config: Mapping[str, object]) -> Tuple[Type[PKey],
+                                                             Optional[int]]:
+    key_type = config.get('MASTER_KEY_TYPE', RSAKey)
+    if not isinstance(key_type, type):
+        raise RegenOptionError('MASTER_KEY_TYPE configuration must be a type, '
+                               'not ' + repr(key_type))
+    elif not issubclass(key_type, PKey):
+        raise RegenOptionError(
+            'MASTER_KEY_TYPE configuration must be a subclass of '
+            '{0.__module__}.{0.__qualname__}, but {1.__module__}.'
+            '{1.__qualname__} is not'.format(PKey, key_type)
+        )
+    bits = config['MASTER_KEY_BITS']
+    if bits is not None and not isinstance(bits, int):
+        raise RegenOptionError('MASTER_KEY_BITS configuration must be an '
+                               'integer, not ' + repr(bits))
+    return RSAKey, bits
+
+
+class RegenOptionError(RegenError):
+    """Error raised by :func:`get_regen_options()`."""
 
 
 def main():  # pragma: no cover
@@ -101,8 +128,11 @@ def main():  # pragma: no cover
         regenerate(
             get_master_key_store(),
             get_remote_set(),
+            *get_regen_options(app.config),
             create_if_empty=args.create_master_key,
             renew_unless_empty=True
         )
+    except KeyGenerationError as e:
+        parser.error(str(e))
     except RegenError as e:
         parser.error(str(e))

@@ -66,8 +66,9 @@ from .identity import Identity
 from .keystore import (DuplicatePublicKeyError, KeyStore, KeyTypeError,
                        format_openssh_pubkey, get_key_fingerprint,
                        parse_openssh_pubkey)
-from .masterkey import MasterKeyStore, PeriodicalRenewal
-from .regen import RegenError, main_parser as regen_main_parser, regenerate
+from .masterkey import KeyGenerationError, MasterKeyStore, PeriodicalRenewal
+from .regen import (RegenError, get_regen_options,
+                    main_parser as regen_main_parser, regenerate)
 from .remote import (DefaultPermissionPolicy, PermissionPolicy, Remote,
                      RemoteSet, authorize)
 from .team import AuthenticationError, Team
@@ -140,7 +141,7 @@ app.url_map.converters.update(
 )
 app.config.update(  # Config defaults
     PERMISSION_POLICY=DefaultPermissionPolicy(),
-    MASTER_KEY_BITS=2048,
+    MASTER_KEY_BITS=None,
     MASTER_KEY_RENEWAL=datetime.timedelta(days=1),
     TOKEN_EXPIRE=datetime.timedelta(days=7),
     ENABLE_HSTS=False,
@@ -1066,23 +1067,18 @@ def main():  # pragma: no cover
     master_key_store = get_master_key_store()
     remote_set = get_remote_set()
     servers = frozenset(remote_set.values())
-    master_key_bits = app.config['MASTER_KEY_BITS']
-    if not isinstance(master_key_bits, int):
-        parser.error('MASTER_KEYS_BITS configuration must be an integer, '
-                     'not ' + repr(master_key_bits))
-    elif master_key_bits < 1024:
-        parser.error('MASTER_KEY_BITS has to be 1024 at least.')
-    elif master_key_bits % 256:
-        parser.error('MASTER_KEY_BITS has to be a multiple of 256.')
     try:
+        regen_options = get_regen_options(app.config)
         regenerate(
             master_key_store,
             remote_set,
-            master_key_bits,
+            *regen_options,
             create_if_empty=args.create_master_key or args.renew_master_key,
             renew_unless_empty=(args.renew_master_key and
                                 not os.environ.get('WERKZEUG_RUN_MAIN'))
         )
+    except KeyGenerationError as e:
+        parser.error(str(e))
     except RegenError as e:
         parser.error(str(e))
     master_key_renewal_interval = app.config['MASTER_KEY_RENEWAL']
@@ -1097,7 +1093,7 @@ def main():  # pragma: no cover
             servers,
             master_key_store,
             master_key_renewal_interval,
-            master_key_bits
+            *regen_options
         )
     waitress_options = {}
     if args.trusted_proxy:
