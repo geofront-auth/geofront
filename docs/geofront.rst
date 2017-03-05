@@ -12,5 +12,4 @@
       geofront/remote
       geofront/server
       geofront/team
-      geofront/util
       geofront/version

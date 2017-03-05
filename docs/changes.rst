@@ -7,8 +7,8 @@ Version 0.4.0
 To be released.
 
 - Geofront now supports ECDSA key.
-  Under the hood, :func:`parse_openssh_pubkey()` function becomes to be
-  possible to parse ECDSA public keys.
+  Under the hood, :func:`geofront.keystore.parse_openssh_pubkey()` function
+  becomes to be possible to parse ECDSA public keys.
 - Geofront now supports Atlassian Bitbucket Cloud.
   See also :mod:`geofront.backends.bitbucket` module.  [:issue:`4`]
 - Geofront now can generate other than RSA master key (e.g. ECDSA).
@@ -20,12 +20,12 @@ To be released.
 - Added ``key_type`` optional parameter to
   :func:`~geofront.masterkey.renew_master_key()` function,
   :class:`~geofront.masterkey.PeriodicalRenewal` class constructor, and
-  :func:`~geofront.regent.regenerate()` function.
+  :func:`~geofront.regen.regenerate()` function.
 - Since ``key_type`` now can be other than :class:`~paramiko.rsakey.RSAKey`,
   the ``bits`` optional parameter of
   :func:`~geofront.masterkey.renew_master_key()` function,
   :class:`~geofront.masterkey.PeriodicalRenewal` class constructor, and
-  :func:`~geofront.regent.regenerate()` function now have the default value
+  :func:`~geofront.regen.regenerate()` function now have the default value
   :const:`None` instead of 2048.  :const:`None` automatically choose
   the appropriate bits of the ``key_type``.
 - Added :func:`~geofront.masterkey.generate_key()` function and

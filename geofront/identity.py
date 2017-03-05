@@ -16,7 +16,7 @@ class Identity(collections.abc.Hashable):
     each public key in the store.
 
     :param team_type: a sbclass of :class:`~.team.Team`
-    :type team_type: :class:`type`
+    :type team_type: :class:`~typing.Type`\ [:class:`~.team.Team`]
     :param identifier: any hashable identifier for the owner.
                        it's interpreted by ``team_type``
     :type identifier: :class:`~typing.Hashable`
@@ -24,7 +24,7 @@ class Identity(collections.abc.Hashable):
 
     """
 
-    #: (:class:`~typing.Type`\ [:class:`~.team.Type`]) A subclass of
+    #: (:class:`~typing.Type`\ [:class:`~.team.Team`]) A subclass of
     #: :class:`~.team.Team`.
     team_type = None  # type: Type[Team]
 

@@ -275,11 +275,11 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    'python': ('http://docs.python.org/3/', None),
+    'python': ('https://docs.python.org/3/', None),
     'paramiko': ('http://docs.paramiko.org/en/2.0/', None),
     'werkzeug': ('http://werkzeug.pocoo.org/docs/', None),
     'flask': ('http://flask.pocoo.org/docs/', None),
-    'libcloud': ('https://libcloud.readthedocs.org/en/latest/', None),
+    'libcloud': ('https://libcloud.readthedocs.io/en/latest/', None),
     'waitress': ('http://docs.pylonsproject.org/projects/waitress/en/latest/',
                  None),
 }

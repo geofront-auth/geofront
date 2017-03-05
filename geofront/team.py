@@ -30,7 +30,7 @@ __all__ = ('AuthenticationContinuation', 'AuthenticationError',
 #: identifiers.  Group identifiers are usually a string, but can be anything
 #: hashable.
 #:
-#: Alias of :class:`~typing.AbstractSet`\ [:class:`~typing.Hashable`]
+#: Alias of :class:`~typing.AbstractSet`\ [:class:`~typing.Hashable`].
 #:
 #: .. versionadded:: 0.4.0
 GroupSet = AbstractSet[Hashable]
@@ -190,7 +190,7 @@ class Team:
         :param identity: the identity to list his/her groups
         :type identity: :class:`~.identity.Identity`
         :return: the set of groups associated with the ``identity``
-        :rtype: :class:`GroupSet`
+        :rtype: :const:`GroupSet`
 
         .. versionadded:: 0.2.0
 

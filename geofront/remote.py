@@ -354,7 +354,7 @@ class PermissionPolicy:
         :param groups: the groups that the given ``identity`` belongs to.
                        every element is a group identifier and
                        :class:`~typing.Hashable`
-        :type groups: :class:`~.team.GroupSet`
+        :type groups: :const:`~.team.GroupSet`
         :return: the filtered result remote set
         :rtype: :class:`RemoteSet`
 
@@ -376,7 +376,7 @@ class PermissionPolicy:
         :param groups: the groups that the given ``identity`` belongs to.
                        every element is a group identifier and
                        :class:`~typing.Hashable`
-        :type groups: :class:`~.team.GroupSet`
+        :type groups: :const:`~.team.GroupSet`
 
         """
         raise NotImplementedError('permit() method has to be implemented')
