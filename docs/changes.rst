@@ -41,6 +41,9 @@ To be released.
   Use :http:get:`/masterkey/` instead.
   The existing url redirects to the new url :http:get:`/masterkey/` with
   :http:statuscode:`301`.
+- Fixed bug that :meth:`CloudKeyStore.list_keys()
+  <~geofront.backends.cloud.CloudKeyStore>` sometimes returned an empty set
+  even if there were stored keys.
 - Geofront becomes to require Paramiko 2.0.1 or higher.
 - Geofront becomes to require Werkzeug 0.11 or higher.
 - Geofront becomes to require Flask 0.10.1 or higher.

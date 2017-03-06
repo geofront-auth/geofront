@@ -32,6 +32,7 @@ from libcloud.compute.types import KeyPairDoesNotExistError
 from libcloud.storage.base import Container, StorageDriver
 from libcloud.storage.drivers.s3 import S3StorageDriver
 from libcloud.storage.types import ObjectDoesNotExistError
+from paramiko.ecdsakey import ECDSAKey
 from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
 from typeguard import typechecked
@@ -325,15 +326,16 @@ class CloudKeyStore(KeyStore):
         cls = type(self)
         sample_keys = cls._sample_keys
         if sample_keys is None:
-            sample_keys = RSAKey.generate(1024), RSAKey.generate(1024)
+            sample_keys = (RSAKey.generate(bits=512),
+                           RSAKey.generate(bits=512),
+                           ECDSAKey.generate(bits=256),
+                           ECDSAKey.generate(bits=256))
             cls._sample_keys = sample_keys
-        sample_name_a = self._get_key_name(identity, sample_keys[0])
-        sample_name_b = self._get_key_name(identity, sample_keys[1])
-        if sample_name_a == sample_name_b:
-            return re.compile('^' + re.escape(sample_name_a) + '$')
-        prefix = os.path.commonprefix([sample_name_a, sample_name_b])
-        postfix = os.path.commonprefix([sample_name_a[::-1],
-                                        sample_name_b[::-1]])[::-1]
+        sample_names = [self._get_key_name(identity, k) for k in sample_keys]
+        if len(frozenset(sample_names)) < 2:
+            return re.compile('^' + re.escape(sample_names[0]) + '$')
+        prefix = os.path.commonprefix(sample_names)
+        postfix = os.path.commonprefix([n[::-1] for n in sample_names])[::-1]
         return re.compile(
             '^{}.+?{}$'.format(re.escape(prefix), re.escape(postfix))
         )

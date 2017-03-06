@@ -156,27 +156,36 @@ def test_cloud_key_store():
 
 
 def test_cloud_key_store_get_key_name_pattern():
-    driver = KeyPairSupportedDummyNodeDriver('')
-    keystore = CloudKeyStore(driver)
-    identity = Identity(DummyTeam, 'abcd')
-    pattern = keystore._get_key_name_pattern(identity)
+    for i in range(100):
+        CloudKeyStore._sample_keys = None
+        # repeat for better reproducibility
 
-    def random_fp():
-        return ':'.join(
-            map('{:02x}'.format, hashlib.md5(os.urandom(100)).digest())
-        )
-    actual = {
-        'tests.server_test.DummyTeam abcd ' + random_fp()
-        for _ in range(5)
-    }
-    result = filter(pattern.match, actual | {
-        'tests.server_test.DummyTeam defg ' + random_fp(),
-        'tests.server_test.OtherTeam abcd ' + random_fp(),
-        'tests.server_test.DummyTeam abcd ',
-        'junk'
-    })
-    result = frozenset(result)
-    assert result == actual
+        driver = KeyPairSupportedDummyNodeDriver('')
+        keystore = CloudKeyStore(driver)
+        identity = Identity(DummyTeam, 'abcd')
+        pattern = keystore._get_key_name_pattern(identity)
+        print('Cached CloudKeyStore._sample_keys:', CloudKeyStore._sample_keys)
+        print('Cached CloudKeyStore._sample_keys (as names):',
+              tuple(keystore._get_key_name(identity, k)
+                    for k in CloudKeyStore._sample_keys))
+        print('Generated pattern:', pattern.pattern)
+
+        def random_fp():
+            return ':'.join(
+                map('{:02x}'.format, hashlib.md5(os.urandom(100)).digest())
+            )
+        actual = {
+            'tests.server_test.DummyTeam abcd ' + random_fp()
+            for _ in range(5)
+        }
+        result = filter(pattern.match, actual | {
+            'tests.server_test.DummyTeam defg ' + random_fp(),
+            'tests.server_test.OtherTeam abcd ' + random_fp(),
+            'tests.server_test.DummyTeam abcd ',
+            'junk'
+        })
+        result = frozenset(result)
+        assert result == actual
 
 
 def test_cloud_master_public_key_store():
