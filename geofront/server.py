@@ -203,14 +203,20 @@ def server_endpoint():
        HTTP/1.0 200 OK
        Content-Type: application/json
        Link: <https://example.com/tokens/>; rel=tokens
+       Link: <https://example.com/masterkey/>; rel=masterkey
 
        {
+         "master_key_url": "https://example.com/masterkey/",
          "tokens_url": "https://example.com/tokens/"
        }
 
     :resheader Link: the url to create a new token.  the equivalent to
                      the response content
     :status 200: when the server is available
+
+    .. versionadded:: 0.4.0
+       Added ``"master_key_url"`` field in the result and :http:header:`Link`
+       header of ``rel=masterkey``.
 
     .. versionadded:: 0.2.0
 
@@ -220,8 +226,17 @@ def server_endpoint():
         token_id='TOKEN_ID',
         _external=True
     ).replace('/TOKEN_ID/', '/')  # FIXME
-    response = jsonify(tokens_url=tokens_url)
+    master_key_url = url_for('master_key', _external=True)
+    response = jsonify(
+        tokens_url=tokens_url,
+        master_key_url=master_key_url
+    )
     response.headers.add('Link', '<{}>'.format(tokens_url), rel='tokens')
+    response.headers.add(
+        'Link',
+        '<{}>'.format(master_key_url),
+        rel='masterkey'
+    )
     return response
 
 
@@ -477,14 +492,14 @@ def token(token_id: str):
        Content-Type: application/json
        Link: <https://example.com/tokens/0123456789abcdef/remo...>; rel=remotes
        Link: <https://example.com/tokens/0123456789abcdef/keys/>; rel=keys
-       Link: <https://example.com/tokens/0123456789abcdef/ma...>; rel=masterkey
+       Link: <https://example.com/masterkey/>; rel=masterkey
 
        {
          "identifier": "dahlia",
          "team_type": "geofront.backends.github.GitHubOrganization",
          "remotes_url": "https://example.com/tokens/0123456789abcdef/remotes/",
          "keys_url": "https://example.com/tokens/0123456789abcdef/keys/",
-         "master_key_url": "https://example.com/tokens/0123456789abcdef/mas..."
+         "master_key_url": "https://example.com/masterkey/"
        }
 
     :param token_id: the token id that holds the identity
@@ -502,7 +517,7 @@ def token(token_id: str):
     links = {
         'remotes': url_for('list_remotes', token_id=token_id, _external=True),
         'keys': url_for('list_public_keys', token_id=token_id, _external=True),
-        'master_key': url_for('master_key', token_id=token_id, _external=True)
+        'master_key': url_for('master_key', _external=True)
     }
     response = jsonify(
         team_type='{0.__module__}.{0.__qualname__}'.format(identity.team_type),
@@ -580,7 +595,7 @@ def token_master_key(token_id: str):
 
     .. code-block:: http
 
-       HTTP/1.1 200 OK
+       HTTP/1.1 301 Moved Permanently
        Content-Type: text/plain
 
        ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDAEMUvjBcX.../MuLLzC/m8Q==
@@ -593,9 +608,17 @@ def token_master_key(token_id: str):
     .. deprecated:: 4.0.0
        Use :http:get:`/masterkey/` instead.
 
+    .. versionchanged:: 4.0.0
+       It now responds with :http:statuscode:`301 Moved Permanently` instead
+       of :http:statuscode:`200 OK`.  It redirects to :http:get:`/masterkey/`
+       which is the new master key url.
+
     """
     get_identity(token_id)
-    return master_key()
+    response = master_key()
+    response.status_code = 301
+    response.location = url_for('master_key', _external=True)
+    return response
 
 
 def get_key_store() -> KeyStore:

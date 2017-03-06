@@ -35,9 +35,12 @@ To be released.
 - Added :const:`geofront.team.GroupSet` type which is alias of
   :class:`~typing.AbstractSet`\ [:class:`~typing.Hashable`].
 - Now master key can be found without token through
-  :http:get:`/masterkey/` API.
+  :http:get:`/masterkey/` API.  The server root :http:get:`/` also became
+  to contain a :http:header:`Link` header to it and ``"master_key_url"`` field.
 - Deprecated :http:get:`/tokens/(token_id:token_id)/masterkey/`.
   Use :http:get:`/masterkey/` instead.
+  The existing url redirects to the new url :http:get:`/masterkey/` with
+  :http:statuscode:`301`.
 - Geofront becomes to require Paramiko 2.0.1 or higher.
 - Geofront becomes to require Werkzeug 0.11 or higher.
 - Geofront becomes to require Flask 0.10.1 or higher.

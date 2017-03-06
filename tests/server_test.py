@@ -112,15 +112,23 @@ def parse_link_header(link_header):
 def test_server_endpoint():
     with app.test_client() as client:
         assert get_url('server_endpoint') == '/'
-        expected_url = get_url(
+        tokens_url = get_url(
             'token',
             token_id='TOKEN_ID',
             _external=True
         ).replace('/TOKEN_ID/', '/')
+        master_key_url = get_url('master_key', _external=True)
         response = client.get('/')
-        assert (parse_link_header(response.headers['Link']) ==
-                (expected_url, 'tokens'))
-        assert json.loads(response.get_data()) == {'tokens_url': expected_url}
+        links = dict(parse_link_header(link)[::-1]
+                     for link in response.headers.getlist('Link'))
+        assert links == {
+            'tokens': tokens_url,
+            'masterkey': master_key_url,
+        }
+        assert json.loads(response.get_data()) == {
+            'tokens_url': tokens_url,
+            'master_key_url': master_key_url,
+        }
 
 
 def test_get_token_store__no_config():
@@ -392,9 +400,7 @@ def test_token(fx_app, fx_authorized_identity, fx_token_id):
                                token_id=fx_token_id, _external=True),
             'keys': get_url('list_public_keys',
                             token_id=fx_token_id, _external=True),
-            'masterkey': get_url('master_key',
-                                 token_id=fx_token_id,
-                                 _external=True)
+            'masterkey': get_url('master_key', _external=True)
         }
         t = fx_authorized_identity.team_type
         assert json.loads(response.get_data()) == {
@@ -438,7 +444,8 @@ def test_token_master_key(fx_app, fx_master_key,
     with fx_app.test_client() as c:
         response = c.get(get_url('token_master_key', token_id=fx_token_id))
         expected = c.get(get_url('master_key'))
-        assert response.status_code == expected.status_code
+        assert response.status_code == 301
+        assert response.location == get_url('master_key', _external=True)
         assert response.mimetype == expected.mimetype
         assert (response.get_data(as_text=True) ==
                 expected.get_data(as_text=True))
