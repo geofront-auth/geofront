@@ -8,7 +8,7 @@ To be released.
 
 - Geofront now supports ECDSA key.
   Under the hood, :func:`geofront.keystore.parse_openssh_pubkey()` function
-  becomes to be possible to parse ECDSA public keys.
+  becomes to be possible to parse ECDSA public keys.  [:issue:`14`]
 - Geofront now supports Atlassian Bitbucket Cloud.
   See also :mod:`geofront.backends.bitbucket` module.  [:issue:`4`]
 - Geofront now can generate other than RSA master key (e.g. ECDSA).
