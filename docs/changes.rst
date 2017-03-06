@@ -43,7 +43,7 @@ To be released.
 - Geofront becomes to require Flask 0.10.1 or higher.
 - Geofront becomes to require Apache Libcloud 1.1.0 or higher.
 - Geofront becomes to require OAuthLib 1.1.1 or higher.
-- Geofront becomes to require Waitress 0.9.0 or higher.
+- Geofront becomes to require Waitress 1.0.2 or higher.
 - Goefront becomes to require typeguard_ 2.1.1 or higher.
 - :mod:`geofront.util` is gone now.  Geofront instead became to require
   :mod:`typing` and typeguard_.

@@ -24,7 +24,7 @@ install_requires = [
     'oauthlib[rsa, signedtoken] >= 1.1.1, < 2.0.0',
     'Flask >= 0.10.1',
     'apache-libcloud >= 1.1.0',
-    'waitress >= 0.9.0'
+    'waitress >= 1.0.2, < 2.0.0'
 ]
 
 supported_pyversions = [(3, 3), (3, 4), (3, 5), (3, 6)]

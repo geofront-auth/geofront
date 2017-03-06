@@ -72,7 +72,7 @@ Prerequisites
   - Flask_ 0.10.1+
   - OAuthLib_ 1.1.1+
   - Apache Libcloud_ 1.1.0+
-  - Waitress_ 0.9.0+
+  - Waitress_ 1.0.2+
   - singledispatch_ (only if Python is older than 3.4)
   - typing_ (only if Python is older than 3.5)
   - typeguard_ 2.1.1+

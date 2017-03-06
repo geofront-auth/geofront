@@ -55,9 +55,7 @@ from paramiko.pkey import PKey
 from paramiko.ssh_exception import SSHException
 from typeguard import typechecked
 from waitress import serve
-from waitress.adjustments import Adjustments
 from werkzeug.contrib.cache import BaseCache, SimpleCache
-from werkzeug.contrib.fixers import ProxyFix
 from werkzeug.exceptions import BadRequest, Forbidden, HTTPException, NotFound
 from werkzeug.routing import BaseConverter, ValidationError
 from werkzeug.utils import html
@@ -1028,7 +1026,7 @@ def main_parser() -> argparse.ArgumentParser:  # pragma: no cover
     )
     parser = regen_main_parser(parser)
     parser.add_argument('-H', '--host',
-                        default='0.0.0.0',
+                        default='*',
                         help='host to bind [%(default)s]')
     parser.add_argument('-p', '--port',
                         default=5000,
@@ -1095,15 +1093,9 @@ def main():  # pragma: no cover
             master_key_renewal_interval,
             *regen_options
         )
-    waitress_options = {}
-    if args.trusted_proxy:
-        if hasattr(Adjustments, 'trusted_proxy'):
-            # > 0.8.8
-            # https://github.com/Pylons/waitress/pull/42
-            waitress_options['trusted_proxy'] = True
-        else:
-            # <= 0.8.8
-            app.wsgi_app = ProxyFix(app.wsgi_app)
+    waitress_options = {
+        'trusted_proxy': args.trusted_proxy,
+    }
     if args.force_https:
         app.config.update(
             PREFERRED_URL_SCHEME='https',
@@ -1113,7 +1105,9 @@ def main():  # pragma: no cover
         if args.debug:
             app.run(args.host, int(args.port), debug=True)
         else:
-            serve(app, host=args.host, port=args.port, asyncore_use_poll=True,
+            serve(app,
+                  listen='{0.host}:{0.port}'.format(args),
+                  asyncore_use_poll=True,
                   **waitress_options)
     finally:
         if master_key_renewal_interval is not None:
