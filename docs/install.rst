@@ -105,15 +105,13 @@ Here's an example configuration for Geofront server behind Nginx reverse proxy:
 Using :program:`geofront-cli`
 -----------------------------
 
-Every team member who want to use Geofront has to install a client for Geofront
-server.  `geofront-cli`_ is the reference implementation of Geofront client.
+Every team member who want to use Geofront has to install a client for Geofront.
+`geofront-cli`_ is the reference implementation of Geofront client.
 It can be installed using :program:`pip`:
 
 .. code-block:: console
 
-   $ pip install --allow-external dirspec \
-                 --allow-unverified dirspec \
-                 geofront-cli
+   $ pip install geofront-cli
 
 To setup what Geofront server to use use :program:`geofront-cli start` command.
 It will show a prompt:
