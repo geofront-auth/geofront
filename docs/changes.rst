@@ -4,7 +4,7 @@ Geofront Changelog
 Version 0.4.0
 -------------
 
-To be released.
+Released on March 30, 2017.
 
 - Geofront now supports ECDSA key.
   Under the hood, :func:`geofront.keystore.parse_openssh_pubkey()` function
