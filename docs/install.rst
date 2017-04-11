@@ -1,11 +1,11 @@
 Installation
 ============
 
-You can easily install Geofront server using :program:`pip`:
+You can easily install Geofront server using pip:
 
 .. code-block:: console
 
-   $ pip install Geofront
+   $ pip3 install Geofront
 
 
 Running server
