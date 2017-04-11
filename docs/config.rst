@@ -88,8 +88,8 @@ be uppercase.
        from libcloud.compute.types import Provider
        from libcloud.compute.providers import get_driver
 
-       driver_cls = get_driver(Provider.EC2_US_WEST)
-       driver = driver_cls('access id', 'secret key')
+       driver_cls = get_driver(Provider.EC2)
+       driver = driver_cls('access id', 'secret key', region='us-east-1')
        REMOTE_SET = CloudRemoteSet(driver)
 
    .. seealso::
@@ -175,7 +175,7 @@ be uppercase.
        from libcloud.storage.providers import get_driver
 
        driver_cls = get_driver(Provider.EC2)
-       driver = driver_cls('api key', 'api secret key')
+       driver = driver_cls('api key', 'api secret key', region='us-east-1')
        KEY_STORE = CloudKeyStore(driver)
 
    .. versionadded:: 0.2.0

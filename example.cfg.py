@@ -49,8 +49,8 @@ from geofront.backends.cloud import CloudRemoteSet
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
 
-driver_cls = get_driver(Provider.EC2_US_WEST)
-driver = driver_cls('aws access id', 'aws secret key')
+driver_cls = get_driver(Provider.EC2)
+driver = driver_cls('aws access id', 'aws secret key', region='uest-east-1')
 REMOTE_SET = CloudRemoteSet(driver, user='ec2-user')
 
 # Suppose your team is divided by several subgroups, and these subgroups are

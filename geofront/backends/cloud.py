@@ -59,8 +59,8 @@ class CloudRemoteSet(collections.abc.Mapping):
         from libcloud.compute.types import Provider
         from libcloud.compute.providers import get_driver
 
-        driver_cls = get_driver(Provider.EC2_US_WEST)
-        driver = driver_cls('access id', 'secret key')
+        driver_cls = get_driver(Provider.EC2)
+        driver = driver_cls('access id', 'secret key', region='us-east-1')
         REMOTE_SET = CloudRemoteSet(driver)
 
     If the given ``driver`` supports metadata feature (for example,
@@ -283,7 +283,7 @@ class CloudKeyStore(KeyStore):
         from libcloud.compute.providers import get_driver
 
         driver_cls = get_driver(Provider.EC2)
-        driver = driver_cls('api key', 'api secret key')
+        driver = driver_cls('api key', 'api secret key', region='us-east-1')
         KEY_STORE = CloudKeyStore(driver)
 
     :param driver: libcloud compute driver
