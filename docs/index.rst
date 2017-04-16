@@ -1,4 +1,4 @@
-.. include:: ../README.rst
+.. include:: readme.rst
 
 
 User's guide
@@ -7,6 +7,7 @@ User's guide
 .. toctree::
    :maxdepth: 2
 
+   docker
    install
    contribute
    changes

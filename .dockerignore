@@ -1,7 +1,6 @@
 *.pyc
 *.egg
 *.egg-info
-*.cfg.py
 .*.swo
 .*.swp
 .cache
@@ -13,5 +12,4 @@
 .tox
 build
 dist
-docs/_build
-docs/readme.rst
+docs
