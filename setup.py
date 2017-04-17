@@ -36,8 +36,7 @@ pyversion_requires = {
 
 tests_require = [
     'pytest >= 2.5.0',
-    'sftpserver == 0.2setuptools',
-    # FIXME: https://github.com/spoqa/sftpserver/releases
+    'sftpserver >= 0.3',
     'iso8601 >= 0.1.10',
     'redis',
     'pytest-cov'
