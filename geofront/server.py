@@ -1077,8 +1077,8 @@ def main():  # pragma: no cover
     args = parser.parse_args()
     try:
         app.config.from_pyfile(os.path.abspath(args.config), silent=False)
-    except FileNotFoundError:
-        parser.error('unable to load configuration file: ' + args.config)
+    except FileNotFoundError as e:
+        parser.error(str(e))
     logger = logging.getLogger('geofront')
     handler = logging.StreamHandler()
     level = logging.DEBUG if args.debug else logging.INFO

@@ -2,6 +2,7 @@
 *.egg
 *.egg-info
 *.cfg.py
+cfg.py
 .*.swo
 .*.swp
 .cache
@@ -14,3 +15,4 @@
 build
 dist
 docs/_build
+.vagrant
