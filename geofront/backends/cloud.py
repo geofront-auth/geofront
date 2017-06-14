@@ -50,20 +50,20 @@ if TYPE_CHECKING:
     from typing import MutableMapping, Optional  # noqa: F401
 
 __all__ = ('CloudKeyStore', 'CloudMasterKeyStore', 'CloudMasterPublicKeyStore',
-           'CloudRemoteSet', 'create_storage_driver', 'create_compute_driver')
-
-
-def create_storage_driver(provider_name: str, creds: Sequence[str],
-                          **driver_kwargs) -> StorageDriver:
-    provider = getattr(StorageProvider, provider_name)
-    driver_cls = get_storage_driver(provider)
-    return driver_cls(*creds, **driver_kwargs)
+           'CloudRemoteSet', 'create_compute_driver', 'create_storage_driver')
 
 
 def create_compute_driver(provider_name: str, creds: Sequence[str],
                           **driver_kwargs) -> NodeDriver:
     provider = getattr(ComputeProvider, provider_name)
     driver_cls = get_compute_driver(provider)
+    return driver_cls(*creds, **driver_kwargs)
+
+
+def create_storage_driver(provider_name: str, creds: Sequence[str],
+                          **driver_kwargs) -> StorageDriver:
+    provider = getattr(StorageProvider, provider_name)
+    driver_cls = get_storage_driver(provider)
     return driver_cls(*creds, **driver_kwargs)
 
 
