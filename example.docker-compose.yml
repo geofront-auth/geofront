@@ -1,0 +1,31 @@
+version: "2"
+
+services:
+
+  geofront-server:
+    container_name: geofront-server
+    build:
+      context: .
+    depends_on:
+      - geofront-redis
+    environment:
+      - 'OPTIONS=--trusted-proxy'
+      - 'TEAM=geofront.backends.github:GitHubOrganization(client_id="0123456789abcdef0123", client_secret="0123456789abcdef0123456789abcdef01234567", org_login="YOUR_TEAM")'
+      - 'TOKEN_STORE=werkzeug.contrib.cache:RedisCache(host="geofront-redis", db=0)'
+      - 'KEY_STORE=geofront.backends.dbapi:DatabaseKeyStore("sqlite3", "/var/lib/geofront/public_keys.db")'
+      - 'MASTER_KEY_STORE=geofront.masterkey:FileSystemMasterKeyStore("/var/lib/geofront/id_rsa")'
+      - 'REMOTE_SET=:{}'
+
+  geofront-web:
+    container_name: geofront-web
+    image: nginx:mainline-alpine
+    depends_on:
+      - geofront-server
+    volumes:
+      - "./example.nginx.conf:/etc/nginx/conf.d/default.conf:ro"
+    ports:
+      - "8080:80"
+
+  geofront-redis:
+    container_name: geofront-redis
+    image: redis:latest
