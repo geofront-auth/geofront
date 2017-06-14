@@ -14,7 +14,7 @@ services:
       - 'TOKEN_STORE=werkzeug.contrib.cache:RedisCache(host="geofront-redis", db=0)'
       - 'KEY_STORE=geofront.backends.dbapi:DatabaseKeyStore("sqlite3", "/var/lib/geofront/public_keys.db")'
       - 'MASTER_KEY_STORE=geofront.masterkey:FileSystemMasterKeyStore("/var/lib/geofront/id_rsa")'
-      - 'REMOTE_SET=:{}'
+      - 'REMOTE_SET=geofront.backends.cloud:CloudRemoteSet(create_compute_driver("EC2", "ap-northeast-2", ("AWS_ACCESS_KEY", "AWS_SECRET_KEY")))'
 
   geofront-web:
     container_name: geofront-web
