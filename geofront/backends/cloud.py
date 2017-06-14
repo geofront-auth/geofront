@@ -50,7 +50,7 @@ if TYPE_CHECKING:
     from typing import MutableMapping, Optional  # noqa: F401
 
 __all__ = ('CloudKeyStore', 'CloudMasterKeyStore', 'CloudMasterPublicKeyStore',
-           'CloudRemoteSet')
+           'CloudRemoteSet', 'create_storage_driver', 'create_compute_driver')
 
 
 def create_storage_driver(provider_name: str, creds: Sequence[str],

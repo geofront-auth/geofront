@@ -54,7 +54,7 @@ class DatabaseKeyStore(KeyStore):
     def __init__(self, db_module: Union[types.ModuleType, str],
                  *args, **kwargs) -> None:
         if isinstance(db_module, str):
-            db_module = importlib.__import__(db_module)
+            db_module = importlib.import_module(db_module)
         if not callable(getattr(db_module, 'connect', None)):
             module_name = db_module.__name__
             raise TypeError('db_module must be DB-API 2.0 compliant, but {} '
