@@ -53,18 +53,18 @@ __all__ = ('CloudKeyStore', 'CloudMasterKeyStore', 'CloudMasterPublicKeyStore',
            'CloudRemoteSet')
 
 
-def create_storage_driver(provider_name: str, region: str,
-                          creds: Sequence[str]) -> StorageDriver:
+def create_storage_driver(provider_name: str, creds: Sequence[str],
+                          **driver_kwargs) -> StorageDriver:
     provider = getattr(StorageProvider, provider_name)
     driver_cls = get_storage_driver(provider)
-    return driver_cls(*creds, region=region)
+    return driver_cls(*creds, **driver_kwargs)
 
 
-def create_compute_driver(provider_name: str, region: str,
-                          creds: Sequence[str]) -> NodeDriver:
+def create_compute_driver(provider_name: str, creds: Sequence[str],
+                          **driver_kwargs) -> NodeDriver:
     provider = getattr(ComputeProvider, provider_name)
     driver_cls = get_compute_driver(provider)
-    return driver_cls(*creds, region=region)
+    return driver_cls(*creds, **driver_kwargs)
 
 
 class CloudRemoteSet(collections.abc.Mapping):
