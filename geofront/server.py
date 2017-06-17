@@ -26,7 +26,7 @@ configure it.
     If you can't execute any arbitrary Python code,
     set the :envvar:`GEOFRONT_CONFIG` environment variable.
     It's useful when to use a CLI frontend of the WSGI server e.g.
-    :program:`gunicorn`, :program:`waitress-serve`.
+    :program:`gunicorn`.
 
     .. code-block:: console
 
@@ -46,15 +46,19 @@ import logging
 import os
 import os.path
 import re
+import sys
 from typing import Mapping, NamedTuple, Union
 import warnings
 
 from flask import (Flask, Response, current_app, helpers, json, jsonify,
                    make_response, request)
+from flask_sockets import Sockets
+from gevent import pywsgi, spawn
+from gevent.socket import create_connection
+from geventwebsocket.handler import WebSocketHandler
 from paramiko.pkey import PKey
 from paramiko.ssh_exception import SSHException
 from typeguard import typechecked
-from waitress import serve
 from werkzeug.contrib.cache import BaseCache, SimpleCache
 from werkzeug.exceptions import BadRequest, Forbidden, HTTPException, NotFound
 from werkzeug.routing import BaseConverter, ValidationError
@@ -133,6 +137,7 @@ class FingerprintConverter(BaseConverter):
 
 #: (:class:`flask.Flask`) The WSGI application of the server.
 app = Flask(__name__)
+sockets = Sockets(app)
 app.url_map.converters.update(
     token_id=TokenIdConverter,
     fingerprint=FingerprintConverter
@@ -143,6 +148,10 @@ app.config.update(  # Config defaults
     MASTER_KEY_RENEWAL=datetime.timedelta(days=1),
     TOKEN_EXPIRE=datetime.timedelta(days=7),
     ENABLE_HSTS=False,
+)
+sockets.url_map.converters.update(
+    token_id=TokenIdConverter,
+    fingerprint=FingerprintConverter
 )
 
 
@@ -1033,6 +1042,58 @@ def authorize_remote(token_id: str, alias: str):
     )
 
 
+@sockets.route('/ws/tokens/<token_id:token_id>/remotes/<alias>/ssh/')
+def proxy_ssh(ws, token_id: str, alias: str):
+    team = get_team()
+    identity = get_identity(token_id)
+    key_store = get_key_store()
+    master_key_store = get_master_key_store()
+    remotes = get_remote_set()
+    policy = get_permission_policy()
+    try:
+        remote = remotes[alias]
+    except KeyError:
+        response = jsonify(
+            error='not-found',
+            message='No such remote alias: {}.'.format(alias)
+        )
+        response.status_code = 404
+        return response
+    if not policy.permit(remote, identity, team.list_groups(identity)):
+        response = jsonify(
+            error='forbidden',
+            message='Remote {0} is disallowed.  Contact the system '
+                    'administrator.'.format(alias)
+        )
+        response.status_code = 403
+        return response
+
+    ssh_sock = create_connection((remote.host, remote.port))
+
+    def pipe():
+        while True:
+            try:
+                reply = ssh_sock.recv(4096)
+            except OSError:
+                # closed in another greenlet
+                break
+            if not reply:
+                break
+            if ws.closed:
+                break
+            ws.send(reply)
+
+    pipe_coro = spawn(pipe)
+    while not ws.closed:
+        msg = ws.receive()
+        if not msg:
+            break
+        ssh_sock.send(msg)
+    if ssh_sock:
+        ssh_sock.close()
+    pipe_coro.join()
+
+
 def main_parser() -> argparse.ArgumentParser:  # pragma: no cover
     """Create an :class:`~argparse.ArgumentParser` object for
     :program:`geofront-server` CLI program.  It also is used for
@@ -1052,7 +1113,7 @@ def main_parser() -> argparse.ArgumentParser:  # pragma: no cover
                         default='0.0.0.0',
                         help='host to bind [%(default)s]')
     parser.add_argument('-p', '--port',
-                        default=5000,
+                        default=5000, type=int,
                         help='port to bind [%(default)s]')
     parser.add_argument('--renew-master-key',
                         action='store_true',
@@ -1063,7 +1124,8 @@ def main_parser() -> argparse.ArgumentParser:  # pragma: no cover
                         help='IP address of a client allowed to override '
                              'url_scheme via the X-Forwarded-Proto header. '
                              'useful when it runs behind reverse proxy. '
-                             '-d/--debug option disables this option')
+                             '-d/--debug option disables this option. '
+                             '(deprecated)')
     parser.add_argument('--force-https',
                         action='store_true',
                         help='enable HSTS (HTTP strict transport security) '
@@ -1116,22 +1178,19 @@ def main():  # pragma: no cover
             master_key_renewal_interval,
             *regen_options
         )
-    waitress_options = {
-        'trusted_proxy': args.trusted_proxy,
-    }
+
     if args.force_https:
         app.config.update(
             PREFERRED_URL_SCHEME='https',
             ENABLE_HSTS=True
         )
     try:
+        logger.info('running server on {0.host}:{0.port}'.format(args))
         if args.debug:
-            app.run(args.host, int(args.port), debug=True)
+            app.run(args.host, args.port, debug=True)
         else:
-            serve(app,
-                  listen='{0.host}:{0.port}'.format(args),
-                  asyncore_use_poll=True,
-                  **waitress_options)
+            server = pywsgi.WSGIServer((args.host, args.port), app, handler_class=WebSocketHandler)
+            server.serve_forever()
     finally:
         if master_key_renewal_interval is not None:
             master_key_renewal.terminate()

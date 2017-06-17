@@ -4,7 +4,7 @@ MAINTAINER Hong Minhee <hong.minhee@gmail.com>
 
 RUN apk add --no-cache python3 ca-certificates
 RUN apk add --no-cache py3-cryptography py3-paramiko py3-werkzeug py3-flask \
-                       py3-libcloud
+                       py3-libcloud py3-gevent
 RUN update-ca-certificates
 RUN mkdir -p /usr/local/bin/src/geofront && \
     mkdir -p /var/lib/geofront
