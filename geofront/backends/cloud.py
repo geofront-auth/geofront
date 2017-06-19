@@ -70,25 +70,6 @@ def create_storage_driver(provider_name: str, creds: Sequence[str],
     return driver_cls(*creds, **driver_kwargs)
 
 
-def create_cloud_master_pubkey_store(compute_provider_name: str,
-                                     storage_provider_name: str,
-                                     common_creds: Sequence[str],
-                                     keypair_name: str,
-                                     container_name: str,
-                                     object_name: str,
-                                     **common_driver_kwargs)
-                                     -> CloudMasterPublicKeyStore:
-    """A shortcut CloudMasterPublicKeyStore factory for environment-variable
-    configs"""
-    compute_driver = create_compute_driver(compute_provider_name, common_creds,
-                                           **common_driver_kwargs)
-    storage_driver = create_storage_driver(storage_provider_name, common_creds,
-                                           **common_driver_kwargs)
-    container = storage_driver.get_container(container_name)
-    mkstore = CloudMasterKeyStore(storage_driver, container, object_name)
-    return CloudMasterPublicKeyStore(compute_driver, keypair_name, mkstore)
-
-
 class CloudRemoteSet(collections.abc.Mapping):
     """Libcloud_-backed remote set.  It supports more than 20 cloud providers
     through the efforts of Libcloud_. ::
@@ -468,3 +449,21 @@ class CloudMasterPublicKeyStore(MasterKeyStore):
             driver.delete_key_pair(key_pair)
         driver.import_key_pair_from_string(self.key_pair_name, public_key)
         self.master_key_store.save(master_key)
+
+
+def create_cloud_master_pubkey_store(compute_provider_name: str,
+                                     storage_provider_name: str,
+                                     common_creds: Sequence[str],
+                                     keypair_name: str,
+                                     container_name: str,
+                                     object_name: str,
+                                     **common_driver_kwargs) -> CloudMasterPublicKeyStore:
+    """A shortcut CloudMasterPublicKeyStore factory for environment-variable
+    configs"""
+    compute_driver = create_compute_driver(compute_provider_name, common_creds,
+                                           **common_driver_kwargs)
+    storage_driver = create_storage_driver(storage_provider_name, common_creds,
+                                           **common_driver_kwargs)
+    container = storage_driver.get_container(container_name)
+    mkstore = CloudMasterKeyStore(storage_driver, container, object_name)
+    return CloudMasterPublicKeyStore(compute_driver, keypair_name, mkstore)
