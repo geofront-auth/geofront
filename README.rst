@@ -10,7 +10,7 @@ Geofront
    :alt: Latest PyPI version
 
 .. image:: https://readthedocs.org/projects/geofront/badge/
-   :target: https://geofront.readthedocs.io/
+   :target: https://geofront.readthedocs.io/en/stable/
    :alt: Read the Docs
 
 .. image:: https://travis-ci.org/spoqa/geofront.svg?branch=master
@@ -19,11 +19,13 @@ Geofront
 .. image:: https://codecov.io/gh/spoqa/geofront/branch/master/graph/badge.svg
    :target: https://codecov.io/gh/spoqa/geofront
 
-Geofront is a simple SSH key management server.  It helps to maintain servers
-to SSH, and ``authorized_keys`` list for them.  `Read the docs`__ for more
-details.
+.. image:: https://img.shields.io/docker/build/spoqa/geofront.svg
+   :target: https://hub.docker.com/r/spoqa/geofront/
+   :alt: Docker automated build
 
-__ https://geofront.readthedocs.io/
+Geofront is a simple SSH key management server.  It helps to maintain servers
+to SSH, and ``authorized_keys`` list for them.  `Read the docs
+<https://geofront.readthedocs.io/en/stable/>`_ for more details.
 
 
 Situations
@@ -63,30 +65,18 @@ Idea
 Prerequisites
 -------------
 
+You can setup a Geofront `using Docker
+<https://geofront.readthedocs.io/en/stable/docker.html>`_, and it requires only
+Docker_.
+
+Or you can set it up by yourself `on your barebone system
+<https://geofront.readthedocs.io/en/stable/install.html>`_.
+For barebone systems, it needs these prerequisites:
+
 - Linux, BSD, Mac
 - Python 3.3+
-- Third-party packages (automatically installed together)
 
-  - Paramiko_ 2.0.1+ (which requires cryptography_)
-  - Werkzeug_ 0.11+
-  - Flask_ 0.10.1+
-  - OAuthLib_ 1.1.1+
-  - Apache Libcloud_ 1.1.0+
-  - Waitress_ 1.0.2+
-  - singledispatch_ (only if Python is older than 3.4)
-  - typing_ (only if Python is older than 3.5)
-  - typeguard_ 2.1.1+
-
-.. _Paramiko: http://www.paramiko.org/
-.. _cryptography: https://cryptography.io/
-.. _Werkzeug: http://werkzeug.pocoo.org/
-.. _Flask: http://flask.pocoo.org/
-.. _OAuthLib: https://github.com/idan/oauthlib
-.. _Libcloud: http://libcloud.apache.org/
-.. _Waitress: https://github.com/Pylons/waitress
-.. _singledispatch: https://pypi.python.org/pypi/singledispatch
-.. _typing: https://pypi.python.org/pypi/typing
-.. _typeguard: https://github.com/agronholm/typeguard
+.. _Docker: https://www.docker.com/
 
 
 Author and license

@@ -1,6 +1,13 @@
 Installation
 ============
 
+.. note::
+
+   We recommend to :doc:`setup Geofront using Docker <docker>`
+   since it is easier and requires no prerequisites but Docker_.
+
+   .. _Docker: https://www.docker.com/
+
 You can easily install Geofront server using pip:
 
 .. code-block:: console

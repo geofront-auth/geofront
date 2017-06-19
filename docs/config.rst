@@ -3,6 +3,11 @@
 Configuration
 =============
 
+.. note::
+
+   The official Docker image offers :ref:`slightly different ways to configure
+   Geofront <docker-config>`.
+
 The :program:`geofront-server` command takes a configuration file as required
 argument.  The configuration is an ordinary Python script that defines
 the following required and optional variables.  Note that all names have to

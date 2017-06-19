@@ -28,10 +28,12 @@ from libcloud.common.types import MalformedResponseError
 from libcloud.compute.base import Node, NodeDriver
 from libcloud.compute.drivers.ec2 import EC2NodeDriver
 from libcloud.compute.drivers.gce import GCENodeDriver
-from libcloud.compute.types import KeyPairDoesNotExistError
+from libcloud.compute.providers import get_driver as get_compute_driver
+from libcloud.compute.types import KeyPairDoesNotExistError, Provider as ComputeProvider
 from libcloud.storage.base import Container, StorageDriver
 from libcloud.storage.drivers.s3 import S3StorageDriver
-from libcloud.storage.types import ObjectDoesNotExistError
+from libcloud.storage.providers import get_driver as get_storage_driver
+from libcloud.storage.types import ObjectDoesNotExistError, Provider as StorageProvider
 from paramiko.ecdsakey import ECDSAKey
 from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
@@ -48,7 +50,24 @@ if TYPE_CHECKING:
     from typing import MutableMapping, Optional  # noqa: F401
 
 __all__ = ('CloudKeyStore', 'CloudMasterKeyStore', 'CloudMasterPublicKeyStore',
-           'CloudRemoteSet')
+           'CloudRemoteSet', 'create_compute_driver', 'create_storage_driver',
+           'create_cloud_master_pubkey_store')
+
+
+def create_compute_driver(provider_name: str, creds: Sequence[str],
+                          **driver_kwargs) -> NodeDriver:
+    """A shortcut NodeDriver factory for environment-variable configs"""
+    provider = getattr(ComputeProvider, provider_name)
+    driver_cls = get_compute_driver(provider)
+    return driver_cls(*creds, **driver_kwargs)
+
+
+def create_storage_driver(provider_name: str, creds: Sequence[str],
+                          **driver_kwargs) -> StorageDriver:
+    """A shortcut StorageDriver factory for environment-variable configs"""
+    provider = getattr(StorageProvider, provider_name)
+    driver_cls = get_storage_driver(provider)
+    return driver_cls(*creds, **driver_kwargs)
 
 
 class CloudRemoteSet(collections.abc.Mapping):
@@ -83,6 +102,19 @@ class CloudRemoteSet(collections.abc.Mapping):
     :type alias_nameer:
         :class:`~typing.Callable`\ [[:class:`libcloud.compute.base.Node`],
                                     :class:`str`]
+    :param addresser: A function to get the address for the given node.
+                      :attr:`Node.public_ips
+                      <libcloud.compute.base.Node.public_ips>`
+                      is used by default.
+    :type addresser:
+        :class:`~typing.Callable`\ [[:class:`libcloud.compute.base.Node`],
+                                    :class:`str`]
+    :param filter: A function to decide if the given node should be included as
+                   a remote or not.  By default it checks if the node has any
+                   public IP.
+    :type filter:
+        :class:`~typing.Callable`\ [[:class:`libcloud.compute.base.Node`],
+                                    :class:`bool`]
 
     .. seealso::
 
@@ -108,22 +140,25 @@ class CloudRemoteSet(collections.abc.Mapping):
         driver: NodeDriver,
         user: str='ec2-user',
         port: int=22,
-        alias_namer: Callable[[Node], str]=lambda node: node.name
+        alias_namer: Callable[[Node], str]=lambda node: node.name,
+        addresser: Callable[[Node], str]=lambda node: node.public_ips[0],
+        filter: Callable[[Node], bool]=lambda node: bool(node.public_ips)
     ) -> None:
         self.driver = driver
         self.user = user
         self.port = port
         self.alias_namer = alias_namer
+        self.addresser = addresser
+        self.filter = filter
         self._nodes = None  # type: Optional[Mapping[str, Node]]
         self._metadata = {} if supports_metadata(driver) else None  \
             # type: Optional[MutableMapping[str, object]]
 
     def _get_nodes(self, refresh: bool=False) -> Mapping[str, Node]:
         if refresh or self._nodes is None:
-            make_alias = self.alias_namer
-            self._nodes = {make_alias(node): node
+            self._nodes = {self.alias_namer(node): node
                            for node in self.driver.list_nodes()
-                           if node.public_ips}
+                           if self.filter(node)}
             if self._metadata is not None:
                 self._metadata.clear()
         return self._nodes
@@ -144,7 +179,7 @@ class CloudRemoteSet(collections.abc.Mapping):
             except KeyError:
                 metadata = get_metadata(self.driver, node)
                 self._metadata[alias] = metadata
-        return Remote(self.user, node.public_ips[0], self.port, metadata)
+        return Remote(self.user, self.addresser(node), self.port, metadata)
 
 
 @singledispatch
@@ -430,3 +465,21 @@ class CloudMasterPublicKeyStore(MasterKeyStore):
             driver.delete_key_pair(key_pair)
         driver.import_key_pair_from_string(self.key_pair_name, public_key)
         self.master_key_store.save(master_key)
+
+
+def create_cloud_master_pubkey_store(compute_provider_name: str,
+                                     storage_provider_name: str,
+                                     common_creds: Sequence[str],
+                                     keypair_name: str,
+                                     container_name: str,
+                                     object_name: str,
+                                     **common_driver_kwargs) -> CloudMasterPublicKeyStore:
+    """A shortcut CloudMasterPublicKeyStore factory for environment-variable
+    configs"""
+    compute_driver = create_compute_driver(compute_provider_name, common_creds,
+                                           **common_driver_kwargs)
+    storage_driver = create_storage_driver(storage_provider_name, common_creds,
+                                           **common_driver_kwargs)
+    container = storage_driver.get_container(container_name)
+    mkstore = CloudMasterKeyStore(storage_driver, container, object_name)
+    return CloudMasterPublicKeyStore(compute_driver, keypair_name, mkstore)

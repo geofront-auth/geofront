@@ -10,6 +10,7 @@
 """
 import base64
 import contextlib
+import importlib
 import types
 from typing import AbstractSet, Mapping, Tuple, Type, Union, cast
 
@@ -50,7 +51,10 @@ class DatabaseKeyStore(KeyStore):
     """
 
     @typechecked
-    def __init__(self, db_module: types.ModuleType, *args, **kwargs) -> None:
+    def __init__(self, db_module: Union[types.ModuleType, str],
+                 *args, **kwargs) -> None:
+        if isinstance(db_module, str):
+            db_module = importlib.import_module(db_module)
         if not callable(getattr(db_module, 'connect', None)):
             module_name = db_module.__name__
             raise TypeError('db_module must be DB-API 2.0 compliant, but {} '
