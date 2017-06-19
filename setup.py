@@ -18,13 +18,14 @@ install_requires = [
     'setuptools',
     'typeguard >= 2.1.1, < 3.0.0',
     'cryptography >= 1.4',
+    'gevent >= 1.1.2',
     # indirect dependency thorugh paramiko; just for version constraint (>=1.4)
     'paramiko >= 2.2.0',
     'Werkzeug >= 0.11, < 0.14',
     'oauthlib[rsa, signedtoken] >= 1.1.1, < 2.0.0',
     'Flask >= 0.10.1',
+    'Flask-Sockets >= 0.2.1',
     'apache-libcloud >= 1.1.0',
-    'waitress >= 1.0.2, < 2.0.0'
 ]
 
 supported_pyversions = [(3, 3), (3, 4), (3, 5), (3, 6)]
