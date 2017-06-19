@@ -50,11 +50,13 @@ if TYPE_CHECKING:
     from typing import MutableMapping, Optional  # noqa: F401
 
 __all__ = ('CloudKeyStore', 'CloudMasterKeyStore', 'CloudMasterPublicKeyStore',
-           'CloudRemoteSet', 'create_compute_driver', 'create_storage_driver')
+           'CloudRemoteSet', 'create_compute_driver', 'create_storage_driver',
+           'create_cloud_master_pubkey_store')
 
 
 def create_compute_driver(provider_name: str, creds: Sequence[str],
                           **driver_kwargs) -> NodeDriver:
+    """A shortcut NodeDriver factory for environment-variable configs"""
     provider = getattr(ComputeProvider, provider_name)
     driver_cls = get_compute_driver(provider)
     return driver_cls(*creds, **driver_kwargs)
@@ -62,9 +64,29 @@ def create_compute_driver(provider_name: str, creds: Sequence[str],
 
 def create_storage_driver(provider_name: str, creds: Sequence[str],
                           **driver_kwargs) -> StorageDriver:
+    """A shortcut StorageDriver factory for environment-variable configs"""
     provider = getattr(StorageProvider, provider_name)
     driver_cls = get_storage_driver(provider)
     return driver_cls(*creds, **driver_kwargs)
+
+
+def create_cloud_master_pubkey_store(compute_provider_name: str,
+                                     storage_provider_name: str,
+                                     common_creds: Sequence[str],
+                                     keypair_name: str,
+                                     container_name: str,
+                                     object_name: str,
+                                     **common_driver_kwargs)
+                                     -> CloudMasterPublicKeyStore:
+    """A shortcut CloudMasterPublicKeyStore factory for environment-variable
+    configs"""
+    compute_driver = create_compute_driver(compute_provider_name, common_creds,
+                                           **common_driver_kwargs)
+    storage_driver = create_storage_driver(storage_provider_name, common_creds,
+                                           **common_driver_kwargs)
+    container = storage_driver.get_container(container_name)
+    mkstore = CloudMasterKeyStore(storage_driver, container, object_name)
+    return CloudMasterPublicKeyStore(compute_driver, keypair_name, mkstore)
 
 
 class CloudRemoteSet(collections.abc.Mapping):
