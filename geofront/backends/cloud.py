@@ -28,10 +28,12 @@ from libcloud.common.types import MalformedResponseError
 from libcloud.compute.base import Node, NodeDriver
 from libcloud.compute.drivers.ec2 import EC2NodeDriver
 from libcloud.compute.drivers.gce import GCENodeDriver
-from libcloud.compute.types import KeyPairDoesNotExistError
+from libcloud.compute.providers import get_driver as get_compute_driver
+from libcloud.compute.types import KeyPairDoesNotExistError, Provider as ComputeProvider
 from libcloud.storage.base import Container, StorageDriver
 from libcloud.storage.drivers.s3 import S3StorageDriver
-from libcloud.storage.types import ObjectDoesNotExistError
+from libcloud.storage.providers import get_driver as get_storage_driver
+from libcloud.storage.types import ObjectDoesNotExistError, Provider as StorageProvider
 from paramiko.ecdsakey import ECDSAKey
 from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
@@ -48,7 +50,21 @@ if TYPE_CHECKING:
     from typing import MutableMapping, Optional  # noqa: F401
 
 __all__ = ('CloudKeyStore', 'CloudMasterKeyStore', 'CloudMasterPublicKeyStore',
-           'CloudRemoteSet')
+           'CloudRemoteSet', 'create_compute_driver', 'create_storage_driver')
+
+
+def create_compute_driver(provider_name: str, creds: Sequence[str],
+                          **driver_kwargs) -> NodeDriver:
+    provider = getattr(ComputeProvider, provider_name)
+    driver_cls = get_compute_driver(provider)
+    return driver_cls(*creds, **driver_kwargs)
+
+
+def create_storage_driver(provider_name: str, creds: Sequence[str],
+                          **driver_kwargs) -> StorageDriver:
+    provider = getattr(StorageProvider, provider_name)
+    driver_cls = get_storage_driver(provider)
+    return driver_cls(*creds, **driver_kwargs)
 
 
 class CloudRemoteSet(collections.abc.Mapping):

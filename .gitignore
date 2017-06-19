@@ -15,3 +15,4 @@ build
 dist
 docs/_build
 docs/readme.rst
+venv

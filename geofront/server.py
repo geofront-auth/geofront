@@ -1049,7 +1049,7 @@ def main_parser() -> argparse.ArgumentParser:  # pragma: no cover
     )
     parser = regen_main_parser(parser)
     parser.add_argument('-H', '--host',
-                        default='*',
+                        default='0.0.0.0',
                         help='host to bind [%(default)s]')
     parser.add_argument('-p', '--port',
                         default=5000,
