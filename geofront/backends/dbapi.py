@@ -33,6 +33,10 @@ class DatabaseKeyStore(KeyStore):
         import sqlite3
         DatabaseKeyStore(sqlite3, 'geofront.db')
 
+    or::
+
+        DatabaseKeyStore('sqlite3', 'geofront.db')
+
     The following code stores public keys into PostgreSQL database
     through psycopg2_::
 
@@ -42,11 +46,16 @@ class DatabaseKeyStore(KeyStore):
     It will create a table named ``geofront_public_key`` into the database.
 
     :param db_module: :pep:`249` DB-API 2.0 compliant module
-    :type db_module: :class:`types.ModuleType`
+    :type db_module: :class:`types.ModuleType` or :class:`str`
     :param \*args: arguments to ``db_module.connect()`` function
     :param \*kwargs: keyword arguments to ``db_module.connect()`` function
 
     .. _psycopg2: http://initd.org/psycopg/
+
+    .. versionchanged:: 0.5.0
+
+       It now accepts strings for ``db_module`` as well and automatically
+       imports the module from the string path.
 
     """
 

@@ -50,13 +50,18 @@ if TYPE_CHECKING:
     from typing import MutableMapping, Optional  # noqa: F401
 
 __all__ = ('CloudKeyStore', 'CloudMasterKeyStore', 'CloudMasterPublicKeyStore',
-           'CloudRemoteSet', 'create_compute_driver', 'create_storage_driver',
-           'create_cloud_master_pubkey_store')
+           'CloudRemoteSet', 'create_cloud_master_pubkey_store',
+           'create_compute_driver', 'create_storage_driver')
 
 
 def create_compute_driver(provider_name: str, creds: Sequence[str],
                           **driver_kwargs) -> NodeDriver:
-    """A shortcut NodeDriver factory for environment-variable configs"""
+    """A shortcut :class:`NodeDriver <libcloud.compute.base.NodeDriver>`
+    factory for environment-variable configs.
+
+    .. versionadded:: 0.5.0
+
+    """
     provider = getattr(ComputeProvider, provider_name)
     driver_cls = get_compute_driver(provider)
     return driver_cls(*creds, **driver_kwargs)
@@ -64,7 +69,12 @@ def create_compute_driver(provider_name: str, creds: Sequence[str],
 
 def create_storage_driver(provider_name: str, creds: Sequence[str],
                           **driver_kwargs) -> StorageDriver:
-    """A shortcut StorageDriver factory for environment-variable configs"""
+    """A shortcut :class:`StorageDriver <libcloud.storage.base.StorageDriver>`
+    factory for environment-variable configs.
+
+    .. versionadded:: 0.5.0
+
+    """
     provider = getattr(StorageProvider, provider_name)
     driver_cls = get_storage_driver(provider)
     return driver_cls(*creds, **driver_kwargs)
@@ -458,8 +468,14 @@ def create_cloud_master_pubkey_store(compute_provider_name: str,
                                      container_name: str,
                                      object_name: str,
                                      **common_driver_kwargs) -> CloudMasterPublicKeyStore:
-    """A shortcut CloudMasterPublicKeyStore factory for environment-variable
-    configs"""
+    """A shortcut to create :class:`CloudMasterPublicKeyStore` with fewer
+    keystrokes.  It assumes the compute and storage providers are from the same
+    vendor (e.g., AWS) as it shares the same credentials and driver kwargs.
+    Intended to be used in environment-variable configs.
+
+    .. versionadded:: 0.5.0
+
+    """
     compute_driver = create_compute_driver(compute_provider_name, common_creds,
                                            **common_driver_kwargs)
     storage_driver = create_storage_driver(storage_provider_name, common_creds,
