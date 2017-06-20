@@ -1119,13 +1119,6 @@ def main_parser() -> argparse.ArgumentParser:  # pragma: no cover
                         action='store_true',
                         help='renew the master key before the server starts. '
                              'implies --create-master-key option')
-    parser.add_argument('--trusted-proxy',
-                        action='store_true',
-                        help='IP address of a client allowed to override '
-                             'url_scheme via the X-Forwarded-Proto header. '
-                             'useful when it runs behind reverse proxy. '
-                             '-d/--debug option disables this option. '
-                             '(deprecated)')
     parser.add_argument('--force-https',
                         action='store_true',
                         help='enable HSTS (HTTP strict transport security) '
