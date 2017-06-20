@@ -70,9 +70,10 @@ Prerequisites
   - Paramiko_ 2.0.1+ (which requires cryptography_)
   - Werkzeug_ 0.11+
   - Flask_ 0.10.1+
+  - Flask-Sockets_ 0.2.1+
+  - gevent_ 1.1.2+
   - OAuthLib_ 1.1.1+
   - Apache Libcloud_ 1.1.0+
-  - Waitress_ 1.0.2+
   - singledispatch_ (only if Python is older than 3.4)
   - typing_ (only if Python is older than 3.5)
   - typeguard_ 2.1.1+
@@ -81,9 +82,10 @@ Prerequisites
 .. _cryptography: https://cryptography.io/
 .. _Werkzeug: http://werkzeug.pocoo.org/
 .. _Flask: http://flask.pocoo.org/
+.. _Flask-Sockets: https://github.com/kennethreitz/flask-sockets
+.. _gevent: http://www.gevent.org/
 .. _OAuthLib: https://github.com/idan/oauthlib
 .. _Libcloud: http://libcloud.apache.org/
-.. _Waitress: https://github.com/Pylons/waitress
 .. _singledispatch: https://pypi.python.org/pypi/singledispatch
 .. _typing: https://pypi.python.org/pypi/typing
 .. _typeguard: https://github.com/agronholm/typeguard
