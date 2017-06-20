@@ -995,6 +995,7 @@ def authorize_remote(token_id: str, alias: str):
     :param alias: the alias of the remote to access
     :type alias: :class:`str`
     :status 200: when successfully granted a temporary authorization
+    :status 403: when the permission policy denies access
     :status 404: (``not-found``) when there's no such remote
 
     """
@@ -1044,6 +1045,20 @@ def authorize_remote(token_id: str, alias: str):
 
 @sockets.route('/ws/tokens/<token_id:token_id>/remotes/<alias>/ssh/')
 def proxy_ssh(ws, token_id: str, alias: str):
+    """Proxy all WebSocket BINARY payloads to the given remote.
+    Combined with the client-side local SSH proxy, it composes an SSH tunnel
+    over WebSockets.  The client must authorize first and then call this API.
+
+    :param ws: The WebSocket connection object
+    :param token_id: the token id that holds the identity
+    :type token_id: :class:`str`
+    :param alias: the alias of the remote to access
+    :type alias: :class:`str`
+    :status 101: good to upgrade to a WebSocket connection.
+    :status 403: when the permission policy denies access
+    :status 404: (``not-found``) when there's no such remote
+
+    """
     team = get_team()
     identity = get_identity(token_id)
     key_store = get_key_store()
