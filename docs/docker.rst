@@ -5,8 +5,8 @@ Installation using Docker
    :target: https://hub.docker.com/r/spoqa/geofront/
    :alt: Docker automated build
 
-Geofront provides the official Docker image.  The official repository is
-`spoqa/geofront`__:
+Geofront provides the official Docker image based on Alpine Linux.  The
+official repository is `spoqa/geofront`__:
 
 .. code-block:: text
 
@@ -15,8 +15,11 @@ Geofront provides the official Docker image.  The official repository is
 __ https://hub.docker.com/r/spoqa/geofront/
 
 
+Images
+------
+
 Tags
-----
+~~~~
 
 There are rules for tags:
 
@@ -37,11 +40,36 @@ There are rules for tags:
 
 
 Exposed port: ``8080``
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 Since Geofront server works as a HTTP server, the official image also exposes
 the port number **8080** to listen.  You can map the port using
 :program:`docker run` command's :option:`-p`/:option:`--publish` option.
+
+
+Additional backend dependencies
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The base ``spoqa/geofront`` Docker images provide only the core modules.
+To use additional backend dependencies, such as :mod:`redis` or
+:mod:`pyscopg2`, you need to build your own image.
+
+First, create a Dockerfile that extends from the base image which installs
+the required dependencies manually.
+Then, add additional package installation commands, such as ``RUN pip3 install
+<your-own-deps>`` for pure Python packages, while it is recommended to search
+`the Alpine Linux package repository <http://pkgs.alpinelinux.org/>`_ for
+Python packages with compiled binaries and install them by ``RUN apk add
+--no-cache <alpine-pkg-name>``.  Most binary Python packages in Alpine Linux
+has the naming style of ``py3-xxx``.
+
+Example:
+
+.. code-block:: docker
+
+   FROM spoqa/geofront:stable
+   RUN pip3 install redis
+   RUN apk add --no-cache py3-psycopg2
 
 
 .. _docker-config:
@@ -69,10 +97,10 @@ GitHub as its team authentication backend:
 
    TEAM='geofront.backends.github:GitHubOrganization(client_id="...", client_secret="...", org_login="your_org_name")'
 
-As you can guess, it has its own language and the language contains some Python
-syntax.  This language consists of two part: a module path and an expression.
-In the above, ``geofront.backends.github`` followed by a colon is a module path.
-It's also called as "import path" in Python.
+As you can guess, it has its own mini-language and the language contains some
+Python syntax.  This language consists of two part: a module path and an
+expression separated by a colon.  In the above, ``geofront.backends.github`` is
+a module path.  It's also called as "import path" in Python.
 
 The above environment variable is equivalent to the following configuration::
 
@@ -112,7 +140,23 @@ pass environment variables:
 
 Although :option:`-e`/:option:`--env` can be repeated, it's not suitable for
 maintaining configurations.  We therefore recommend to use :option:`--env-file`
-option instead.
+option or Docker Compose.
+
+To specify objects with complex initialization steps, Geofront provides several
+shortcut factory functions such as :func:`create_compute_driver
+<geofront.backends.cloud.create_compute_driver>`, :func:`create_storage_driver
+<geofront.backends.cloud.create_storage_driver>`, and
+:func:`create_cloud_master_pubkey_store
+<geofront.backends.cloud.create_cloud_master_pubkey_store>`.
+For example:
+
+.. code-block:: bash
+
+   docker run -e REMOTE_SET='geofront.backends.cloud:CloudRemoteSet(create_compute_driver("EC2", ("AKIA...", "..."), region="ap-northeast-2"), addresser=lambda n: n.private_ips[0], filter=lambda n: bool(n.private_ips))' \
+              -e MASTER_KEY_STORE='geofront.backends.cloud:create_cloud_master_pubkey_store("EC2", "S3_AP_NORTHEAST2", ("AKIA...", "..."), "keypair-name", "s3-bucket-name", "s3-object-name", region="ap-northeast-2")' \
+              --detach --publish 8080 \
+              spoqa/geofront:stable
+
 
 .. note::
 
@@ -160,3 +204,22 @@ configuration file into the path:
    `Manage data in containers`__ --- Docker Documentation
 
 __ https://docs.docker.com/engine/tutorials/dockervolumes/
+
+
+.. _docker-config-compose:
+
+Using Docker Compose
+~~~~~~~~~~~~~~~~~~~~
+
+Docker Compopse is a great way to launch a cluster of multiple containers
+that works together.  It is useful to containerize external daemons such as
+Redis and nginx.
+
+Check out `an example Docker Compose configuration
+<https://github.com/spoqa/geofront/blob/2b41f018/example.docker-compose.yml>`_.
+
+.. seealso::
+
+   `Docker Compose Documentation`__
+
+__ https://docs.docker.com/compose/
