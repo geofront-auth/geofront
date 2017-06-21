@@ -83,8 +83,8 @@ __all__ = ('AUTHORIZATION_TIMEOUT',
            'get_key_store', 'get_master_key_store', 'get_permission_policy',
            'get_public_key', 'get_remote_set', 'get_team', 'get_token_store',
            'list_public_keys', 'main', 'main_parser', 'master_key',
-           'public_key', 'remote_dict', 'server_endpoint', 'server_version',
-           'token', 'token_master_key', 'url_for')
+           'proxy_ssh', 'public_key', 'remote_dict', 'server_endpoint',
+           'server_version', 'token', 'token_master_key', 'url_for')
 
 
 #: (:class:`datetime.timedelta`) How long does each temporary authorization
