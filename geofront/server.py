@@ -42,6 +42,7 @@ endpoint for WSGI:
 import argparse
 import collections.abc
 import datetime
+import errno
 import logging
 import os
 import os.path
@@ -1089,9 +1090,12 @@ def proxy_ssh(ws, token_id: str, alias: str):
         while True:
             try:
                 reply = ssh_sock.recv(4096)
-            except OSError:
-                # closed in another greenlet
-                break
+            except OSError as e:
+                if e.errno == errno.EBADF:
+                    # closed in another greenlet
+                    break
+                else:
+                    raise
             if not reply:
                 break
             if ws.closed:
