@@ -1,6 +1,21 @@
 Geofront Changelog
 ==================
 
+Version 0.5.0
+-------------
+
+Released on XX XX, 2017.
+
+- Geofront now supports Docker-based deployment.
+
+  - Added shortcut factory functions for classes in
+    :mod:`geofront.backends.cloud` for use in environment-variable
+    configuration.
+  - Allow :class:`DatabaseKeyStore <geofront.backends.dbapi.DatabaseKeyStore>`
+    to accept string database module names for use in environment-variable
+    configuration.
+  - Added example configurations for nginx and docker-compose.
+
 Version 0.4.0
 -------------
 
