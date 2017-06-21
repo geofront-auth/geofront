@@ -54,8 +54,7 @@ The base ``spoqa/geofront`` Docker images provide only the core modules.
 To use additional backend dependencies, such as :mod:`redis` or
 :mod:`pyscopg2`, you need to build your own image.
 
-First, create a Dockerfile that extends from the base image which installs
-the required dependencies manually.
+First, create a Dockerfile that extends from one of the official images.
 Then, add additional package installation commands, such as ``RUN pip3 install
 <your-own-deps>`` for pure Python packages, while it is recommended to search
 `the Alpine Linux package repository <http://pkgs.alpinelinux.org/>`_ for
