@@ -969,6 +969,35 @@ def list_remotes(token_id: str):
     )
 
 
+@app.route('/tokens/<token_id:token_id>/remotes/<alias>/', methods=['GET'])
+def remote_info(token_id: str, alias: str):
+    """Retrieve the information of the given remote alias.
+
+    :param token_id: the token id that holds the identity
+    :type token_id: :class:`str`
+    :param alias: the alias of the remote to access
+    :type alias: :class:`str`
+    :status 200: when successfully granted a temporary authorization
+    :status 404: (``not-found``) when there's no such remote
+
+    """
+    team = get_team()
+    remotes = get_remote_set()
+    try:
+        remote = remotes[alias]
+    except KeyError:
+        response = jsonify(
+            error='not-found',
+            message='No such remote alias: {}.'.format(alias)
+        )
+        response.status_code = 404
+        return response
+    remote_mapping = remote_dict(remote)
+    return jsonify(
+        remote=remote_mapping,
+    )
+
+
 @app.route('/tokens/<token_id:token_id>/remotes/<alias>/', methods=['POST'])
 def authorize_remote(token_id: str, alias: str):
     """Temporarily authorize the token owner to access a remote.
