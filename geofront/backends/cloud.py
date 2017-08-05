@@ -150,12 +150,12 @@ class CloudRemoteSet(collections.abc.Mapping):
 @singledispatch
 def supports_metadata(driver: NodeDriver) -> bool:
     """Whether this drive type supports metadata?"""
-    return callable(getattr(driver, 'ex_get_metadata', None))
+    return callable(getattr(driver, 'ex_get_metadata_for_node', None))
 
 
 @singledispatch
 def get_metadata(driver: NodeDriver, node: Node) -> Mapping[str, object]:
-    return driver.ex_get_metadata(node)
+    return driver.ex_get_metadata_for_node(node)
 
 
 @supports_metadata.register(GCENodeDriver)
