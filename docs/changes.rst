@@ -6,6 +6,12 @@ Version 0.4.1
 
 To be released.
 
+- Fixed :exc:`TypeError`
+  (``__init__() got an unexpected keyword argument 'filename'``)
+  from :meth:`FileSystemMasterKeyStore.load()
+  <geofront.masterkey.FileSystemMasterKeyStore.load>` method.
+  [:issue:`7`]
+
 
 Version 0.4.0
 -------------

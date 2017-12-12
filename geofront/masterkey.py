@@ -34,7 +34,7 @@ from paramiko.ssh_exception import SSHException
 from paramiko.transport import Transport
 from typeguard import typechecked
 
-from .keystore import get_key_fingerprint
+from .keystore import KEY_TYPES, get_key_fingerprint
 from .remote import AuthorizedKeyList, Remote
 
 if TYPE_CHECKING:
@@ -93,7 +93,7 @@ def read_private_key_file(file_: IO[str]) -> PKey:
     """
     classes = PKey.__subclasses__()
     last = len(classes) + 1
-    for i, cls in enumerate(classes):
+    for i, cls in enumerate(KEY_TYPES.values()):
         try:
             return cls.from_private_key(file_)
         except SSHException:
@@ -389,7 +389,7 @@ class FileSystemMasterKeyStore(MasterKeyStore):
         if os.path.isfile(self.path):
             classes = PKey.__subclasses__()
             last = len(classes) + 1
-            for i, cls in enumerate(classes):
+            for i, cls in enumerate(KEY_TYPES.values()):
                 try:
                     return cls.from_private_key_file(self.path)
                 except SSHException:
