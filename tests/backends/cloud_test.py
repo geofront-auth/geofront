@@ -2,7 +2,7 @@ import hashlib
 import io
 import os
 
-from libcloud.compute.base import Node, KeyPair
+from libcloud.compute.base import KeyPair, Node
 from libcloud.compute.drivers.dummy import DummyNodeDriver
 from libcloud.compute.types import KeyPairDoesNotExistError
 from libcloud.storage.drivers import dummy

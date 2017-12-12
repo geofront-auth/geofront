@@ -291,10 +291,10 @@ def authorize(public_keys: AbstractSet[PKey],
         try:
             authorized_keys = AuthorizedKeyList(sftp_client)
             authorized_keys.extend(public_keys)
-        except:
+        except BaseException:
             sftp_client.close()
             raise
-    except:
+    except BaseException:
         transport.close()
         raise
 

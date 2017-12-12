@@ -11,14 +11,14 @@ import json
 import logging
 import os
 import shutil
-from typing import TYPE_CHECKING, IO, Mapping, cast
+from typing import IO, TYPE_CHECKING, Mapping, cast
 import urllib.error
 import urllib.request
 
 from typeguard import typechecked
 from werkzeug.datastructures import ImmutableMultiDict
 from werkzeug.http import parse_options_header
-from werkzeug.urls import url_encode, url_decode_stream
+from werkzeug.urls import url_decode_stream, url_encode
 from werkzeug.wrappers import Request
 
 from ..identity import Identity
@@ -113,7 +113,9 @@ def request(access_token, url: str, method: str='GET', data: bytes=None):
             f.seek(0)
             logger.debug(str(e), exc_info=True)
             make_error = urllib.error.HTTPError  # workaround mypy
-            restored = make_error(e.geturl(), e.code, e.reason, e.headers, f)
+            restored = make_error(  # type: ignore
+                e.geturl(), e.code, e.reason, e.headers, f
+            )
             raise restored from e
         else:
             raise

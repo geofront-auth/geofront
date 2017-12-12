@@ -153,8 +153,8 @@ class TwoPhaseRenewal:
             except (OSError, SSHException) as e:
                 for t, _, __ in sftp_clients.values():
                     t.close()
-                l = logging.getLogger(__name__ + '.TwoPhaseRenewal.__enter__')
-                l.exception(
+                lg = logging.getLogger(__name__ + '.TwoPhaseRenewal.__enter__')
+                lg.exception(
                     'An exception rise during master key renewal '
                     '(%s -> %s, server: %s@%s:%d): %s',
                     get_key_fingerprint(self.old_key),
@@ -207,7 +207,7 @@ def generate_key(key_type: Type[PKey]=RSAKey,
     .. versionadded:: 0.4.0
 
     """
-    generate = key_type.generate  # type: ignore
+    generate = key_type.generate
     bits_param = inspect.signature(generate).parameters['bits']
     if bits is None and bits_param.default is inspect.Signature.empty:
         new_key = generate(bits=1024)  # FIXME

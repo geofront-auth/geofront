@@ -192,8 +192,8 @@ def test_authorize(fx_sftpd):
         timeout=datetime.timedelta(seconds=5)
     )
     with authorized_keys_path.open() as f:
-        saved_keys = frozenset(parse_openssh_pubkey(l)
-                               for l in f if l.strip())
+        saved_keys = frozenset(parse_openssh_pubkey(line)
+                               for line in f if line.strip())
         assert saved_keys == (public_keys | {master_key})
     while datetime.datetime.now(datetime.timezone.utc) <= expires_at:
         time.sleep(1)

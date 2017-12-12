@@ -7,7 +7,7 @@
 import argparse
 import logging
 import os.path
-from typing import Optional, Mapping, Tuple, Type
+from typing import Mapping, Optional, Tuple, Type
 
 from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
