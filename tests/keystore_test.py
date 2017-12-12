@@ -2,6 +2,7 @@ import collections.abc
 
 from paramiko.dsskey import DSSKey
 from paramiko.ecdsakey import ECDSAKey
+from paramiko.ed25519key import Ed25519Key
 from paramiko.rsakey import RSAKey
 from pytest import fixture, raises
 
@@ -71,11 +72,22 @@ def test_parse_openssh_pubkey_ecdsa():
     assert pkey.get_base64() == id_ecdsa_pub
 
 
+def test_parse_openssh_pubkey_ed25519():
+    id_ed25519_pub = ('AAAAC3NzaC1lZDI1NTE5AAAAIBtfC/x6Bm'
+                      'h0Y2BHGSSdRyMBpX2m3C7Fw3qSNWrzK3GP')
+    pkey = parse_openssh_pubkey('ssh-ed25519 ' + id_ed25519_pub)
+    assert isinstance(pkey, Ed25519Key)
+    assert pkey.get_name() == 'ssh-ed25519'
+    assert pkey.get_base64() == id_ed25519_pub
+
+
 def test_parse_openssh_unsupported():
     with raises(KeyTypeError):
         parse_openssh_pubkey(
-            'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGMI9M959cz5sY823QX8W0oBRZuMe'
-            '4QYclVQPIDRfETh dahlia@Hong-Minhees-MacBook-Pro.local'
+            'ssh-unsupported '
+            'AAAAC3NzaC1lZDI1NTE5AAAAIBtfC/x6Bm'
+            'h0Y2BHGSSdRyMBpX2m3C7Fw3qSNWrzK3GP '
+            'key-type-error-test'
         )
 
 

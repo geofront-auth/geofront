@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, AbstractSet
 
 from paramiko.dsskey import DSSKey
 from paramiko.ecdsakey import ECDSAKey
+from paramiko.ed25519key import Ed25519Key
 from paramiko.pkey import PKey
 from paramiko.rsakey import RSAKey
 from typeguard import typechecked
@@ -29,9 +30,13 @@ __all__ = ('KEY_TYPES', 'AuthorizationError', 'DuplicatePublicKeyError',
 #: .. versionadded:: 0.4.0
 #:    Added ``ecdsa-sha2-nistp256``, ``ecdsa-sha2-nistp384``, and
 #:    ``ecdsa-sha2-nistp521`` (:class:`~paramiko.ecdsakey.ECDSAKey`) support.
+#:
+#: .. versionadded:: 0.4.1
+#:    Added ``ssh-ed25519`` (:class:`~paramiko.ed25519key.Ed25519Key`) support.
 KEY_TYPES = {
     'ssh-rsa': RSAKey,
     'ssh-dss': DSSKey,
+    'ssh-ed25519': Ed25519Key,
     'ecdsa-sha2-nistp256': ECDSAKey,
     'ecdsa-sha2-nistp384': ECDSAKey,
     'ecdsa-sha2-nistp521': ECDSAKey,

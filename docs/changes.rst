@@ -6,6 +6,9 @@ Version 0.4.1
 
 To be released.
 
+- Geofront now supports Ed25519 key.
+  Under the hood, :func:`geofront.keystore.parse_openssh_pubkey()` function
+  becomes to be possible to parse Ed25519 public keys.
 - Fixed :exc:`TypeError`
   (``__init__() got an unexpected keyword argument 'filename'``)
   from :meth:`FileSystemMasterKeyStore.load()
