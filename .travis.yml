@@ -27,24 +27,28 @@ before_script:
 - mysql -e 'CREATE DATABASE geofront_test;'
 script:
 - python -mgeofront.version
-- >
-    tox -- \
-        --flake8 \
-        --cov geofront \
-        --durations=20 \
-        --sshd-state-timeout=60 \
-        --redis-host=localhost \
-        --postgresql-database=geofront_test \
-        --postgresql-user=postgres \
-        --mysql-database=geofront_test \
-        --mysql-host=localhost \
-        --mysql-user=root \
-        --github-access-token="$GITHUB_ACCESS_TOKEN" \
-        --github-org-login="$GITHUB_ORG_LOGIN" \
-        --github-team-slugs="$GITHUB_TEAM_SLUGS" \
-        --aws-access-key="$AWS_ACCESS_KEY" \
-        --aws-secret-key="$AWS_SECRET_KEY" \
-        --aws-s3-bucket="$AWS_S3_BUCKET" \
-        -vv
+- |
+  port_min="$(expr '(' "${TRAVIS_JOB_NUMBER#[0-9][0-9]*.}" - 1 ')' '*' 180 + 12220)"
+  port_max="$(expr "${TRAVIS_JOB_NUMBER#[0-9][0-9]*.}" '*' 180 + 12220 - 1)"
+  tox -- \
+      --flake8 \
+      --cov geofront \
+      --durations=20 \
+      --sshd-port-min="$port_min" \
+      --sshd-port-max="$port_max" \
+      --sshd-state-timeout=60 \
+      --redis-host=localhost \
+      --postgresql-database=geofront_test \
+      --postgresql-user=postgres \
+      --mysql-database=geofront_test \
+      --mysql-host=localhost \
+      --mysql-user=root \
+      --github-access-token="$GITHUB_ACCESS_TOKEN" \
+      --github-org-login="$GITHUB_ORG_LOGIN" \
+      --github-team-slugs="$GITHUB_TEAM_SLUGS" \
+      --aws-access-key="$AWS_ACCESS_KEY" \
+      --aws-secret-key="$AWS_SECRET_KEY" \
+      --aws-s3-bucket="$AWS_S3_BUCKET" \
+      -vv
 after_success:
 - codecov
