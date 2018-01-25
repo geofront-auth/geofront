@@ -14,6 +14,9 @@ To be released.
   from :meth:`FileSystemMasterKeyStore.load()
   <geofront.masterkey.FileSystemMasterKeyStore.load>` method.
   [:issue:`7`]
+- Since Werkzeug 0.14 changed the way to handle exceptions and it's no more
+  compatible with the current use of Geofront, Geofront explicitly scoped
+  the version of Werzkeug to be less than 0.14.
 
 
 Version 0.4.0

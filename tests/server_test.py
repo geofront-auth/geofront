@@ -415,10 +415,14 @@ def test_token(fx_app, fx_authorized_identity, fx_token_id):
 def test_token_412(fx_app, fx_token_store, fx_token_id):
     fx_token_store.set(fx_token_id, 'nonce')
     with fx_app.test_client() as c:
-        response = c.get(get_url('token', token_id=fx_token_id))
+        url = get_url('token', token_id=fx_token_id)
+        response = c.get(url)
         assert response.status_code == 412
-        assert (json.loads(response.get_data())['error'] ==
-                'unfinished-authentication')
+        assert response.headers['content-type'] == 'application/json'
+        content = response.get_data(as_text=True)
+    assert content
+    print(content)
+    assert json.loads(content)['error'] == 'unfinished-authentication'
 
 
 def test_token_404(fx_app, fx_token_id):
