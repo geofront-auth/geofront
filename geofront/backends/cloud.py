@@ -107,6 +107,10 @@ class CloudRemoteSet(collections.abc.Mapping):
     .. _Libcloud: http://libcloud.apache.org/
     __ https://libcloud.readthedocs.org/en/latest/compute/
 
+    .. versionchanged:: 0.5.0
+       It now accepts addresser and filter arguments to allow the users to
+       customize the criteria of cloud instances eligible for access.
+
     .. versionadded:: 0.4.0
 
     .. versionchanged:: 0.2.0
