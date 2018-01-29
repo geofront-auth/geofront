@@ -980,6 +980,8 @@ def remote_info(token_id: str, alias: str):
     :status 200: when successfully granted a temporary authorization
     :status 404: (``not-found``) when there's no such remote
 
+    .. versionadded:: 0.5.0
+
     """
     team = get_team()
     remotes = get_remote_set()
@@ -1087,6 +1089,8 @@ def proxy_ssh(ws, token_id: str, alias: str):
     :status 101: good to upgrade to a WebSocket connection.
     :status 403: when the permission policy denies access
     :status 404: (``not-found``) when there's no such remote
+
+    .. versionadded:: 0.5.0
 
     """
     team = get_team()
