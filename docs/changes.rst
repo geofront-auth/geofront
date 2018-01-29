@@ -9,16 +9,10 @@ To be released.
 - Geofront now supports access to servers inside remote private networks
   via SSH tunneling over an HTTP WebSocket.  [:issue:`21`]
 
-  - Added ``addresser`` and ``filter`` options to :class:`CloudRemoteSet
-    <geofront.backends.cloud.CloudRemoteSet>` constructor, which allow
-    customization of server addressing and filtering schemes.  The default
-    is still to use public IPs, so you would wish to give lambda functions that
-    return private IPs from the :class:`libcloud.compute.base.Node` object
-    for use with SSH tunneling.
-  - Removed ``--trusted-proxy`` option from the :program:`geofront-server`
-    command.
   - Known issue: the WebSocket endpoints do not work in the debug mode.
 
+- Removed ``--trusted-proxy`` option from the :program:`geofront-server`
+  command.
 - Geofront becomes to require gevent 1.1.2 or higher.
 - Geofront becomes to require Flask-Sockets 0.2.1 or higher.
 - Geofront becomes not to require waitress any more.
