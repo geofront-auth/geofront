@@ -9,6 +9,12 @@ To be released.
 - Geofront now supports Ed25519 key.
   Under the hood, :func:`geofront.keystore.parse_openssh_pubkey()` function
   becomes to be possible to parse Ed25519 public keys.
+- Added ``addresser`` and ``filter`` options to :class:`CloudRemoteSet
+  <geofront.backends.cloud.CloudRemoteSet>` constructor, which allow
+  customization of server addressing and filtering schemes.  The default
+  is still to use public IPs, so you would wish to give lambda functions that
+  return private IPs from the :class:`libcloud.compute.base.Node` object
+  for use with VPNs or SSH tunneling.
 - Fixed :exc:`TypeError`
   (``__init__() got an unexpected keyword argument 'filename'``)
   from :meth:`FileSystemMasterKeyStore.load()

@@ -83,6 +83,19 @@ class CloudRemoteSet(collections.abc.Mapping):
     :type alias_nameer:
         :class:`~typing.Callable`\ [[:class:`libcloud.compute.base.Node`],
                                     :class:`str`]
+    :param addresser: A function to get the address for the given node.
+                      :attr:`Node.public_ips
+                      <libcloud.compute.base.Node.public_ips>`
+                      is used by default.
+    :type addresser:
+        :class:`~typing.Callable`\ [[:class:`libcloud.compute.base.Node`],
+                                    :class:`str`]
+    :param filter: A function to decide if the given node should be included as
+                   a remote or not.  By default it checks if the node has any
+                   public IP.
+    :type filter:
+        :class:`~typing.Callable`\ [[:class:`libcloud.compute.base.Node`],
+                                    :class:`bool`]
 
     .. seealso::
 
@@ -94,7 +107,11 @@ class CloudRemoteSet(collections.abc.Mapping):
     .. _Libcloud: http://libcloud.apache.org/
     __ https://libcloud.readthedocs.org/en/latest/compute/
 
+    .. versionadded:: 0.4.1
+       ``addresser`` and ``filter`` parameters.
+
     .. versionadded:: 0.4.0
+       ``alias_namer`` parameter.
 
     .. versionchanged:: 0.2.0
        It fills :attr:`~geofront.remote.Remote.metadata` of the resulted
@@ -108,22 +125,25 @@ class CloudRemoteSet(collections.abc.Mapping):
         driver: NodeDriver,
         user: str='ec2-user',
         port: int=22,
-        alias_namer: Callable[[Node], str]=lambda node: node.name
+        alias_namer: Callable[[Node], str]=lambda node: node.name,
+        addresser: Callable[[Node], str]=lambda node: node.public_ips[0],
+        filter: Callable[[Node], bool]=lambda node: bool(node.public_ips)
     ) -> None:
         self.driver = driver
         self.user = user
         self.port = port
         self.alias_namer = alias_namer
+        self.addresser = addresser
+        self.filter = filter
         self._nodes = None  # type: Optional[Mapping[str, Node]]
         self._metadata = {} if supports_metadata(driver) else None  \
             # type: Optional[MutableMapping[str, object]]
 
     def _get_nodes(self, refresh: bool=False) -> Mapping[str, Node]:
         if refresh or self._nodes is None:
-            make_alias = self.alias_namer
-            self._nodes = {make_alias(node): node
+            self._nodes = {self.alias_namer(node): node
                            for node in self.driver.list_nodes()
-                           if node.public_ips}
+                           if self.filter(node)}
             if self._metadata is not None:
                 self._metadata.clear()
         return self._nodes
@@ -144,7 +164,7 @@ class CloudRemoteSet(collections.abc.Mapping):
             except KeyError:
                 metadata = get_metadata(self.driver, node)
                 self._metadata[alias] = metadata
-        return Remote(self.user, node.public_ips[0], self.port, metadata)
+        return Remote(self.user, self.addresser(node), self.port, metadata)
 
 
 @singledispatch
