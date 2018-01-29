@@ -47,7 +47,6 @@ import logging
 import os
 import os.path
 import re
-import sys
 from typing import Mapping, NamedTuple, Union
 import warnings
 
@@ -983,7 +982,6 @@ def remote_info(token_id: str, alias: str):
     .. versionadded:: 0.5.0
 
     """
-    team = get_team()
     remotes = get_remote_set()
     try:
         remote = remotes[alias]
@@ -1095,8 +1093,6 @@ def proxy_ssh(ws, token_id: str, alias: str):
     """
     team = get_team()
     identity = get_identity(token_id)
-    key_store = get_key_store()
-    master_key_store = get_master_key_store()
     remotes = get_remote_set()
     policy = get_permission_policy()
     try:
@@ -1234,7 +1230,8 @@ def main():  # pragma: no cover
         if args.debug:
             app.run(args.host, args.port, debug=True)
         else:
-            server = pywsgi.WSGIServer((args.host, args.port), app, handler_class=WebSocketHandler)
+            server = pywsgi.WSGIServer((args.host, args.port), app,
+                                       handler_class=WebSocketHandler)
             server.serve_forever()
     finally:
         if master_key_renewal_interval is not None:
