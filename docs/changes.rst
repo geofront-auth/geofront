@@ -1,6 +1,23 @@
 Geofront Changelog
 ==================
 
+Version 0.5.0
+-------------
+
+To be released.
+
+- Geofront now supports access to servers inside remote private networks
+  via SSH tunneling over an HTTP WebSocket.  [:issue:`21`]
+
+  - Known issue: the WebSocket endpoints do not work in the debug mode.
+
+- Removed ``--trusted-proxy`` option from the :program:`geofront-server`
+  command.
+- Geofront becomes to require gevent 1.1.2 or higher.
+- Geofront becomes to require Flask-Sockets 0.2.1 or higher.
+- Geofront becomes not to require waitress any more.
+
+
 Version 0.4.1
 -------------
 
@@ -218,9 +235,8 @@ Released on April 22, 2014.
 
 - Fixed :exc:`TypeError` that rises when :class:`CloudMasterKeyStore
   <geofront.backends.cloud.CloudMasterKeyStore>` is used with AWS S3 driver.
-- Added :option:`--trusted-proxy <geofront-server --trusted-proxy>` option
-  to :program:`geofront-server` command.  It's useful when the server is
-  run behind a reverse proxy.
+- Added ``--trusted-proxy`` option to :program:`geofront-server` command.  It's
+  useful when the server is run behind a reverse proxy.
 - Added token no-op API: :http:get:`/tokens/(token_id:token_id)/`.
 
 
