@@ -31,6 +31,8 @@ KEY_STORE = GitHubKeyStore()
 # Unlike public keys, the master key ideally ought to be accessible by
 # only Geofront.  Assume you use Amazon Web Services.  So you'll store
 # the master key to the your private S3 bucket named your_team_master_key.
+# You can find proper provider via below link
+# https://libcloud.readthedocs.io/en/latest/storage/supported_providers.html#supported-methods-storage
 from geofront.backends.cloud import CloudMasterKeyStore
 from libcloud.storage.types import Provider
 from libcloud.storage.providers import get_driver
